@@ -4527,6 +4527,7 @@
                 body.innerHTML = `<div class="output-grid">${(node.images || []).map(url => renderOutputMedia(url)).join('')}${pendingHtml}</div>`;
                 body.onwheel = e => {
                     e.stopPropagation();
+                    if(e.ctrlKey || e.metaKey) e.preventDefault();
                 };
                 body.querySelectorAll('.output-img-wrap').forEach(wrap => bindOutputWrap(wrap, node));
             }
@@ -8465,7 +8466,12 @@
             }
         });
         board.addEventListener('mouseleave', () => setHoveredConnection(''));
-        board.ondblclick = null;
+        board.ondblclick = e => {
+            if(!canvas) return;
+            if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
+            e.preventDefault();
+            openCreateMenu(e.clientX, e.clientY);
+        };
         board.oncontextmenu = e => {
             if(!canvas) return;
             if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
@@ -8535,6 +8541,13 @@
             if(blank) fillImageNode(blank.id, files);
             else uploadImages(files);
         });
+        // 阻止 Ctrl/Cmd + 滚轮触发浏览器页面缩放
+        document.addEventListener('wheel', e => {
+            if(e.ctrlKey || e.metaKey){
+                e.preventDefault();
+            }
+        }, { passive: false });
+
         window.addEventListener('keydown', e => {
             if(!canvas) return;
             if(e.key === 'Shift' && !isEditableTarget(document.activeElement)) setKnifeMode(true);
