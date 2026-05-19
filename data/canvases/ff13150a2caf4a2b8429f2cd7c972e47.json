@@ -1,0 +1,226 @@
+{
+  "id": "ff13150a2caf4a2b8429f2cd7c972e47",
+  "title": "测试仪",
+  "icon": "🧩",
+  "created_at": 1779110052375,
+  "updated_at": 1779153785765,
+  "nodes": [
+    {
+      "id": "gen_41d9aaf3fdf72_1779110059095",
+      "type": "generator",
+      "x": 549,
+      "y": 159.5,
+      "apiProvider": "ai-2",
+      "model": "gpt-image-2",
+      "ratio": "custom",
+      "resolution": "1k",
+      "customRatio": "1:3",
+      "customSize": "",
+      "customRatioWidth": "1",
+      "customRatioHeight": "3",
+      "customWidth": "",
+      "customHeight": "",
+      "inputs": [
+        "prompt_033b1d1c1caff_1779110062852"
+      ],
+      "running": false,
+      "generatedOutputs": [
+        "/assets/output/online_4f5fc5c470.png"
+      ],
+      "runStatus": "done",
+      "runError": ""
+    },
+    {
+      "id": "prompt_033b1d1c1caff_1779110062852",
+      "type": "prompt",
+      "x": 170,
+      "y": 171.5,
+      "text": "Cutting-edge internet operations visual design master standard, Behance / Dribbble 3D illustration style poster, C4D style, soft-light rendering, high saturation, dopamine palette, abstract art, clean minimalist background, visually cheerful, refined and delicate. Theme: Play Wildly."
+    },
+    {
+      "id": "out_4d1d0e63da604_1779110218245",
+      "type": "output",
+      "x": 1085,
+      "y": 149.5,
+      "images": [
+        {
+          "url": "/assets/output/online_636f7d2e2f.png",
+          "viewed": true,
+          "runMs": 124854,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "gen_41d9aaf3fdf72_1779110059095",
+              "type": "generator",
+              "x": 549,
+              "y": 159.5,
+              "apiProvider": "api-corp",
+              "model": "gpt-image-2",
+              "ratio": "custom",
+              "resolution": "1k",
+              "customRatio": "1:3",
+              "customSize": "",
+              "customRatioWidth": "1",
+              "customRatioHeight": "3",
+              "customWidth": "",
+              "customHeight": ""
+            },
+            "prompt": "Cutting-edge internet operations visual design master standard, Behance / Dribbble 3D illustration style poster, C4D style, soft-light rendering, high saturation, dopamine palette, abstract art, clean minimalist background, visually cheerful, refined and delicate. Theme: Play Wildly.",
+            "refs": [],
+            "request": {
+              "task_id": "",
+              "request_id": "",
+              "provider_id": "api-corp",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        },
+        {
+          "url": "/assets/output/online_4f5fc5c470.png",
+          "viewed": true,
+          "runMs": 39866,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "gen_41d9aaf3fdf72_1779110059095",
+              "type": "generator",
+              "x": 549,
+              "y": 159.5,
+              "apiProvider": "ai-2",
+              "model": "gpt-image-2",
+              "ratio": "custom",
+              "resolution": "1k",
+              "customRatio": "1:3",
+              "customSize": "",
+              "customRatioWidth": "1",
+              "customRatioHeight": "3",
+              "customWidth": "",
+              "customHeight": "",
+              "generatedOutputs": [
+                "/assets/output/online_636f7d2e2f.png"
+              ]
+            },
+            "prompt": "Cutting-edge internet operations visual design master standard, Behance / Dribbble 3D illustration style poster, C4D style, soft-light rendering, high saturation, dopamine palette, abstract art, clean minimalist background, visually cheerful, refined and delicate. Theme: Play Wildly.",
+            "refs": [],
+            "request": {
+              "task_id": "",
+              "request_id": "",
+              "provider_id": "ai-2",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "_pending": [],
+      "w": 922,
+      "h": 472
+    },
+    {
+      "id": "generator_7ffc68c18bd7d_1779110403776",
+      "type": "generator",
+      "x": 584.4442344045368,
+      "y": 685.2561436672968,
+      "apiProvider": "now-coding",
+      "model": "gpt-image-2",
+      "ratio": "wide",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "inputs": [
+        "prompt_033b1d1c1caff_1779110062852"
+      ],
+      "running": false,
+      "generatedOutputs": [
+        "/assets/output/online_ce4754dc4e.png"
+      ],
+      "runStatus": "done",
+      "runError": ""
+    },
+    {
+      "id": "out_4a6895d99b951_1779110413029",
+      "type": "output",
+      "x": 1044.444234404537,
+      "y": 685.2561436672968,
+      "images": [
+        {
+          "url": "/assets/output/online_ce4754dc4e.png",
+          "viewed": true,
+          "runMs": 51515,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "generator_7ffc68c18bd7d_1779110403776",
+              "type": "generator",
+              "x": 584.4442344045368,
+              "y": 685.2561436672968,
+              "apiProvider": "now-coding",
+              "model": "gpt-image-2",
+              "ratio": "wide",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": "",
+              "generatedOutputs": [
+                "/assets/output/online_636f7d2e2f.png"
+              ]
+            },
+            "prompt": "Cutting-edge internet operations visual design master standard, Behance / Dribbble 3D illustration style poster, C4D style, soft-light rendering, high saturation, dopamine palette, abstract art, clean minimalist background, visually cheerful, refined and delicate. Theme: Play Wildly.",
+            "refs": [],
+            "request": {
+              "task_id": "",
+              "request_id": "",
+              "provider_id": "now-coding",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "_pending": []
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_c76d005fa1626_1779110065478",
+      "from": "prompt_033b1d1c1caff_1779110062852",
+      "to": "gen_41d9aaf3fdf72_1779110059095"
+    },
+    {
+      "id": "c_9ec5da30a416c_1779110218245",
+      "from": "gen_41d9aaf3fdf72_1779110059095",
+      "to": "out_4d1d0e63da604_1779110218245"
+    },
+    {
+      "id": "c_d95964f1abb19_1779110406120",
+      "from": "prompt_033b1d1c1caff_1779110062852",
+      "to": "generator_7ffc68c18bd7d_1779110403776"
+    },
+    {
+      "id": "c_f0af50c73dd0c_1779110413029",
+      "from": "generator_7ffc68c18bd7d_1779110403776",
+      "to": "out_4a6895d99b951_1779110413029"
+    }
+  ],
+  "viewport": {
+    "x": -124.7212640583682,
+    "y": -96.24681526886422,
+    "scale": 0.7118080450560001
+  },
+  "logs": [],
+  "deleted_at": 1779153785765
+}

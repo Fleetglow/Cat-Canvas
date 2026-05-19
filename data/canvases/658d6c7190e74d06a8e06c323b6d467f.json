@@ -1,0 +1,881 @@
+{
+  "id": "658d6c7190e74d06a8e06c323b6d467f",
+  "title": "专题",
+  "icon": "🧩",
+  "created_at": 1779156906386,
+  "updated_at": 1779178181232,
+  "nodes": [
+    {
+      "id": "img_63086e354578b_1779174636515",
+      "type": "image",
+      "x": 517.6373440055881,
+      "y": 1551.4441688960371,
+      "url": "/assets/input/ai_ref_fc5a5d1c5920.jpg",
+      "name": "企业微信截图_17791710634512.jpg"
+    },
+    {
+      "id": "prompt_aa91d352edd44_1779174640111",
+      "type": "prompt",
+      "x": 514.4577914252377,
+      "y": 1281.18219956625,
+      "text": "只保留红色印章，删除文字，背景为纯白色"
+    },
+    {
+      "id": "gen_c57648ccd8d89_1779174640670",
+      "type": "generator",
+      "x": 970.1936612754672,
+      "y": 1404.1248993398,
+      "apiProvider": "ai",
+      "model": "gpt-image-2",
+      "ratio": "wide",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "inputs": [
+        "grp_54f33e61793aa_1779174646048:img_63086e354578b_1779174636515",
+        "grp_54f33e61793aa_1779174646048:prompts"
+      ],
+      "running": false,
+      "generatedOutputs": [
+        "/assets/output/online_7af471b05b.png"
+      ],
+      "runStatus": "done",
+      "runError": ""
+    },
+    {
+      "id": "grp_54f33e61793aa_1779174646048",
+      "type": "group",
+      "x": 490.4577914252377,
+      "y": 1223.18219956625,
+      "w": 358,
+      "h": 696.2619693297872,
+      "items": [
+        "img_63086e354578b_1779174636515",
+        "prompt_aa91d352edd44_1779174640111"
+      ]
+    },
+    {
+      "id": "out_67a9a755856aa_1779174676427",
+      "type": "output",
+      "x": 1430.193661275467,
+      "y": 1404.1248993398,
+      "images": [
+        {
+          "url": "/assets/output/online_7af471b05b.png",
+          "viewed": true,
+          "runMs": 27288,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "gen_c57648ccd8d89_1779174640670",
+              "type": "generator",
+              "x": 970.1936612754672,
+              "y": 1404.1248993398,
+              "apiProvider": "ai",
+              "model": "gpt-image-2",
+              "ratio": "wide",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": ""
+            },
+            "prompt": "只保留红色印章，删除文字，背景为纯白色",
+            "refs": [
+              {
+                "url": "/assets/input/ai_ref_fc5a5d1c5920.jpg",
+                "name": "企业微信截图_17791710634512.jpg"
+              }
+            ],
+            "request": {
+              "task_id": "",
+              "request_id": "",
+              "provider_id": "ai",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "_pending": [],
+      "imageComparisons": {
+        "/assets/output/online_7af471b05b.png": {
+          "url": "/assets/input/ai_ref_fc5a5d1c5920.jpg",
+          "name": "企业微信截图_17791710634512.jpg"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_91d47d5282fc7_1779174647410",
+      "from": "grp_54f33e61793aa_1779174646048",
+      "to": "gen_c57648ccd8d89_1779174640670"
+    },
+    {
+      "id": "c_6d45cfa442826_1779174676427",
+      "from": "gen_c57648ccd8d89_1779174640670",
+      "to": "out_67a9a755856aa_1779174676427"
+    }
+  ],
+  "viewport": {
+    "x": -713.8175306733197,
+    "y": -1580.0782697029144,
+    "scale": 1.376772239512856
+  },
+  "logs": [
+    {
+      "id": "log_a91be2c4674ee_1779174703812",
+      "createdAt": 1779174703812,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "只保留红色印章，删除文字，背景为纯白色",
+      "outputs": [
+        "/assets/output/online_7af471b05b.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_fc5a5d1c5920.jpg",
+          "name": "企业微信截图_17791710634512.jpg"
+        }
+      ],
+      "runMs": 27288,
+      "error": ""
+    },
+    {
+      "id": "log_5efbd2c3eae27_1779171490264",
+      "createdAt": 1779171490264,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "五、参会人员 \n国家及地方能源主管部门（如四川省能源局）\n国家电网、南方电网及各网省电力公司\n发电集团、新能源企业（光伏、储能、充电桩等）\n电力设计院、科研院所\n虚拟电厂聚合商、综合能源服务公司\nAI与大数据企业、碳交易机构\n投融资机构、设备制造商\n高耗能园区企业代表",
+      "outputs": [
+        "/assets/output/online_53ceb6a84b.png"
+      ],
+      "refs": [],
+      "runMs": 40854,
+      "error": ""
+    },
+    {
+      "id": "log_d7f39416f07f1_1779171490244",
+      "createdAt": 1779171490244,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "五、参会人员 \n国家及地方能源主管部门（如四川省能源局）\n国家电网、南方电网及各网省电力公司\n发电集团、新能源企业（光伏、储能、充电桩等）\n电力设计院、科研院所\n虚拟电厂聚合商、综合能源服务公司\nAI与大数据企业、碳交易机构\n投融资机构、设备制造商\n高耗能园区企业代表",
+      "outputs": [
+        "/assets/output/online_7b36a9af16.png"
+      ],
+      "refs": [],
+      "runMs": 40834,
+      "error": ""
+    },
+    {
+      "id": "log_e8fd285fac859_1779171486271",
+      "createdAt": 1779171486271,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "五、参会人员 \n国家及地方能源主管部门（如四川省能源局）\n国家电网、南方电网及各网省电力公司\n发电集团、新能源企业（光伏、储能、充电桩等）\n电力设计院、科研院所\n虚拟电厂聚合商、综合能源服务公司\nAI与大数据企业、碳交易机构\n投融资机构、设备制造商\n高耗能园区企业代表",
+      "outputs": [
+        "/assets/output/online_29833e1298.png"
+      ],
+      "refs": [],
+      "runMs": 36861,
+      "error": ""
+    },
+    {
+      "id": "log_3476edbc43fe9_1779171486251",
+      "createdAt": 1779171486251,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "五、参会人员 \n国家及地方能源主管部门（如四川省能源局）\n国家电网、南方电网及各网省电力公司\n发电集团、新能源企业（光伏、储能、充电桩等）\n电力设计院、科研院所\n虚拟电厂聚合商、综合能源服务公司\nAI与大数据企业、碳交易机构\n投融资机构、设备制造商\n高耗能园区企业代表",
+      "outputs": [
+        "/assets/output/online_144b6ad0b3.png"
+      ],
+      "refs": [],
+      "runMs": 36840,
+      "error": ""
+    },
+    {
+      "id": "log_cd69e239d13b4_1779170367843",
+      "createdAt": 1779170367844,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2064,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_6db0e417d8e51_1779170367819",
+      "createdAt": 1779170367819,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2040,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_bc31f35472ab6_1779170367792",
+      "createdAt": 1779170367792,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2013,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_339e6e3f14caa_1779170329237",
+      "createdAt": 1779170329237,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_9038a01ca6.png"
+      ],
+      "refs": [],
+      "runMs": 85616,
+      "error": ""
+    },
+    {
+      "id": "log_26904ced73b4c_1779170323237",
+      "createdAt": 1779170323237,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_1338dd5d78.png"
+      ],
+      "refs": [],
+      "runMs": 79616,
+      "error": ""
+    },
+    {
+      "id": "log_0a845182d25b5_1779170307491",
+      "createdAt": 1779170307491,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_024c8c68fc.png"
+      ],
+      "refs": [],
+      "runMs": 63870,
+      "error": ""
+    },
+    {
+      "id": "log_5aadef1d1abf2_1779170304357",
+      "createdAt": 1779170304357,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_7e40c6008c.png"
+      ],
+      "refs": [],
+      "runMs": 51037,
+      "error": ""
+    },
+    {
+      "id": "log_9140f6d5a48be_1779170300258",
+      "createdAt": 1779170300258,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_75926fffdb.png"
+      ],
+      "refs": [],
+      "runMs": 56637,
+      "error": ""
+    },
+    {
+      "id": "log_45602c6ae94cd_1779170299945",
+      "createdAt": 1779170299945,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 1945,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_bef2e2921fdc5_1779170299909",
+      "createdAt": 1779170299909,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 1909,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_cee650b5d8a93_1779170299860",
+      "createdAt": 1779170299860,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 1860,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_2a4b1f458994_1779170297107",
+      "createdAt": 1779170297107,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_c83337e147.png"
+      ],
+      "refs": [],
+      "runMs": 43787,
+      "error": ""
+    },
+    {
+      "id": "log_d83197ff401b7_1779170288077",
+      "createdAt": 1779170288077,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_e6ea23c82c.png"
+      ],
+      "refs": [],
+      "runMs": 34756,
+      "error": ""
+    },
+    {
+      "id": "log_cbc679d977846_1779170286227",
+      "createdAt": 1779170286227,
+      "status": "success",
+      "platform": "柏拉图AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [
+        "/assets/output/online_41875dc830.png"
+      ],
+      "refs": [],
+      "runMs": 32907,
+      "error": ""
+    },
+    {
+      "id": "log_ec57f06353216_1779170284308",
+      "createdAt": 1779170284308,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2348,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_cb2a580b832f9_1779170284295",
+      "createdAt": 1779170284295,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2335,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_16d4561335725_1779170284280",
+      "createdAt": 1779170284280,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2320,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_d83ffea0ffa98_1779170284258",
+      "createdAt": 1779170284258,
+      "status": "failed",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "四、活动亮点 \n1.精准分组，实战导向：下午的4个圆桌覆盖“市场、技术、场景、资本”四大核心维度，确保不同背景的参会者都能找到对口议题，实现从“听会”到“解题”的转变。\n2.西部特色，因地制宜：紧扣四川及西部地区水电消纳、季节性保供等痛点，邀请本地政策制定者与电网专家，提供最具落地性的区域指导。\n3.生态共建，资源对接：通过圆桌互动，打破电网、发电、用户、技术商之间的信息壁垒，现场促成潜在的商业合作与技术对接。",
+      "outputs": [],
+      "refs": [],
+      "runMs": 2297,
+      "error": "上游生图接口错误：{\"error\":{\"message\":\"no available image quota\",\"type\":\"insufficient_quota\",\"param\":\"\",\"code\":\"insufficient_quota\"}}"
+    },
+    {
+      "id": "log_3a4b16d3ede4e_1779157274273",
+      "createdAt": 1779157274273,
+      "status": "success",
+      "platform": "API-CORP",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "api-corp",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_0f7f49598f.png"
+      ],
+      "refs": [],
+      "runMs": 45205,
+      "error": ""
+    },
+    {
+      "id": "log_e52d583ccba58_1779157274241",
+      "createdAt": 1779157274241,
+      "status": "success",
+      "platform": "API-CORP",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "api-corp",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_34118cd9c1.png"
+      ],
+      "refs": [],
+      "runMs": 45172,
+      "error": ""
+    },
+    {
+      "id": "log_b690957d82441_1779157270239",
+      "createdAt": 1779157270239,
+      "status": "success",
+      "platform": "API-CORP",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "api-corp",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_ec37f914d7.png"
+      ],
+      "refs": [],
+      "runMs": 41171,
+      "error": ""
+    },
+    {
+      "id": "log_4dd8620a8dbbb_1779157268244",
+      "createdAt": 1779157268244,
+      "status": "success",
+      "platform": "API-CORP",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "api-corp",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_18766277bc.png"
+      ],
+      "refs": [],
+      "runMs": 39176,
+      "error": ""
+    },
+    {
+      "id": "log_4589d1403a5fa_1779157237270",
+      "createdAt": 1779157237271,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_043a5bc6cf.png"
+      ],
+      "refs": [],
+      "runMs": 45292,
+      "error": ""
+    },
+    {
+      "id": "log_0d174ace2e785_1779157237217",
+      "createdAt": 1779157237217,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_843083b695.png"
+      ],
+      "refs": [],
+      "runMs": 45239,
+      "error": ""
+    },
+    {
+      "id": "log_e883c696d23da_1779157235478",
+      "createdAt": 1779157235478,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_7a195a3d15.png"
+      ],
+      "refs": [],
+      "runMs": 43500,
+      "error": ""
+    },
+    {
+      "id": "log_8283854bd6c7d_1779157231822",
+      "createdAt": 1779157231822,
+      "status": "success",
+      "platform": "APIQIK 特惠站",
+      "nodeType": "generator",
+      "model": "gpt-image-2-flatfee",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "apiqik",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_6b130050ff.png"
+      ],
+      "refs": [],
+      "runMs": 39843,
+      "error": ""
+    },
+    {
+      "id": "log_b1fbaa3aa8a29_1779157116760",
+      "createdAt": 1779157116760,
+      "status": "success",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai-2",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_69da1d587f.png"
+      ],
+      "refs": [],
+      "runMs": 54591,
+      "error": ""
+    },
+    {
+      "id": "log_981a53f5b7933_1779157114954",
+      "createdAt": 1779157114954,
+      "status": "success",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai-2",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_9726b3f842.png"
+      ],
+      "refs": [],
+      "runMs": 52785,
+      "error": ""
+    },
+    {
+      "id": "log_34b5fef7351ce_1779157102221",
+      "createdAt": 1779157102221,
+      "status": "success",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai-2",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_b00f6ef159.png"
+      ],
+      "refs": [],
+      "runMs": 40052,
+      "error": ""
+    },
+    {
+      "id": "log_9b7739ba1538e_1779157100338",
+      "createdAt": 1779157100338,
+      "status": "success",
+      "platform": "星途 AI",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "ai-2",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "蓝色科技KV海报，峰会主视觉，主题“聚能生态 电链未来”，“2026虚拟电厂落地实践研讨会（第三期）”",
+      "outputs": [
+        "/assets/output/online_56793cf1c2.png"
+      ],
+      "refs": [],
+      "runMs": 38169,
+      "error": ""
+    }
+  ]
+}
