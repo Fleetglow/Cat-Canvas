@@ -962,8 +962,11 @@
                         <span class="settings-label">显示图片生成时间</span>
                         <input id="showGenTimeSwitch" type="checkbox" class="settings-switch" onchange="onShowGenTimeChange(this.checked)">
                     </label>
-                    <label class="settings-row">
-                        <span class="settings-label">交换 Ctrl/Shift 功能</span>
+                    <label class="settings-row" style="align-items:flex-start;">
+                        <div style="display:flex;flex-direction:column;gap:2px;">
+                            <span class="settings-label">交换 Ctrl/Shift 功能</span>
+                            <span style="font-size:11px;color:var(--faint);line-height:1.35;">默认 Ctrl 多选，Shift 切割；开启后互换</span>
+                        </div>
                         <input id="swapCtrlShiftSwitch" type="checkbox" class="settings-switch" onchange="onSwapCtrlShiftChange(this.checked)">
                     </label>
                 </div>
