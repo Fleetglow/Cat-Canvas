@@ -8762,12 +8762,14 @@
             else uploadImages(files);
         });
         // 阻止 Ctrl/Cmd + 滚轮触发浏览器页面缩放
-        document.addEventListener('wheel', e => {
+        // 必须在 window 捕获阶段拦截，否则浏览器会优先处理缩放（尤其在文本编辑区域）
+        window.addEventListener('wheel', e => {
             if(e.ctrlKey || e.metaKey){
                 e.preventDefault();
+                e.returnValue = false;
             }
-        }, { passive: false });
-        // 全局拦截 Ctrl/Cmd + +/-/0，阻止浏览器页面缩放（包括文本编辑时）
+        }, { capture: true, passive: false });
+        // 保留 document 层作为双重保险
         // 同时覆盖 window 捕获阶段和 document 层，兼容性更强
         function preventBrowserZoom(e){
             if((e.ctrlKey || e.metaKey) && !e.altKey){
