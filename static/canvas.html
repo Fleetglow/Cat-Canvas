@@ -4640,10 +4640,6 @@
                         e.preventDefault();
                         e.stopPropagation();
                         applyWheelZoom(e);
-                    } else if(!canScroll(body, e.deltaY)){
-                        e.preventDefault();
-                        e.stopPropagation();
-                        applyWheelZoom(e);
                     } else {
                         e.stopPropagation();
                     }
@@ -8766,31 +8762,11 @@
             if(blank) fillImageNode(blank.id, files);
             else uploadImages(files);
         });
-        // 判断元素在指定方向上是否还能继续滚动
-        function canScroll(el, deltaY){
-            if(!el) return false;
-            const maxScroll = el.scrollHeight - el.clientHeight;
-            if(maxScroll <= 0) return false;
-            if(deltaY > 0) return el.scrollTop < maxScroll - 0.5;
-            if(deltaY < 0) return el.scrollTop > 0.5;
-            return false;
-        }
-        // 捕获阶段：文本编辑区域和 output 节点上滚轮智能处理
-        // 有滚动条且还能继续滚动 → 元素自身滚动
-        // 无滚动条或已滚动到边界 → 触发画布缩放
+        // 捕获阶段：文本编辑区域上 Ctrl+滚轮 触发画布缩放，不触发浏览器缩放
         window.addEventListener('wheel', e => {
             const tag = e.target.tagName;
             const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
-            const outputBody = e.target.closest ? e.target.closest('.output-node .node-body') : null;
-            const scrollEl = isEditable ? e.target : outputBody;
-            if(!scrollEl) return;
-            if(e.ctrlKey || e.metaKey){
-                e.preventDefault();
-                e.returnValue = false;
-                applyWheelZoom(e);
-                return;
-            }
-            if(!canScroll(scrollEl, e.deltaY)){
+            if(isEditable && (e.ctrlKey || e.metaKey)){
                 e.preventDefault();
                 e.returnValue = false;
                 applyWheelZoom(e);
