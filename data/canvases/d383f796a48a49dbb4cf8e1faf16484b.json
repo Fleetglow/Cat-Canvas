@@ -3,7 +3,7 @@
   "title": "测试",
   "icon": "image",
   "created_at": 1779071682628,
-  "updated_at": 1779241802128,
+  "updated_at": 1779242443375,
   "nodes": [
     {
       "id": "prompt_7b3bd7c7fb364_1779071939341",
@@ -27,9 +27,7 @@
       "customRatioHeight": "",
       "customWidth": "",
       "customHeight": "",
-      "inputs": [
-        "prompt_7b3bd7c7fb364_1779071939341"
-      ],
+      "inputs": [],
       "running": false,
       "generatedOutputs": [
         "https://chatgpt2api.manxiaobai.online/images/2026/05/19/1779181444_d42630c097373144f5b2f217af3e3876.png"
@@ -554,9 +552,7 @@
       "customRatioHeight": "3",
       "customWidth": "",
       "customHeight": "",
-      "inputs": [
-        "prompt_7b3bd7c7fb364_1779071939341"
-      ],
+      "inputs": [],
       "running": false,
       "generatedOutputs": [
         "https://chatgpt2api.manxiaobai.online/images/2026/05/20/1779239000_e6dfaf1f6ae827fc911268a7473ae53a.png"
@@ -760,22 +756,11 @@
       "runError": ""
     }
   ],
-  "connections": [
-    {
-      "id": "c_4369cd3b5d67d_1779071942512",
-      "from": "prompt_7b3bd7c7fb364_1779071939341",
-      "to": "gen_85211a346a3bb_1779071940050"
-    },
-    {
-      "id": "c_925f1ca1d8367_1779180919875",
-      "from": "prompt_7b3bd7c7fb364_1779071939341",
-      "to": "generator_873a00c813b83_1779180917899"
-    }
-  ],
+  "connections": [],
   "viewport": {
-    "x": 321.41047991768164,
-    "y": 309.06587740218436,
-    "scale": 0.41891993956790147
+    "x": 554.7050499482248,
+    "y": 480.23454341670686,
+    "scale": 0.24230133912234644
   },
   "logs": [
     {

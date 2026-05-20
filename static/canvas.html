@@ -8590,6 +8590,44 @@
         }
         window.addEventListener('keydown', e => {
             if(!canvas) return;
+            // Ctrl/Cmd + 加号/减号/0 控制画布缩放（屏蔽浏览器缩放）
+            if((e.ctrlKey || e.metaKey) && !e.altKey){
+                const tag = document.activeElement?.tagName;
+                if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+                if(e.key === '=' || e.key === '+'){
+                    e.preventDefault();
+                    const rect = board.getBoundingClientRect();
+                    const cx = rect.width / 2, cy = rect.height / 2;
+                    const before = screenToWorld(rect.left + cx, rect.top + cy);
+                    viewport.scale = Math.min(viewport.scale * 1.08, 10);
+                    viewport.x = cx - before.x * viewport.scale;
+                    viewport.y = cy - before.y * viewport.scale;
+                    applyViewport(); renderLinks(); renderSelectionHub();
+                    return;
+                }
+                if(e.key === '-'){
+                    e.preventDefault();
+                    const rect = board.getBoundingClientRect();
+                    const cx = rect.width / 2, cy = rect.height / 2;
+                    const before = screenToWorld(rect.left + cx, rect.top + cy);
+                    viewport.scale = Math.max(viewport.scale * 0.92, 0.05);
+                    viewport.x = cx - before.x * viewport.scale;
+                    viewport.y = cy - before.y * viewport.scale;
+                    applyViewport(); renderLinks(); renderSelectionHub();
+                    return;
+                }
+                if(e.key === '0'){
+                    e.preventDefault();
+                    const rect = board.getBoundingClientRect();
+                    const cx = rect.width / 2, cy = rect.height / 2;
+                    const before = screenToWorld(rect.left + cx, rect.top + cy);
+                    viewport.scale = 1;
+                    viewport.x = cx - before.x * viewport.scale;
+                    viewport.y = cy - before.y * viewport.scale;
+                    applyViewport(); renderLinks(); renderSelectionHub();
+                    return;
+                }
+            }
             if(e.key === 'f' || e.key === 'F'){
                 const tag = document.activeElement?.tagName;
                 if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
