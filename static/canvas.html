@@ -477,6 +477,13 @@
         .log-head { height:58px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
         .log-title { font-size:14px; font-weight:900; color:var(--text); }
         .log-list { padding:12px; overflow:auto; display:flex; flex-direction:column; gap:10px; }
+        .log-list.grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+        .log-list.grid .log-item { flex-direction:column; gap:8px; }
+        .log-list.grid .log-thumbs { order:-1; justify-content:flex-start; max-width:none; }
+        .log-list.grid .log-thumbs img, .log-list.grid .log-thumbs video { width:100%; height:auto; aspect-ratio:1; }
+        .log-list.grid .log-subline { display:none; }
+        .log-list.grid .log-error { display:none; }
+        .log-list.grid .log-prompt { max-width:none; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
         .log-empty { padding:28px; text-align:center; color:var(--muted); font-size:12px; font-weight:700; }
         .log-item { border:1px solid var(--line); border-radius:14px; background:var(--soft); padding:9px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; }
         .log-item.failed { border-color:#fecaca; background:#fff7f7; }
@@ -935,7 +942,11 @@
             <div class="log-panel" onclick="event.stopPropagation()">
                 <div class="log-head">
                     <div class="log-title" data-i18n="canvas.generationLogs">生成日志</div>
-                    <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <button class="preview-icon-btn" type="button" id="logLayoutListBtn" onclick="setLogLayout('list')" title="列表"><i data-lucide="layout-list" class="w-4 h-4"></i></button>
+                        <button class="preview-icon-btn" type="button" id="logLayoutGridBtn" onclick="setLogLayout('grid')" title="网格"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
+                        <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
                 </div>
                 <div id="logList" class="log-list"></div>
             </div>
@@ -1182,6 +1193,10 @@
         const outputRerunBtn = document.getElementById('outputRerunBtn');
         const logModal = document.getElementById('logModal');
         const logList = document.getElementById('logList');
+        const logLayoutListBtn = document.getElementById('logLayoutListBtn');
+        const logLayoutGridBtn = document.getElementById('logLayoutGridBtn');
+        let logLayout = localStorage.getItem('canvas_logLayout') || 'list';
+        setLogLayout(logLayout);
         const errorModal = document.getElementById('errorModal');
         const errorTitle = document.getElementById('errorTitle');
         const errorMessage = document.getElementById('errorMessage');
@@ -7445,6 +7460,13 @@
         }
         function closeCanvasLog(){
             logModal.classList.remove('open');
+        }
+        function setLogLayout(mode){
+            logLayout = mode;
+            localStorage.setItem('canvas_logLayout', mode);
+            if(logList) logList.classList.toggle('grid', mode === 'grid');
+            if(logLayoutListBtn) logLayoutListBtn.style.opacity = mode === 'list' ? '1' : '.35';
+            if(logLayoutGridBtn) logLayoutGridBtn.style.opacity = mode === 'grid' ? '1' : '.35';
         }
         function toggleHelpModal(){
             helpModal.classList.toggle('open');
