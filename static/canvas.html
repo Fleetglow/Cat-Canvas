@@ -423,7 +423,7 @@
         .node-port-menu .menu-btn { height:54px; flex-direction:column; justify-content:center; gap:4px; padding:6px; border-radius:12px; font-size:10px; line-height:1.15; text-align:center; }
         .node-port-menu .menu-btn i { width:17px; height:17px; }
         .selection-box { position:absolute; z-index:22; border:1px solid #111827; background:rgba(17,24,39,.06); pointer-events:none; display:none; }
-        .minimap { position:absolute; right:22px; bottom:22px; z-index:24; width:188px; height:126px; padding:8px; border-radius:16px; background:var(--panel); border:1px solid var(--line); box-shadow:0 16px 42px var(--shadow); backdrop-filter:blur(16px); overflow:hidden; pointer-events:auto; cursor:crosshair; }
+        .minimap { position:absolute; right:22px; bottom:72px; z-index:24; width:188px; height:126px; padding:8px; border-radius:16px; background:var(--panel); border:1px solid var(--line); box-shadow:0 16px 42px var(--shadow); backdrop-filter:blur(16px); overflow:hidden; pointer-events:auto; cursor:crosshair; }
         .minimap-content { position:relative; width:100%; height:100%; border-radius:10px; background:rgba(148,163,184,.08); overflow:hidden; }
         .minimap-node { position:absolute; border-radius:3px; background:rgba(15,23,42,.64); border:1px solid rgba(255,255,255,.32); min-width:2px; min-height:2px; }
         .minimap-node.selected { background:#111827; box-shadow:0 0 0 1px rgba(255,255,255,.7); }
@@ -432,6 +432,12 @@
         body.theme-dark .minimap-node { background:rgba(248,250,252,.7); border-color:rgba(15,23,42,.35); }
         body.theme-dark .minimap-node.selected { background:#fff; box-shadow:0 0 0 1px rgba(15,23,42,.8); }
         body.theme-dark .minimap-viewport { border-color:#f8fafc; background:rgba(248,250,252,.1); box-shadow:0 0 0 1px rgba(15,23,42,.8); }
+        .zoom-control { position:absolute; right:22px; bottom:22px; z-index:25; display:flex; align-items:center; justify-content:flex-start; gap:6px; width:98px; padding:6px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--line); box-shadow:0 8px 24px var(--shadow); backdrop-filter:blur(16px); pointer-events:auto; }
+        .zoom-control button { display:flex; align-items:center; gap:6px; height:26px; padding:0 8px; border-radius:999px; border:none; background:transparent; color:var(--muted); font-size:11px; font-weight:800; cursor:pointer; transition:background .15s, color .15s; }
+        .zoom-control button:hover { background:var(--soft); color:var(--text); }
+        .zoom-control button:active { transform:scale(.96); }
+        .zoom-toggle-map { padding:0 6px !important; }
+        .zoom-percent { min-width:40px; justify-content:center; }
         .selection-hub { position:absolute; z-index:28; display:none; align-items:center; gap:6px; padding:6px; border-radius:999px; background:rgba(255,255,255,.96); border:1px solid #e8edf3; box-shadow:0 12px 30px rgba(15,23,42,.12); }
         .selection-hub.open { display:flex; }
         .hub-port { height:30px; border-radius:999px; padding:0 10px; display:flex; align-items:center; gap:7px; background:#f8fafc; color:#475569; font-size:11px; font-weight:700; cursor:crosshair; }
@@ -490,6 +496,15 @@
         .log-error { margin:0 0 7px; padding:7px 8px; border-radius:10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#dc2626; font-size:11px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .log-thumbs { display:flex; gap:6px; align-items:flex-start; justify-content:flex-end; max-width:126px; flex-wrap:wrap; }
         .log-thumbs img, .log-thumbs video { width:38px; height:38px; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0f172a; cursor:pointer; }
+        .help-modal { position:absolute; inset:0; z-index:76; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
+        .help-modal.open { display:flex; }
+        .help-panel { width:min(480px, 94vw); max-height:86vh; display:flex; flex-direction:column; border-radius:22px; background:var(--card-solid); border:1px solid var(--line); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
+        .help-head { height:58px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+        .help-title { font-size:14px; font-weight:900; color:var(--text); }
+        .help-body { padding:20px; overflow:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px 28px; }
+        .help-row { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text); }
+        .help-row kbd { display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:24px; padding:0 8px; border-radius:6px; background:var(--soft); border:1px solid var(--line); font-size:11px; font-weight:800; font-family:inherit; color:var(--text); white-space:nowrap; }
+        .help-row span { color:var(--muted); font-weight:700; }
         .model-modal { position:absolute; inset:0; z-index:70; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
         .model-modal.open { display:flex; }
         .error-modal { position:absolute; inset:0; z-index:90; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
@@ -808,6 +823,7 @@
                 </div>
                 <div class="toolbar-fixed">
                     <button class="tool-btn toolbar-log" onclick="openCanvasLog()" title="日志" aria-label="日志" data-i18n-title="canvas.logs"><i data-lucide="list-todo" class="w-4 h-4"></i><span data-i18n="canvas.logs">日志</span></button>
+                    <button class="tool-btn" onclick="toggleHelpModal()" title="帮助" aria-label="帮助"><i data-lucide="help-circle" class="w-4 h-4"></i></button>
                 </div>
             </div>
         </div>
@@ -869,6 +885,10 @@
                 <div id="linkControls" class="link-controls"></div>
                 <div id="nodes"></div>
             </div>
+            <div id="zoomControl" class="zoom-control">
+                <button class="zoom-toggle-map" onclick="toggleMinimap()" title="切换小地图"><i data-lucide="map" class="w-3.5 h-3.5"></i></button>
+                <button class="zoom-percent" onclick="resetZoomTo100()" title="点击重置为100%"><span id="zoomPercentLabel">100%</span></button>
+            </div>
             <div id="minimap" class="minimap" title="导航地图">
                 <div id="minimapContent" class="minimap-content">
                     <div id="minimapViewport" class="minimap-viewport"></div>
@@ -914,6 +934,23 @@
                     <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div id="logList" class="log-list"></div>
+            </div>
+        </div>
+        <div id="helpModal" class="help-modal" onclick="closeHelpModal()">
+            <div class="help-panel" onclick="event.stopPropagation()">
+                <div class="help-head">
+                    <div class="help-title">快捷键与操作</div>
+                    <button class="preview-icon-btn" type="button" onclick="closeHelpModal()" title="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div class="help-body">
+                    <div class="help-row"><kbd>Ctrl</kbd><kbd>+</kbd><span>放大</span></div>
+                    <div class="help-row"><kbd>Ctrl</kbd><kbd>点击</kbd><span>多选节点</span></div>
+                    <div class="help-row"><kbd>Ctrl</kbd><kbd>-</kbd><span>缩小</span></div>
+                    <div class="help-row"><kbd>Shift</kbd><span>按住切换切割模式</span></div>
+                    <div class="help-row"><kbd>Ctrl</kbd><kbd>0</kbd><span>缩放至100%</span></div>
+                    <div class="help-row"><kbd>F</kbd><span>聚焦</span></div>
+                    <div class="help-row"><kbd>双击/右键空白</kbd><span>弹出添加节点菜单</span></div>
+                </div>
             </div>
         </div>
         <div id="imageEditModal" class="image-edit-modal" onclick="closeImageEditor()">
@@ -1057,6 +1094,7 @@
         const minimap = document.getElementById('minimap');
         const minimapContent = document.getElementById('minimapContent');
         let minimapViewport = document.getElementById('minimapViewport');
+        const zoomPercentLabel = document.getElementById('zoomPercentLabel');
         const linksEl = document.getElementById('links');
         const linkControlsEl = document.getElementById('linkControls');
         const dropOverlay = document.getElementById('dropOverlay');
@@ -1693,6 +1731,7 @@
         function applyViewport(){
             world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
             scheduleMinimapRender();
+            if(zoomPercentLabel) zoomPercentLabel.textContent = Math.round((viewport.scale || 1) * 100) + '%';
         }
         function estimatedNodeRect(n){
             const el = nodesEl?.querySelector?.(`.node[data-id="${CSS.escape(n.id)}"]`);
@@ -7347,6 +7386,27 @@
         }
         function closeCanvasLog(){
             logModal.classList.remove('open');
+        }
+        function toggleHelpModal(){
+            helpModal.classList.toggle('open');
+        }
+        function closeHelpModal(){
+            helpModal.classList.remove('open');
+        }
+        function toggleMinimap(){
+            const el = document.getElementById('minimap');
+            if(!el) return;
+            el.style.display = el.style.display === 'none' ? '' : 'none';
+        }
+        function resetZoomTo100(){
+            if(!canvas) return;
+            const rect = board.getBoundingClientRect();
+            const cx = rect.width / 2, cy = rect.height / 2;
+            const before = screenToWorld(rect.left + cx, rect.top + cy);
+            viewport.scale = 1;
+            viewport.x = cx - before.x * viewport.scale;
+            viewport.y = cy - before.y * viewport.scale;
+            applyViewport(); renderLinks(); renderSelectionHub();
         }
         function makePending(id, run, task={}){
             return {id, startedAt:nowMs(), run, ...task};
