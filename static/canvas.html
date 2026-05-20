@@ -973,9 +973,13 @@
                         </div>
                         <input id="swapCtrlShiftSwitch" type="checkbox" class="settings-switch" onchange="onSwapCtrlShiftChange(this.checked)">
                     </label>
-                    <div class="settings-info" style="padding:8px 14px;font-size:11px;color:var(--faint);line-height:1.5;">
-                        X 键删除选中节点（Blender 风格）；文本输入时自动忽略
-                    </div>
+                    <label class="settings-row" style="align-items:flex-start;">
+                        <div style="display:flex;flex-direction:column;gap:2px;">
+                            <span class="settings-label">X 键删除节点</span>
+                            <span style="font-size:11px;color:var(--faint);line-height:1.35;">Blender 风格，文本输入时自动忽略</span>
+                        </div>
+                        <input id="enableXDeleteSwitch" type="checkbox" class="settings-switch" onchange="onEnableXDeleteChange(this.checked)">
+                    </label>
                 </div>
             </div>
         </div>
@@ -1130,6 +1134,9 @@
         function isKnifeKey(e){ return swapCtrlShift ? (e.ctrlKey || e.metaKey) : e.shiftKey; }
         const swapCtrlShiftSwitch = document.getElementById('swapCtrlShiftSwitch');
         if(swapCtrlShiftSwitch) swapCtrlShiftSwitch.checked = swapCtrlShift;
+        let enableXDelete = localStorage.getItem('canvas_enableXDelete') === '1';
+        const enableXDeleteSwitch = document.getElementById('enableXDeleteSwitch');
+        if(enableXDeleteSwitch) enableXDeleteSwitch.checked = enableXDelete;
         const linksEl = document.getElementById('links');
         const linkControlsEl = document.getElementById('linkControls');
         const dropOverlay = document.getElementById('dropOverlay');
@@ -7457,6 +7464,10 @@
             swapCtrlShift = checked;
             localStorage.setItem('canvas_swapCtrlShift', checked ? '1' : '0');
         }
+        function onEnableXDeleteChange(checked){
+            enableXDelete = checked;
+            localStorage.setItem('canvas_enableXDelete', checked ? '1' : '0');
+        }
         function toggleMinimap(){
             const el = document.getElementById('minimap');
             if(!el) return;
@@ -8982,6 +8993,7 @@
                 deleteSelectedNodes();
             }
             if(e.key === 'x' || e.key === 'X') {
+                if(!enableXDelete) return;
                 const tag = document.activeElement?.tagName;
                 if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
                 if(e.ctrlKey || e.metaKey) return;
