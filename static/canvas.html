@@ -4645,8 +4645,13 @@
                 ).join('');
                 body.innerHTML = renderOutputGrid(node, pendingHtml);
                 body.onwheel = e => {
-                    e.stopPropagation();
-                    if(e.ctrlKey || e.metaKey) e.preventDefault();
+                    if(e.ctrlKey || e.metaKey){
+                        e.preventDefault();
+                        e.stopPropagation();
+                        applyWheelZoom(e);
+                    } else {
+                        e.stopPropagation();
+                    }
                 };
                 body.querySelectorAll('.output-img-wrap').forEach(wrap => bindOutputWrap(wrap, node));
             }
