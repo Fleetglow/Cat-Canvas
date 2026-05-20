@@ -8926,7 +8926,7 @@
                 focusOnSelectedOrAll();
                 return;
             }
-            if(e.key === 'Shift' && !isEditableTarget(document.activeElement)) setKnifeMode(true);
+            if(isKnifeKey(e) && !isEditableTarget(document.activeElement)) setKnifeMode(true);
             if(e.key === 'Escape' && document.getElementById('imageEditModal').classList.contains('open')) { closeImageEditor(); return; }
             if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
                 if(navigateOutputLightbox(e.key === 'ArrowRight' ? 1 : -1)){
@@ -8973,7 +8973,7 @@
             }
         });
         window.addEventListener('keyup', e => {
-            if(e.key === 'Shift') setKnifeMode(false);
+            if(!isKnifeKey(e)) setKnifeMode(false);
         });
         window.addEventListener('blur', () => setKnifeMode(false));
         window.addEventListener('blur', () => {
