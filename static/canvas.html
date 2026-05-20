@@ -514,8 +514,10 @@
         .settings-switch:checked::after { transform:translateX(20px); }
         html.theme-dark .settings-switch:checked,
         body.theme-dark .settings-switch:checked { background:#3b82f6 !important; }
-        .theme-dark .settings-switch { background:#9ca3af; }
-        .theme-dark .settings-switch::after { background:#e5e7eb; }
+        html.theme-dark .settings-switch,
+        body.theme-dark .settings-switch { background:#9ca3af !important; }
+        html.theme-dark .settings-switch::after,
+        body.theme-dark .settings-switch::after { background:#f9fafb !important; }
         .model-modal { position:absolute; inset:0; z-index:70; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
         .model-modal.open { display:flex; }
         .error-modal { position:absolute; inset:0; z-index:90; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
