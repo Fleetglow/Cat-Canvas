@@ -8548,8 +8548,56 @@
             }
         }, { passive: false });
 
+        function focusOnSelectedOrAll(){
+            if(!canvas) return;
+            const targetIds = [...selected];
+            let targetNodes;
+            const hasSelection = targetIds.length > 0;
+            if(hasSelection){
+                targetNodes = nodes.filter(n => targetIds.includes(n.id));
+            } else {
+                targetNodes = nodes;
+            }
+            if(!targetNodes.length) return;
+            const rect = board.getBoundingClientRect();
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            targetNodes.forEach(n => {
+                const r = estimatedNodeRect(n);
+                minX = Math.min(minX, r.x);
+                minY = Math.min(minY, r.y);
+                maxX = Math.max(maxX, r.x + r.w);
+                maxY = Math.max(maxY, r.y + r.h);
+            });
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+            if(hasSelection){
+                // 选中节点：缩放至100%并居中
+                viewport.scale = 1;
+            } else {
+                // 无选中：适配所有节点
+                const bw = Math.max(1, maxX - minX);
+                const bh = Math.max(1, maxY - minY);
+                const pad = 80;
+                const scaleX = (rect.width - pad * 2) / bw;
+                const scaleY = (rect.height - pad * 2) / bh;
+                viewport.scale = Math.min(scaleX, scaleY, 3);
+            }
+            viewport.x = rect.width / 2 - cx * viewport.scale;
+            viewport.y = rect.height / 2 - cy * viewport.scale;
+            applyViewport();
+            renderLinks();
+            renderSelectionHub();
+        }
         window.addEventListener('keydown', e => {
             if(!canvas) return;
+            if(e.key === 'f' || e.key === 'F'){
+                const tag = document.activeElement?.tagName;
+                if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+                if(e.ctrlKey || e.metaKey) return;
+                e.preventDefault();
+                focusOnSelectedOrAll();
+                return;
+            }
             if(e.key === 'Shift' && !isEditableTarget(document.activeElement)) setKnifeMode(true);
             if(e.key === 'Escape' && document.getElementById('imageEditModal').classList.contains('open')) { closeImageEditor(); return; }
             if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){

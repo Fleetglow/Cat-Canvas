@@ -4,9 +4,13 @@
     "name": "ModelScope",
     "base_url": "https://api-inference.modelscope.cn/v1",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
+      "MusePublic/Qwen-Image-Edit",
+      "Qwen/Qwen-Image-Edit",
       "Tongyi-MAI/Z-Image-Turbo",
       "Qwen/Qwen-Image-2512",
       "Qwen/Qwen-Image-Edit-2511",
@@ -51,6 +55,8 @@
     "name": "SUPLUGIN",
     "base_url": "https://api.suplugin.com",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -67,6 +73,8 @@
     "name": "柏拉图AI-0.04",
     "base_url": "https://api.bltcy.ai",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -86,6 +94,8 @@
     "name": "APIQIK 特惠站-0.016",
     "base_url": "https://value.apiqik.online",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -103,6 +113,8 @@
     "name": "APIQIK 特惠站-vip-0.05",
     "base_url": "https://value.apiqik.online",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -123,6 +135,8 @@
     "name": "Now Coding-0.03",
     "base_url": "https://nowcoding.ai",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -140,6 +154,8 @@
     "name": "Apimart-0.042",
     "base_url": "https://api.apimart.ai",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -156,6 +172,8 @@
     "name": "iKun API-0.05",
     "base_url": "https://api.monkey-tools.cn",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -171,6 +189,8 @@
     "name": "NEXUS AI-0.055",
     "base_url": "https://ainb.plus",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -186,6 +206,8 @@
     "name": "eeeapi-0.02",
     "base_url": "https://eeeapi.com",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -201,6 +223,8 @@
     "name": "Traxnode-0.05",
     "base_url": "https://www.traxnode.com",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -216,6 +240,8 @@
     "name": "星途AI-0.02",
     "base_url": "https://api.xstx.info",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -234,6 +260,8 @@
     "name": "API-CORP-0.06",
     "base_url": "https://cc.api-corp.top",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [
@@ -249,6 +277,8 @@
     "name": "漫小白",
     "base_url": "https://api.manxiaobai.online",
     "protocol": "openai",
+    "image_generation_endpoint": "",
+    "image_edit_endpoint": "",
     "enabled": true,
     "primary": false,
     "image_models": [

@@ -3,12 +3,12 @@
   "title": "测试",
   "icon": "image",
   "created_at": 1779071682628,
-  "updated_at": 1779184496140,
+  "updated_at": 1779241802128,
   "nodes": [
     {
       "id": "prompt_7b3bd7c7fb364_1779071939341",
       "type": "prompt",
-      "x": 130.6055612654111,
+      "x": 128.6055612654111,
       "y": -220.0527741806845,
       "text": "为三峡能源设计一个校园招聘的宣传长图，渐变插画风格"
     },
@@ -544,14 +544,14 @@
       "type": "generator",
       "x": 536.2097024066206,
       "y": 130.0020946478362,
-      "apiProvider": "ikun-api",
-      "model": "gpt-image-2",
-      "ratio": "story",
+      "apiProvider": "api-1cotrq",
+      "model": "codex-gpt-image-2",
+      "ratio": "custom",
       "resolution": "1k",
-      "customRatio": "",
+      "customRatio": "1:3",
       "customSize": "",
-      "customRatioWidth": "",
-      "customRatioHeight": "",
+      "customRatioWidth": "1",
+      "customRatioHeight": "3",
       "customWidth": "",
       "customHeight": "",
       "inputs": [
@@ -559,7 +559,7 @@
       ],
       "running": false,
       "generatedOutputs": [
-        "/assets/output/online_15872773e4.png"
+        "https://chatgpt2api.manxiaobai.online/images/2026/05/20/1779239000_e6dfaf1f6ae827fc911268a7473ae53a.png"
       ],
       "runStatus": "done",
       "runError": ""
@@ -567,8 +567,8 @@
     {
       "id": "out_d6ede728222a4_1779180924111",
       "type": "output",
-      "x": 996.2097024066206,
-      "y": 130.0020946478362,
+      "x": 1454.6569047321138,
+      "y": 78.1768794569366,
       "images": [
         {
           "url": "/assets/output/online_15872773e4.png",
@@ -607,9 +607,87 @@
               "seed": ""
             }
           }
+        },
+        {
+          "url": "/assets/output/online_1dc7a39070.png",
+          "viewed": true,
+          "runMs": 44526,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "generator_873a00c813b83_1779180917899",
+              "type": "generator",
+              "x": 536.2097024066206,
+              "y": 130.0020946478362,
+              "apiProvider": "api-1cotrq",
+              "model": "gpt-image-2",
+              "ratio": "story",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": "",
+              "generatedOutputs": [
+                "/assets/output/online_15872773e4.png"
+              ]
+            },
+            "prompt": "为三峡能源设计一个校园招聘的宣传长图，渐变插画风格",
+            "refs": [],
+            "request": {
+              "task_id": "",
+              "request_id": "",
+              "provider_id": "api-1cotrq",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        },
+        {
+          "url": "https://chatgpt2api.manxiaobai.online/images/2026/05/20/1779239000_e6dfaf1f6ae827fc911268a7473ae53a.png",
+          "viewed": true,
+          "runMs": 41148,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "generator_873a00c813b83_1779180917899",
+              "type": "generator",
+              "x": 536.2097024066206,
+              "y": 130.0020946478362,
+              "apiProvider": "api-1cotrq",
+              "model": "codex-gpt-image-2",
+              "ratio": "custom",
+              "resolution": "1k",
+              "customRatio": "1:3",
+              "customSize": "",
+              "customRatioWidth": "1",
+              "customRatioHeight": "3",
+              "customWidth": "",
+              "customHeight": "",
+              "generatedOutputs": [
+                "/assets/output/online_1dc7a39070.png"
+              ]
+            },
+            "prompt": "为三峡能源设计一个校园招聘的宣传长图，渐变插画风格",
+            "refs": [],
+            "request": {
+              "task_id": "",
+              "request_id": "",
+              "provider_id": "api-1cotrq",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
         }
       ],
-      "_pending": []
+      "_pending": [],
+      "w": 712,
+      "h": 431
     },
     {
       "id": "out_4519e3608503e_1779181064518",
@@ -657,6 +735,29 @@
         }
       ],
       "_pending": []
+    },
+    {
+      "id": "generator_4757a12756357_1779241652129",
+      "type": "generator",
+      "x": 540.5519760303308,
+      "y": 652.5223540343059,
+      "apiProvider": "api-1cotrq",
+      "model": "codex-gpt-image-2",
+      "ratio": "custom",
+      "resolution": "1k",
+      "customRatio": "1:3",
+      "customSize": "",
+      "customRatioWidth": "1",
+      "customRatioHeight": "3",
+      "customWidth": "",
+      "customHeight": "",
+      "inputs": [],
+      "running": false,
+      "generatedOutputs": [
+        "https://chatgpt2api.manxiaobai.online/images/2026/05/20/1779239000_e6dfaf1f6ae827fc911268a7473ae53a.png"
+      ],
+      "runStatus": "done",
+      "runError": ""
     }
   ],
   "connections": [
@@ -669,24 +770,76 @@
       "id": "c_925f1ca1d8367_1779180919875",
       "from": "prompt_7b3bd7c7fb364_1779071939341",
       "to": "generator_873a00c813b83_1779180917899"
-    },
-    {
-      "id": "c_6f529257c0976_1779180924111",
-      "from": "generator_873a00c813b83_1779180917899",
-      "to": "out_d6ede728222a4_1779180924111"
-    },
-    {
-      "id": "c_ea3c7e37f3d95_1779181064518",
-      "from": "gen_85211a346a3bb_1779071940050",
-      "to": "out_4519e3608503e_1779181064518"
     }
   ],
   "viewport": {
-    "x": 803.7098599639023,
-    "y": 599.0444002153544,
-    "scale": 0.12831140610876493
+    "x": 321.41047991768164,
+    "y": 309.06587740218436,
+    "scale": 0.41891993956790147
   },
   "logs": [
+    {
+      "id": "log_c28ae2bd8d8b2_1779239002686",
+      "createdAt": 1779239002686,
+      "status": "success",
+      "platform": "漫小白",
+      "nodeType": "generator",
+      "model": "codex-gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "api-1cotrq",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "为三峡能源设计一个校园招聘的宣传长图，渐变插画风格",
+      "outputs": [
+        "https://chatgpt2api.manxiaobai.online/images/2026/05/20/1779239000_e6dfaf1f6ae827fc911268a7473ae53a.png"
+      ],
+      "refs": [],
+      "runMs": 41148,
+      "error": ""
+    },
+    {
+      "id": "log_d9243178fa23b_1779238933237",
+      "createdAt": 1779238933237,
+      "status": "failed",
+      "platform": "漫小白",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {},
+      "prompt": "为三峡能源设计一个校园招聘的宣传长图，渐变插画风格",
+      "outputs": [],
+      "refs": [],
+      "runMs": 26322,
+      "error": "请求过于频繁，已被上游限流，请稍后再试。"
+    },
+    {
+      "id": "log_2ee4cc1bf03d7_1779238828304",
+      "createdAt": 1779238828304,
+      "status": "success",
+      "platform": "漫小白",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "",
+        "provider_id": "api-1cotrq",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "为三峡能源设计一个校园招聘的宣传长图，渐变插画风格",
+      "outputs": [
+        "/assets/output/online_1dc7a39070.png"
+      ],
+      "refs": [],
+      "runMs": 44526,
+      "error": ""
+    },
     {
       "id": "log_7c24079ec2383_1779181849341",
       "createdAt": 1779181849341,
