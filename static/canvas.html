@@ -4671,7 +4671,7 @@
                 ).join('');
                 body.innerHTML = renderOutputGrid(node, pendingHtml);
                 body.onwheel = e => {
-                    if(e.ctrlKey || e.metaKey || e.altKey){
+                    if(isMultiSelectKey(e) || e.altKey){
                         e.preventDefault();
                         e.stopPropagation();
                         applyWheelZoom(e);
@@ -8816,7 +8816,7 @@
         window.addEventListener('wheel', e => {
             const tag = e.target.tagName;
             const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
-            if(isEditable && (e.ctrlKey || e.metaKey || e.altKey)){
+            if(isEditable && (isMultiSelectKey(e) || e.altKey)){
                 e.preventDefault();
                 e.returnValue = false;
                 applyWheelZoom(e);
