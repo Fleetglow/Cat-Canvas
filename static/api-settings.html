@@ -761,6 +761,7 @@
         // —— 模型选择器浮层 ——
         // 每个模型只归一类（根据用户已配置 或 关键字猜测）；勾选 = 纳入该分类
         let pickerState = { category: {}, selected: {} };
+        let pickerVisibleIds = [];
         function openModelPicker(){
             const item = provider();
             if(!item || !lastFetchedAll.length){ alert('没有拉取到模型'); return; }
@@ -804,16 +805,17 @@
                 if(currentTab === 'all') return true;
                 return pickerState.category[id] === currentTab;
             });
+            pickerVisibleIds = list;
             document.getElementById('pickerCount').textContent = `共 ${totals.all} 个模型 · 当前显示 ${list.length} 个`;
             document.querySelectorAll('.picker-cat-tab').forEach(tab => {
                 const cat = tab.dataset.cat;
                 tab.querySelector('.cat-count').textContent = `${selecteds[cat]}/${totals[cat]}`;
             });
             // 列表
-            const html = list.map(id => {
+            const html = list.map((id, index) => {
                 const checked = pickerState.selected[id];
                 return `
-                    <div class="picker-row ${checked?'has-sel':''}" onclick="togglePickerRow('${escapeAttr(id)}')">
+                    <div class="picker-row ${checked?'has-sel':''}" onclick="togglePickerRowByIndex(${index})">
                         <div class="picker-checkbox ${checked?'checked':''}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
@@ -835,6 +837,11 @@
         function togglePickerRow(id){
             pickerState.selected[id] = !pickerState.selected[id];
             renderModelPicker();
+        }
+        function togglePickerRowByIndex(index){
+            const id = pickerVisibleIds[index];
+            if(typeof id !== 'string') return;
+            togglePickerRow(id);
         }
         function selectPickerCat(cat){
             document.querySelectorAll('.picker-cat-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));

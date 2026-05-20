@@ -269,6 +269,11 @@
         .gen-settings-row.api-size-row .gen-count-row { margin-left:auto; }
         .setting-title { color:var(--faint); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
         .setting-input { width:100%; height:32px; border:1px solid var(--line-2); border-radius:12px; background:var(--card-solid); color:var(--text); outline:none; padding:0 10px; font-size:12px; font-weight:700; }
+        .comfy-random-field { display:grid; grid-template-columns:minmax(0,1fr) 34px; gap:7px; align-items:end; width:100%; }
+        .comfy-random-btn { width:32px; height:32px; min-width:32px; padding:0; border-radius:10px; background:var(--card-solid); color:var(--muted); }
+        .comfy-random-btn svg { width:18px; height:18px; stroke-width:2.2; }
+        .comfy-random-btn.active { background:var(--strong); color:var(--strong-text); border-color:var(--strong); }
+        .comfy-random-btn.active svg { fill:none; stroke:currentColor; }
         .setting-check { height:32px; padding:0 10px; border-radius:999px; display:flex; align-items:center; gap:7px; background:var(--card-solid); border:1px solid var(--line-2); color:var(--muted); font-size:11px; font-weight:800; white-space:nowrap; cursor:pointer; }
         .setting-check.active { background:var(--strong); border-color:var(--strong); color:var(--strong-text); }
         .setting-check input { accent-color:var(--strong); }
@@ -301,6 +306,7 @@
         .output-node { width:460px; --output-thumb-max:180px; --output-thumb-min:150px; }
         .output-node .node-body { overscroll-behavior:contain; }
         .output-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(var(--output-thumb-min), var(--output-thumb-max))); gap:10px; justify-content:start; align-content:start; }
+        .output-grid.grid-layout { grid-template-columns:repeat(var(--grid-cols), minmax(0, 1fr)); justify-content:stretch; }
         .node.sized.output-node .output-grid { min-height:100%; grid-auto-rows:auto; }
         .output-img-wrap { position:relative; width:100%; max-width:var(--output-thumb-max); aspect-ratio:1; cursor:zoom-in; }
         .output-img-wrap:hover { transform:none; }
@@ -547,6 +553,9 @@
         .grid-gap-control { display:flex; align-items:center; gap:8px; color:#64748b; font-size:11px; font-weight:800; min-width:250px; }
         .grid-gap-control input[type="range"] { width:160px; }
         .grid-gap-value { min-width:42px; height:24px; padding:0 8px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:#111827; color:#fff; font-size:11px; font-weight:900; font-variant-numeric:tabular-nums; }
+        .grid-preset-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .grid-preset-btn { height:28px; padding:0 9px; border-radius:999px; border:1px solid rgba(203,213,225,.9); background:#fff; color:#64748b; font-size:11px; font-weight:850; }
+        .grid-preset-btn:hover { background:#111827; border-color:#111827; color:#fff; }
         .image-edit-stage { flex:1; min-height:0; border-radius:20px; background:#f8fafc; border:1px solid #edf2f7; overflow:auto; }
         .image-edit-stage-inner { min-width:100%; min-height:100%; width:max-content; height:max-content; display:flex; align-items:center; justify-content:center; padding:18px; box-sizing:border-box; margin:auto; }
         .image-edit-stage.overflow-x .image-edit-stage-inner { justify-content:flex-start; }
@@ -618,6 +627,8 @@
         .theme-dark .image-edit-tools input[type="range"]::-moz-range-track { background:#334155; box-shadow:inset 0 0 0 1px rgba(148,163,184,.12); }
         .theme-dark .image-edit-tools input[type="range"]::-moz-range-thumb { background:#e2e8f0; border-color:#0f172a; box-shadow:0 1px 5px rgba(0,0,0,.38); }
         .theme-dark .grid-gap-value { background:#e2e8f0; color:#0f172a; }
+        .theme-dark .grid-preset-btn { background:#0f172a; border-color:#334155; color:#cbd5e1; }
+        .theme-dark .grid-preset-btn:hover { background:#d8dee9; border-color:#d8dee9; color:#0f172a; }
         .theme-dark .image-edit-mode button.active { background:#d8dee9; color:#0f172a; }
         .theme-dark .output-lightbox { background:rgba(2,6,23,.66); }
         .theme-dark .output-preview { background:#020617; border-color:rgba(148,163,184,.24); box-shadow:0 30px 90px rgba(0,0,0,.45); }
@@ -661,6 +672,16 @@
         .theme-dark .llm-run,
         .theme-dark .primary-btn,
         .theme-dark .model-btn.primary { background:#d8dee9; color:#0f172a; }
+        .theme-dark .comfy-random-btn.active,
+        html.theme-dark .comfy-random-btn.active,
+        body.theme-dark .comfy-random-btn.active,
+        html.studio-theme-dark .comfy-random-btn.active,
+        body.studio-theme-dark .comfy-random-btn.active,
+        .studio-theme-dark .comfy-random-btn.active {
+            background:#f8fafc !important;
+            color:#0f172a !important;
+            border-color:#f8fafc !important;
+        }
         .theme-dark .model-btn.secondary { background:#1e293b; color:#e5e7eb; border:1px solid #475569; box-shadow:0 8px 20px rgba(0,0,0,.18); }
         .theme-dark .model-btn.secondary:hover { background:#334155; color:#fff; border-color:#94a3b8; }
         .theme-dark .model-btn.secondary.danger { background:rgba(127,29,29,.78); color:#fecaca; border-color:#ef4444; box-shadow:0 8px 20px rgba(127,29,29,.24); }
@@ -930,6 +951,15 @@
                 </div>
                 <div id="imageGridTools" class="image-edit-tools">
                     <button id="gridCustomToggle" class="image-edit-btn secondary" type="button" onclick="toggleGridCustomMode()" data-i18n="canvas.gridCustom" data-i18n-title="canvas.gridCustomTitle" title="自由放置切割线">自定义</button>
+                    <div class="grid-preset-row">
+                        <span class="image-edit-sub" data-i18n="canvas.gridPresets">预设</span>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(1, 2)">1×2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 1)">2×1</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 2)">2×2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 3)">2×3</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 2)">3×2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 3)">3×3</button>
+                    </div>
                     <span id="gridRegularControls" style="display:contents">
                         <label><span data-i18n="canvas.gridHLines">横向线</span> <input id="gridHorizontalLines" type="number" min="0" max="20" value="2"></label>
                         <label><span data-i18n="canvas.gridVLines">竖向线</span> <input id="gridVerticalLines" type="number" min="0" max="20" value="2"></label>
@@ -1512,10 +1542,20 @@
         function ratioPartsFromDimensions(width, height){
             const w = Math.max(1, Math.round(Number(width) || 1));
             const h = Math.max(1, Math.round(Number(height) || 1));
-            return {
-                width:Math.max(1, Math.round(w / 1000)),
-                height:Math.max(1, Math.round(h / 1000))
-            };
+            const target = w / h;
+            let best = {width:1, height:1, score:Infinity};
+            const maxPart = 21;
+            for(let rw = 1; rw <= maxPart; rw++){
+                for(let rh = 1; rh <= maxPart; rh++){
+                    const ratio = rw / rh;
+                    const relativeError = Math.abs(ratio - target) / target;
+                    const complexityPenalty = Math.max(rw, rh) * 0.0008;
+                    const score = relativeError + complexityPenalty;
+                    if(score < best.score) best = {width:rw, height:rh, score};
+                }
+            }
+            const g = gcdInt(best.width, best.height);
+            return {width:best.width / g, height:best.height / g};
         }
         function apiImageSize(ratioValue, resolutionValue, customRatioValue = '', customSizeValue = ''){
             if(resolutionValue === 'custom') return String(customSizeValue || '').trim();
@@ -3833,6 +3873,33 @@
             }
             return rects;
         }
+        function gridLayoutFromRects(rects){
+            const rows = Math.max(1, ...rects.map(r => Number(r.row || 0) + 1));
+            const cols = Math.max(1, ...rects.map(r => Number(r.col || 0) + 1));
+            return {type:'grid-split', groupId:uid('grid'), rows, cols};
+        }
+        function applyGridPreset(rows, cols){
+            gridCustomMode = false;
+            gridCustomLines = [];
+            gridCustomHistory = [];
+            gridCustomDrag = null;
+            const h = document.getElementById('gridHorizontalLines');
+            const v = document.getElementById('gridVerticalLines');
+            if(h){ h.disabled = false; h.value = String(Math.max(0, Number(rows || 1) - 1)); }
+            if(v){ v.disabled = false; v.value = String(Math.max(0, Number(cols || 1) - 1)); }
+            const toggle = document.getElementById('gridCustomToggle');
+            const custom = document.getElementById('gridCustomControls');
+            const regular = document.getElementById('gridRegularControls');
+            if(toggle){
+                toggle.classList.remove('primary');
+                toggle.classList.add('secondary');
+            }
+            if(custom) custom.style.display = 'none';
+            if(regular) regular.style.display = 'contents';
+            _syncGridCustomCursor();
+            _syncGridCustomUndoBtn();
+            refreshGridSplitPreview();
+        }
         // ——— 自定义宫格辅助函数 ———
         function toggleGridCustomMode(){
             gridCustomMode = !gridCustomMode;
@@ -4251,7 +4318,12 @@
             if(files.length){
                 const out = imageEditorOutputNode(node);
                 const urls = files.map(file => file.url).filter(Boolean);
-                appendOutputImages(out, urls, {url:node.url, name:node.name || 'source image'}, urls.map(() => ({runMs:0, run:{prompt:'宫格切分', refs:[{url:node.url, name:node.name || 'source image'}]}})));
+                const layout = gridLayoutFromRects(rects);
+                appendOutputImages(out, urls, {url:node.url, name:node.name || 'source image'}, urls.map((url, i) => ({
+                    runMs:0,
+                    run:{prompt:'宫格切分', refs:[{url:node.url, name:node.name || 'source image'}]},
+                    grid:{...layout, row:rects[i]?.row || 0, col:rects[i]?.col || 0, w:rects[i]?.w || 1, h:rects[i]?.h || 1}
+                })), layout);
                 closeImageEditor();
                 render();
                 scheduleSave();
@@ -4524,7 +4596,7 @@
                 const pendingHtml = (node._pending || []).map(p =>
                     `<div class="output-img-wrap loading-wrap" data-pending-id="${escapeAttr(p.id)}"><span class="output-time-pill running">${formatRunDuration(nowMs() - Number(p.startedAt || nowMs()))}</span><div class="output-spinner"></div><button class="output-del" title="${tr('common.delete')}">×</button></div>`
                 ).join('');
-                body.innerHTML = `<div class="output-grid">${(node.images || []).map(url => renderOutputMedia(url)).join('')}${pendingHtml}</div>`;
+                body.innerHTML = renderOutputGrid(node, pendingHtml);
                 body.onwheel = e => {
                     e.stopPropagation();
                     if(e.ctrlKey || e.metaKey) e.preventDefault();
@@ -4610,10 +4682,14 @@
             const grid = body?.querySelector('.output-grid');
             if(!body || !grid) return false;
             body.onwheel = e => { e.stopPropagation(); };
+            const layout = outputGridLayout(node);
+            grid.classList.toggle('grid-layout', !!layout);
+            if(layout) grid.style.setProperty('--grid-cols', String(Math.max(1, Number(layout.cols || 1))));
+            else grid.style.removeProperty('--grid-cols');
             const items = [
                 ...(node.images || []).map(item => ({
                     key:outputDomKeyForItem(item),
-                    html:renderOutputMedia(item)
+                    html:renderOutputMedia(item, !!layout)
                 })),
                 ...(node._pending || []).map(p => ({
                     key:outputDomKeyForPending(p),
@@ -5301,7 +5377,7 @@
                             <option value="landscape43">4:3</option>
                             <option value="story">9:16</option>
                             <option value="wide">16:9</option>
-                            <option value="source">适配比例</option>
+                            <option value="source">${tr('canvas.adaptiveRatio')}</option>
                             <option value="custom">${tr('canvas.custom')}</option>
                         </select>
                         <select class="select-lite quality-select">
@@ -5781,6 +5857,38 @@
             if(node.comfyParams[field.id] !== undefined) return node.comfyParams[field.id];
             return field.default ?? (field.type === 'boolean' ? false : (field.type === 'number' || field.type === 'slider' ? 0 : ''));
         }
+        function comfyRandomEnabled(field){
+            return field?.type === 'number' && field.random_enabled === true;
+        }
+        function comfyRandomActive(node, fieldId){
+            node.comfyRandomActive = node.comfyRandomActive || {};
+            return node.comfyRandomActive[fieldId] !== false;
+        }
+        function comfyRandomValue(field){
+            const isFloat = Number(field.step) > 0 && Number(field.step) < 1;
+            let min = Number.isFinite(Number(field.min)) ? Number(field.min) : null;
+            let max = Number.isFinite(Number(field.max)) ? Number(field.max) : null;
+            const name = `${field.input || ''} ${field.name || ''}`.toLowerCase();
+            const looksSeed = name.includes('seed') || name.includes('noise') || name.includes('随机') || name.includes('噪');
+            if(min === null) min = looksSeed ? 1 : 0;
+            if(max === null || max <= min) max = looksSeed ? 1000000000000000 : 999999;
+            let value = min + Math.random() * (max - min);
+            if(isFloat){
+                const precision = Math.min(8, Math.max(1, String(field.step).split('.')[1]?.length || 2));
+                return Number(value.toFixed(precision));
+            }
+            return Math.floor(value);
+        }
+        function toggleComfyRandom(nodeId, fieldId){
+            const node = nodes.find(n => n.id === nodeId);
+            if(!node) return;
+            const field = comfyFields(node).find(f => f.id === fieldId);
+            if(!comfyRandomEnabled(field)) return;
+            node.comfyRandomActive = node.comfyRandomActive || {};
+            node.comfyRandomActive[fieldId] = !comfyRandomActive(node, fieldId);
+            refreshNodes([node.id]);
+            scheduleSave();
+        }
         function renderComfyBody(node){
             const wrap = document.createElement('div');
             wrap.className = 'comfy-body';
@@ -5928,6 +6036,13 @@
                 btn.onmousedown = e => e.stopPropagation();
                 btn.onclick = e => updateComfyField(node, btn, e);
             });
+            container.querySelectorAll('button[data-comfy-random]').forEach(btn => {
+                btn.onmousedown = e => e.stopPropagation();
+                btn.onclick = e => {
+                    e.stopPropagation();
+                    toggleComfyRandom(node.id, btn.dataset.comfyRandom);
+                };
+            });
             container.querySelectorAll('input, select, textarea').forEach(input => {
                 input.onmousedown = e => e.stopPropagation();
                 input.onclick = e => e.stopPropagation();
@@ -5965,6 +6080,15 @@
                 </div>`;
             }
             const type = f.type === 'number' ? 'number' : 'text';
+            if(comfyRandomEnabled(f)){
+                const active = comfyRandomActive(node, f.id);
+                return `<div class="gen-settings-row">
+                    <div class="comfy-random-field">
+                        <label class="field"><div class="setting-title">${label}</div><input class="setting-input" type="number" data-comfy-param="${escapeHtml(f.id)}" data-comfy-type="number" value="${escapeHtml(value)}"></label>
+                        <button class="tool-btn comfy-random-btn ${active ? 'active' : ''}" type="button" data-comfy-random="${escapeHtml(f.id)}" title="${active ? '随机已开启，点击关闭' : '随机已关闭，点击开启'}" aria-label="${active ? '随机已开启，点击关闭' : '随机已关闭，点击开启'}"><i data-lucide="dice-5" class="w-4 h-4"></i></button>
+                    </div>
+                </div>`;
+            }
             return `<div class="gen-settings-row">
                 <label class="field" style="flex:1"><div class="setting-title">${label}</div><input class="setting-input" type="${type}" data-comfy-param="${escapeHtml(f.id)}" data-comfy-type="${escapeHtml(f.type || 'text')}" value="${escapeHtml(value)}"></label>
             </div>`;
@@ -6459,6 +6583,10 @@
                     settingFields.forEach(f => {
                         if(!f.node || !f.input) return;
                         params[f.node] = params[f.node] || {};
+                        if(comfyRandomEnabled(f) && comfyRandomActive(node, f.id)){
+                            node.comfyParams = node.comfyParams || {};
+                            node.comfyParams[f.id] = comfyRandomValue(f);
+                        }
                         params[f.node][f.input] = comfyParamValue(node, f);
                     });
                     const result = await fetch('/api/generate', {
@@ -7340,18 +7468,34 @@
                 });
             });
         }
-        function renderOutputMedia(item){
+        function renderOutputMedia(item, useGridLayout=false){
             const url = outputUrlValue(item);
             const safe = escapeAttr(url);
             const meta = item && typeof item === 'object' ? item : {};
+            const grid = useGridLayout ? (meta.grid || null) : null;
+            const gridStyle = grid ? ` style="grid-row:${Number(grid.row || 0) + 1};grid-column:${Number(grid.col || 0) + 1};aspect-ratio:${Math.max(1, Number(grid.w || 1))}/${Math.max(1, Number(grid.h || 1))}"` : '';
             const timePill = meta.runMs && !meta.viewed ? `<span class="output-time-pill">${formatRunDuration(meta.runMs)}</span>` : '';
             if(isMissingAssetUrl(url)){
-                return `<div class="output-img-wrap" data-output-url="${safe}" data-missing-url="${safe}">${missingAssetHtml(url, true)}${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+                return `<div class="output-img-wrap" data-output-url="${safe}" data-missing-url="${safe}"${gridStyle}>${missingAssetHtml(url, true)}${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
             }
             if(isVideoUrl(url)){
-                return `<div class="output-img-wrap" data-output-url="${safe}"><video src="${safe}" data-url="${safe}" preload="metadata" muted playsinline></video>${timePill}<div class="output-video-badge"><i data-lucide="play" class="w-3 h-3"></i>VIDEO</div><button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+                return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}><video src="${safe}" data-url="${safe}" preload="metadata" muted playsinline></video>${timePill}<div class="output-video-badge"><i data-lucide="play" class="w-3 h-3"></i>VIDEO</div><button class="output-del" title="${tr('common.delete')}">×</button></div>`;
             }
-            return `<div class="output-img-wrap" data-output-url="${safe}"><img src="${safe}" data-url="${safe}" alt="generated output">${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+            return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}><img src="${safe}" data-url="${safe}" alt="generated output">${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+        }
+        function outputGridLayout(node){
+            const images = node?.images || [];
+            if(!images.length || node?._pending?.length) return null;
+            const layout = node.outputLayout;
+            if(!layout || layout.type !== 'grid-split' || !layout.groupId) return null;
+            const allMatch = images.every(item => item && typeof item === 'object' && item.grid?.groupId === layout.groupId);
+            return allMatch ? layout : null;
+        }
+        function renderOutputGrid(node, pendingHtml=''){
+            const layout = outputGridLayout(node);
+            const gridClass = layout ? 'output-grid grid-layout' : 'output-grid';
+            const style = layout ? ` style="--grid-cols:${Math.max(1, Number(layout.cols || 1))}"` : '';
+            return `<div class="${gridClass}"${style}>${(node.images || []).map(item => renderOutputMedia(item, !!layout)).join('')}${pendingHtml}</div>`;
         }
         function outputImageName(url){
             const clean = (url || '').split('?')[0];
@@ -7370,12 +7514,20 @@
             event.dataTransfer.setDragImage(wrap, Math.min(rect.width / 2, 120), Math.min(rect.height / 2, 120));
             setTimeout(() => wrap.remove(), 0);
         }
-        function appendOutputImages(out, images, compareRef, metas=[]){
+        function appendOutputImages(out, images, compareRef, metas=[], layout=null){
             const list = (images || []).filter(Boolean);
             if(!out || !list.length) return;
+            if(layout?.type === 'grid-split'){
+                out.images = [];
+                out.outputLayout = layout;
+            } else if(out.outputLayout) {
+                delete out.outputLayout;
+            }
             out.images = [...(out.images || []), ...list.map((url, i) => {
                 const meta = metas[i] || metas[0] || {};
-                return {url, viewed:false, runMs:meta.runMs || 0, run:meta.run || null};
+                const item = {url, viewed:false, runMs:meta.runMs || 0, run:meta.run || null};
+                if(meta.grid) item.grid = meta.grid;
+                return item;
             })];
             if(compareRef?.url){
                 out.imageComparisons = out.imageComparisons || {};
