@@ -8766,14 +8766,14 @@
             if(blank) fillImageNode(blank.id, files);
             else uploadImages(files);
         });
-        // 捕获阶段拦截 Ctrl/Cmd + 滚轮，阻止浏览器缩放；在文本编辑区域时手动触发画布缩放
+        // 捕获阶段：文本编辑区域上的滚轮一律触发画布缩放，不滚动元素
         window.addEventListener('wheel', e => {
-            if(e.ctrlKey || e.metaKey){
+            const tag = e.target.tagName;
+            const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
+            if(isEditable){
                 e.preventDefault();
                 e.returnValue = false;
-                const tag = e.target.tagName;
-                const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
-                if(isEditable) applyWheelZoom(e);
+                applyWheelZoom(e);
             }
         }, { capture: true, passive: false });
         // 保留 document 层作为双重保险
