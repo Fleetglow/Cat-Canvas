@@ -8703,9 +8703,9 @@
             if(e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu')) return;
             closeCreateMenu();
         });
-        board.onwheel = e => {
+        // 画布滚轮缩放逻辑（供 board.onwheel 和全局拦截共同调用）
+        function applyWheelZoom(e){
             if(!canvas) return;
-            e.preventDefault();
             const before = screenToWorld(e.clientX, e.clientY);
             viewport.scale = viewport.scale * (e.deltaY > 0 ? .92 : 1.08);
             const rect = board.getBoundingClientRect();
@@ -8715,6 +8715,11 @@
             renderLinks();
             renderSelectionHub();
             scheduleSave();
+        }
+        board.onwheel = e => {
+            if(!canvas) return;
+            e.preventDefault();
+            applyWheelZoom(e);
         };
         board.addEventListener('dragover', e => {
             if(e.target.closest?.('.image-node')){
@@ -8761,12 +8766,14 @@
             if(blank) fillImageNode(blank.id, files);
             else uploadImages(files);
         });
-        // 阻止 Ctrl/Cmd + 滚轮触发浏览器页面缩放
-        // 必须在 window 捕获阶段拦截，否则浏览器会优先处理缩放（尤其在文本编辑区域）
+        // 捕获阶段拦截 Ctrl/Cmd + 滚轮，阻止浏览器缩放；在文本编辑区域时手动触发画布缩放
         window.addEventListener('wheel', e => {
             if(e.ctrlKey || e.metaKey){
                 e.preventDefault();
                 e.returnValue = false;
+                const tag = e.target.tagName;
+                const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
+                if(isEditable) applyWheelZoom(e);
             }
         }, { capture: true, passive: false });
         // 保留 document 层作为双重保险
