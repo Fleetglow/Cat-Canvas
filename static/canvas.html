@@ -962,8 +962,11 @@
                     <button class="preview-icon-btn" type="button" onclick="closeSettingsModal()" title="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div class="settings-body">
-                    <label class="settings-row">
-                        <span class="settings-label">显示图片生成时间</span>
+                    <label class="settings-row" style="align-items:flex-start;">
+                        <div style="display:flex;flex-direction:column;gap:2px;">
+                            <span class="settings-label">显示图片生成时间</span>
+                            <span style="font-size:11px;color:var(--faint);line-height:1.35;">开启后，图片右上角常驻显示生成时间</span>
+                        </div>
                         <input id="showGenTimeSwitch" type="checkbox" class="settings-switch" onchange="onShowGenTimeChange(this.checked)">
                     </label>
                     <label class="settings-row" style="align-items:flex-start;">
