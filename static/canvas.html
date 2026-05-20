@@ -962,6 +962,10 @@
                         <span class="settings-label">显示图片生成时间</span>
                         <input id="showGenTimeSwitch" type="checkbox" class="settings-switch" onchange="onShowGenTimeChange(this.checked)">
                     </label>
+                    <label class="settings-row">
+                        <span class="settings-label">交换 Ctrl/Shift 功能</span>
+                        <input id="swapCtrlShiftSwitch" type="checkbox" class="settings-switch" onchange="onSwapCtrlShiftChange(this.checked)">
+                    </label>
                 </div>
             </div>
         </div>
@@ -1111,6 +1115,11 @@
         let showGenTime = localStorage.getItem('canvas_showGenTime') !== '0';
         const showGenTimeSwitch = document.getElementById('showGenTimeSwitch');
         if(showGenTimeSwitch) showGenTimeSwitch.checked = showGenTime;
+        let swapCtrlShift = localStorage.getItem('canvas_swapCtrlShift') === '1';
+        function isMultiSelectKey(e){ return swapCtrlShift ? e.shiftKey : (e.ctrlKey || e.metaKey); }
+        function isKnifeKey(e){ return swapCtrlShift ? (e.ctrlKey || e.metaKey) : e.shiftKey; }
+        const swapCtrlShiftSwitch = document.getElementById('swapCtrlShiftSwitch');
+        if(swapCtrlShiftSwitch) swapCtrlShiftSwitch.checked = swapCtrlShift;
         const linksEl = document.getElementById('links');
         const linkControlsEl = document.getElementById('linkControls');
         const dropOverlay = document.getElementById('dropOverlay');
@@ -4482,7 +4491,7 @@
             el.onclick = (e) => {
                 e.stopPropagation();
                 if(isNodeControl(e.target)) return;
-                if(e.ctrlKey || e.metaKey) selected.has(node.id) ? selected.delete(node.id) : selected.add(node.id);
+                if(isMultiSelectKey(e)) selected.has(node.id) ? selected.delete(node.id) : selected.add(node.id);
                 else if(!selected.has(node.id)) { selected.clear(); selected.add(node.id); }
                 refreshSelectionVisuals();
             };
@@ -4687,12 +4696,12 @@
             if(canOutput) el.insertAdjacentHTML('beforeend', `<div class="port out" title="${tr('canvas.dragConnect')}"></div>`);
             el.insertAdjacentHTML('beforeend', `<div class="resize-handle" title="${tr('canvas.resize')}"></div>`);
             el.querySelector('.node-head').onmousedown = e => { if(e.button === 0) startNodeDrag(e, node); };
-            el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !e.shiftKey) startNodeResize(e, node); };
+            el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
             el.ondragstart = e => { e.preventDefault(); e.stopPropagation(); };
             const out = el.querySelector('.port.out');
-            if(out) out.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'out'); };
+            if(out) out.onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startLink(e, node.id, 'out'); };
             const inp = el.querySelector('.port.in');
-            if(inp) inp.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'in'); };
+            if(inp) inp.onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startLink(e, node.id, 'in'); };
             return el;
         }
         function bindOutputWrap(wrap, node){
@@ -7434,6 +7443,10 @@
             localStorage.setItem('canvas_showGenTime', checked ? '1' : '0');
             render();
         }
+        function onSwapCtrlShiftChange(checked){
+            swapCtrlShift = checked;
+            localStorage.setItem('canvas_swapCtrlShift', checked ? '1' : '0');
+        }
         function toggleMinimap(){
             const el = document.getElementById('minimap');
             if(!el) return;
@@ -8333,7 +8346,7 @@
             const shouldRenderKnife = knifeNeedsRender;
             knifeChanged = false;
             knifeNeedsRender = false;
-            if(!event?.shiftKey) setKnifeMode(false);
+            if(!isKnifeKey(event)) setKnifeMode(false);
             if(textSelectionGuard) textSelectionGuard.active = false;
             document.body.classList.remove('canvas-node-drag', 'canvas-node-resize', 'canvas-selecting', 'canvas-board-pan');
             window.onmousemove = null;
@@ -8618,7 +8631,7 @@
             }
         }
         function startKnifeDrag(e){
-            if(!canvas || e.button !== 0 || !e.shiftKey || isEditableTarget(e.target)) return false;
+            if(!canvas || e.button !== 0 || !isKnifeKey(e) || isEditableTarget(e.target)) return false;
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation?.();
@@ -8697,7 +8710,7 @@
             if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
             if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
             closeCreateMenu();
-            if(e.ctrlKey || e.metaKey){
+            if(isMultiSelectKey(e)){
                 e.preventDefault();
                 startSelection(e);
                 return;
