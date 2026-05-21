@@ -8876,9 +8876,8 @@
         }
         board.onwheel = e => {
             if(!canvas) return;
-            // Shift 按住 → 不缩放（切割模式）；Ctrl/Alt 按住 → 缩放
+            // Shift 按住 → 不缩放（切割模式）；其他所有情况都缩放
             if(e.shiftKey) return;
-            if(!(e.ctrlKey || e.metaKey || e.altKey)) return;
             e.preventDefault();
             applyWheelZoom(e);
         };
@@ -8927,23 +8926,17 @@
             if(blank) fillImageNode(blank.id, files);
             else uploadImages(files);
         });
-        // 捕获阶段：拦截浏览器缩放，统一由画布逻辑决定是否缩放
+        // 捕获阶段：只拦截浏览器缩放，不执行画布缩放
+        // 画布缩放由 board.onwheel 和节点 wheel 处理函数负责
         window.addEventListener('wheel', e => {
             const tag = e.target.tagName;
             const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
-            // Shift 按住 → 阻止浏览器缩放，但不执行画布缩放（切割模式）
-            if(e.shiftKey){
+            // 任何修饰键按住时，都阻止浏览器默认缩放
+            if(e.ctrlKey || e.metaKey || e.altKey || e.shiftKey){
                 if(!isEditable){
                     e.preventDefault();
                     e.returnValue = false;
                 }
-                return;
-            }
-            // Ctrl/Alt 按住 → 执行画布缩放
-            if(e.ctrlKey || e.metaKey || e.altKey){
-                e.preventDefault();
-                e.returnValue = false;
-                applyWheelZoom(e);
             }
         }, { capture: true, passive: false });
         // 保留 document 层作为双重保险
