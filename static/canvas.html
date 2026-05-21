@@ -8246,22 +8246,50 @@
             e.stopPropagation();
             let dragTarget = node;
             if(e.altKey){
-                const copy = cloneNode(node, 0, 0);
-                const isGroup = node.type === 'group' || node.type === 'promptGroup';
-                if(isGroup && node.items?.length){
+                // 如果拖动的节点在多选里，则克隆所有选中节点
+                if(selected.has(node.id) && selected.size > 1){
                     const idMap = new Map();
-                    const childCopies = node.items
-                        .map(id => nodes.find(n => n.id === id)).filter(Boolean)
-                        .map(child => { const cc = cloneNode(child, 0, 0); idMap.set(child.id, cc.id); return cc; });
-                    copy.items = copy.items.map(id => idMap.get(id) || id);
-                    nodes.push(...childCopies, copy);
+                    const copies = [...selected].map(id => nodes.find(n => n.id === id)).filter(Boolean).map(n => {
+                        const c = cloneNode(n, 0, 0);
+                        idMap.set(n.id, c.id);
+                        return c;
+                    });
+                    // 处理 group/promptGroup 的 items 映射
+                    copies.forEach(c => {
+                        if((c.type === 'group' || c.type === 'promptGroup') && c.items){
+                            c.items = c.items.map(id => idMap.get(id) || id);
+                        }
+                    });
+                    // 复制选中节点之间的连接
+                    const selSet = new Set([...selected]);
+                    const newConns = connections
+                        .filter(c => selSet.has(c.from) && selSet.has(c.to))
+                        .map(c => ({...c, id:uid('c'), from:idMap.get(c.from), to:idMap.get(c.to)}));
+                    connections.push(...newConns);
+                    nodes.push(...copies);
+                    selected.clear();
+                    copies.forEach(c => selected.add(c.id));
+                    dragTarget = copies.find(c => c.id === idMap.get(node.id)) || copies[0];
+                    render();
                 } else {
-                    nodes.push(copy);
+                    // 单选或拖动的节点未选中：只克隆当前节点
+                    const copy = cloneNode(node, 0, 0);
+                    const isGroup = node.type === 'group' || node.type === 'promptGroup';
+                    if(isGroup && node.items?.length){
+                        const idMap = new Map();
+                        const childCopies = node.items
+                            .map(id => nodes.find(n => n.id === id)).filter(Boolean)
+                            .map(child => { const cc = cloneNode(child, 0, 0); idMap.set(child.id, cc.id); return cc; });
+                        copy.items = copy.items.map(id => idMap.get(id) || id);
+                        nodes.push(...childCopies, copy);
+                    } else {
+                        nodes.push(copy);
+                    }
+                    selected.clear();
+                    selected.add(copy.id);
+                    dragTarget = copy;
+                    render();
                 }
-                selected.clear();
-                selected.add(copy.id);
-                dragTarget = copy;
-                render();
             }
             const isGroup = dragTarget.type === 'group' || dragTarget.type === 'promptGroup';
             const collected = new Map();
