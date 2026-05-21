@@ -8274,11 +8274,11 @@
                             c.items = c.items.map(id => idMap.get(id) || id);
                         }
                     });
-                    // 复制选中节点之间的连接
+                    // 复制与选中节点相关的所有连接（含与外部节点的输入/输出）
                     const selSet = new Set([...selected]);
                     const newConns = connections
-                        .filter(c => selSet.has(c.from) && selSet.has(c.to))
-                        .map(c => ({...c, id:uid('c'), from:idMap.get(c.from), to:idMap.get(c.to)}));
+                        .filter(c => selSet.has(c.from) || selSet.has(c.to))
+                        .map(c => ({...c, id:uid('c'), from:idMap.get(c.from) || c.from, to:idMap.get(c.to) || c.to}));
                     connections.push(...newConns);
                     nodes.push(...copies);
                     selected.clear();
@@ -8299,14 +8299,16 @@
                     } else {
                         nodes.push(copy);
                     }
-                    // 复制与原节点相关的连接（目标节点如也被复制则映射到新节点）
+                    // 复制与原节点相关的所有连接（含与未复制节点的连接）
                     const idMapSingle = new Map([[node.id, copy.id]]);
                     connections.forEach(c => {
-                        if(c.from === node.id && idMapSingle.has(c.from)){
-                            connections.push({...c, id:uid('c'), from:copy.id, to:idMapSingle.get(c.to) || c.to});
-                        }
-                        if(c.to === node.id && idMapSingle.has(c.to)){
-                            connections.push({...c, id:uid('c'), from:idMapSingle.get(c.from) || c.from, to:copy.id});
+                        if(c.from === node.id || c.to === node.id){
+                            connections.push({
+                                ...c,
+                                id: uid('c'),
+                                from: idMapSingle.get(c.from) || c.from,
+                                to: idMapSingle.get(c.to) || c.to
+                            });
                         }
                     });
                     selected.clear();
