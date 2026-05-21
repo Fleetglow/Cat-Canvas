@@ -1286,7 +1286,7 @@
         const missingAssetUrls = new Set();
         let outputTimer = null;
         let loopContext = null;
-        let clipboard = null;
+        let clipboard = {nodes:[], connections:[]};
         let lastImagePasteAt = 0;
         const activeCanvasTaskPolls = new Set();
         let hoveredConnectionId = '';
@@ -8217,7 +8217,12 @@
             if(el && (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')) return;
             const toCopy = [...selected].map(id => nodes.find(n => n.id === id)).filter(Boolean);
             if(!toCopy.length) return;
-            clipboard = JSON.parse(JSON.stringify(toCopy));
+            clipboard.nodes = JSON.parse(JSON.stringify(toCopy));
+            // 保存选中节点之间的连接
+            const selSet = new Set([...selected]);
+            clipboard.connections = connections
+                .filter(c => selSet.has(c.from) && selSet.has(c.to))
+                .map(c => ({...c}));
         }
         function pasteNodes(){
             if(!canvas || !clipboard?.length) return;
@@ -8233,17 +8238,15 @@
                 if((c.type === 'group' || c.type === 'promptGroup') && c.items)
                     c.items = c.items.map(id => idMap.get(id) || id);
             });
-            // 复制 clipboard 节点之间的连接，以及连接外部节点的连接
-            const clipboardIds = new Set(clipboard.map(n => n.id));
-            clipboardConns = connections
-                .filter(c => clipboardIds.has(c.from) || clipboardIds.has(c.to))
+            // 复制 clipboard 节点之间的连接（使用复制时的快照）
+            const pasteConns = (clipboard.connections || [])
                 .map(c => ({
                     ...c,
                     id: uid('c'),
                     from: idMap.get(c.from) || c.from,
                     to: idMap.get(c.to) || c.to
                 }));
-            connections.push(...clipboardConns);
+            connections.push(...pasteConns);
             nodes.push(...copies);
             selected.clear();
             copies.forEach(c => selected.add(c.id));
@@ -9124,7 +9127,7 @@
             if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                 const tag = document.activeElement?.tagName;
                 if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-                if(clipboard?.length) {
+                if(clipboard?.nodes?.length) {
                     const pasteRequestedAt = Date.now();
                     setTimeout(() => {
                         if(!canvas) return;
