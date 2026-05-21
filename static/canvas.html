@@ -1415,6 +1415,17 @@
         function defaultApiProviders(){
             return [{id:'comfly', name:'Comfly', base_url:'', enabled:true, image_models:imageModels, chat_models:chatModels, video_models:videoModels.length ? videoModels : DEFAULT_VIDEO_MODELS, has_key:false, key_preview:''}];
         }
+        function sortApiProviders(list){
+            const builtin = ['modelscope', 'comfly'];
+            list.sort((a, b) => {
+                const ai = builtin.indexOf(a.id);
+                const bi = builtin.indexOf(b.id);
+                if(ai !== -1 && bi !== -1) return ai - bi;
+                if(ai !== -1) return -1;
+                if(bi !== -1) return 1;
+                return (a.sort_order || 0) - (b.sort_order || 0);
+            });
+        }
         function normalizeProviderId(value){
             return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 40);
         }
@@ -2007,6 +2018,7 @@
                 msChatModels = cfg.ms_chat_models?.length ? cfg.ms_chat_models : msChatModels;
                 comfyBackendCount = Math.max(1, (cfg.comfy_instances || []).length || 1);
                 apiProviders = Array.isArray(cfg.api_providers) && cfg.api_providers.length ? cfg.api_providers : defaultApiProviders();
+                sortApiProviders(apiProviders);
                 models.nano = imageModels.find(m => m.toLowerCase().includes('nano')) || 'nano-banana-pro';
                 models.gpt = imageModels.find(m => !m.toLowerCase().includes('nano')) || cfg.image_model || 'gpt-image-2';
                 try {

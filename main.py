@@ -531,6 +531,7 @@ def normalize_provider(item):
         "video_models": model_list_from_values(item.get("video_models") or []),
         "ms_loras": normalize_ms_loras(item.get("ms_loras") or []),
         "ms_defaults_version": int(item.get("ms_defaults_version") or 0),
+        "sort_order": int(item.get("sort_order") or 0),
     }
 
 def load_api_providers():
@@ -818,6 +819,7 @@ class ApiProviderPayload(BaseModel):
     video_models: List[str] = []
     ms_loras: List[Dict[str, Any]] = []
     ms_defaults_version: int = 0
+    sort_order: int = 0
     api_key: Optional[str] = None
     clear_key: bool = False
 

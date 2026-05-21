@@ -53,6 +53,10 @@
         .provider-mark { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:var(--soft); color:var(--muted); }
         .provider-card.active .provider-mark { background:var(--panel); color:var(--text); }
         .provider-card.provider-card-banner { padding:8px 10px; justify-content:center; min-height:44px; }
+        .provider-card[draggable="true"] { cursor:grab; }
+        .provider-card[draggable="true"]:active { cursor:grabbing; }
+        .provider-card.dragging { opacity:.5; }
+        .provider-card.drag-over { border-color:var(--text); background:var(--soft-2); }
         .provider-card-banner img { height:22px; width:auto; max-width:100%; object-fit:contain; display:block; }
         .provider-card-banner .ms-icon-dark { display:none; }
         body.studio-theme-dark .provider-card-banner .ms-icon-light,
@@ -570,29 +574,35 @@
             if(key) item.api_key = key;
         }
         function sortedProviders(){
-            const order = ['modelscope', 'comfly'];
+            const builtin = ['modelscope', 'comfly'];
             return [...providers].sort((a, b) => {
-                const ai = order.indexOf(a.id);
-                const bi = order.indexOf(b.id);
-                if(ai === -1 && bi === -1) return 0;
-                if(ai === -1) return 1;
-                if(bi === -1) return -1;
-                return ai - bi;
+                const ai = builtin.indexOf(a.id);
+                const bi = builtin.indexOf(b.id);
+                if(ai !== -1 && bi !== -1) return ai - bi;
+                if(ai !== -1) return -1;
+                if(bi !== -1) return 1;
+                return (a.sort_order || 0) - (b.sort_order || 0);
             });
         }
+        let dragId = null;
+        let justDragged = false;
         function renderProviderList(){
+            const builtin = ['modelscope', 'comfly'];
             providerList.innerHTML = sortedProviders().map(item => {
                 const active = item.id === selectedId ? 'active' : '';
+                const isDraggable = !builtin.includes(item.id);
+                const dragAttrs = isDraggable ? `draggable="true" data-id="${escapeHtml(item.id)}"` : '';
+                const clickGuard = isDraggable ? `if(window.justDragged){event.preventDefault();return;}selectProvider('${escapeHtml(item.id)}')` : `selectProvider('${escapeHtml(item.id)}')`;
                 if(item.id === 'modelscope'){
                     return `
-                        <button class="provider-card provider-card-banner ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+                        <button class="provider-card provider-card-banner ${active}" type="button" ${dragAttrs} onclick="${clickGuard}">
                             <img src="/static/modelscope.gif" alt="ModelScope" class="ms-icon-light">
                             <img src="/static/modelscope-1.gif" alt="ModelScope" class="ms-icon-dark">
                         </button>
                     `;
                 }
                 return `
-                    <button class="provider-card ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+                    <button class="provider-card ${active}" type="button" ${dragAttrs} onclick="${clickGuard}">
                         <span class="provider-mark"><i data-lucide="${item.has_key ? 'key-round' : 'key'}" class="w-4 h-4"></i></span>
                         <span class="min-w-0">
                             <div class="provider-name">${escapeHtml(item.name || item.id)}</div>
@@ -601,7 +611,55 @@
                     </button>
                 `;
             }).join('');
+            providerList.querySelectorAll('.provider-card[draggable="true"]').forEach(el => {
+                el.addEventListener('dragstart', handleDragStart);
+                el.addEventListener('dragend', handleDragEnd);
+            });
+            providerList.addEventListener('dragover', handleDragOver);
+            providerList.addEventListener('drop', handleDrop);
             refreshIcons();
+        }
+        function handleDragStart(e){
+            dragId = e.currentTarget.dataset.id;
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragId);
+        }
+        function handleDragEnd(e){
+            justDragged = true;
+            e.currentTarget.classList.remove('dragging');
+            dragId = null;
+            providerList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            setTimeout(() => justDragged = false, 50);
+        }
+        function handleDragOver(e){
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const target = e.target.closest('.provider-card[draggable="true"]');
+            if(!target || target.dataset.id === dragId) return;
+            providerList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            target.classList.add('drag-over');
+        }
+        function handleDrop(e){
+            e.preventDefault();
+            const target = e.target.closest('.provider-card[draggable="true"]');
+            if(!target) return;
+            const targetId = target.dataset.id;
+            if(!targetId || targetId === dragId) return;
+            const sorted = sortedProviders();
+            const fromIndex = sorted.findIndex(p => p.id === dragId);
+            const toIndex = sorted.findIndex(p => p.id === targetId);
+            if(fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+            const [moved] = sorted.splice(fromIndex, 1);
+            sorted.splice(toIndex, 0, moved);
+            const builtin = ['modelscope', 'comfly'];
+            let order = 0;
+            sorted.forEach(item => {
+                const p = providers.find(p => p.id === item.id);
+                if(p && !builtin.includes(p.id)) p.sort_order = order++;
+            });
+            renderProviderList();
+            saveProviders();
         }
         function renderEditor(){
             const item = provider();
@@ -1077,6 +1135,7 @@
                         video_models:item.video_models || [],
                         ms_loras:item.id === 'modelscope' ? (item.ms_loras || []) : [],
                         ms_defaults_version:item.id === 'modelscope' ? (item.ms_defaults_version || 1) : 0,
+                        sort_order:item.sort_order || 0,
                         api_key:item.api_key || undefined,
                         clear_key:item._clearKey === true
                     })))
