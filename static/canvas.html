@@ -5450,8 +5450,12 @@
             el.addEventListener('dblclick', stop);
             el.addEventListener('wheel', e => {
                 e.stopPropagation();
+                if(isMultiSelectKey(e) || e.altKey){
+                    e.preventDefault();
+                    applyWheelZoom(e);
+                }
                 if(textSelectionGuard?.el === el) textSelectionGuard.wheelUntil = Date.now() + 180;
-            }, {passive:true});
+            }, {passive:false});
         }
         function startLLMPaneResize(e, node){
             e.preventDefault();
