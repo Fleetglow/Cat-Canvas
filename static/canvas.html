@@ -453,6 +453,8 @@
         .output-preview video { display:block; width:100%; height:100%; object-fit:contain; background:#0f172a; }
         .output-preview.panning { cursor:grabbing; }
         .output-preview.panning img { transition:none; }
+        .space-pan, .space-pan * { cursor:grab !important; }
+        .space-pan.dragging, .space-pan *.dragging { cursor:grabbing !important; }
         .output-single-img { cursor:inherit; }
         .output-compare { position:absolute; inset:0; display:none; width:100%; height:100%; background:#f8f8f9; }
         .output-preview.compare-mode .output-compare { display:block; }
@@ -970,6 +972,7 @@
                 <div class="help-body">
                     <div class="help-row"><kbd>Ctrl</kbd><kbd>点击</kbd><span>多选节点</span></div>
                     <div class="help-row"><kbd>Shift</kbd><span>按住切换切割模式</span></div>
+                    <div class="help-row"><kbd>空格</kbd><span>按住平移画布</span></div>
                     <div class="help-row"><kbd>F</kbd><span>聚焦</span></div>
                     <div class="help-row"><kbd>X</kbd><span>删除选中节点</span></div>
                     <div class="help-row"><kbd>双击/右键空白</kbd><span>弹出添加节点菜单</span></div>
@@ -1161,6 +1164,7 @@
         let enableXDelete = localStorage.getItem('canvas_enableXDelete') === '1';
         const enableXDeleteSwitch = document.getElementById('enableXDeleteSwitch');
         if(enableXDeleteSwitch) enableXDeleteSwitch.checked = enableXDelete;
+        let spacePan = false;
         const linksEl = document.getElementById('links');
         const linkControlsEl = document.getElementById('linkControls');
         const dropOverlay = document.getElementById('dropOverlay');
@@ -4778,7 +4782,7 @@
             if(canInput) el.insertAdjacentHTML('beforeend', `<div class="port in" title="${tr('canvas.connectHere')}"></div>`);
             if(canOutput) el.insertAdjacentHTML('beforeend', `<div class="port out" title="${tr('canvas.dragConnect')}"></div>`);
             el.insertAdjacentHTML('beforeend', `<div class="resize-handle" title="${tr('canvas.resize')}"></div>`);
-            el.querySelector('.node-head').onmousedown = e => { if(e.button === 0) startNodeDrag(e, node); };
+            el.querySelector('.node-head').onmousedown = e => { if(e.button === 0 && !spacePan) startNodeDrag(e, node); };
             el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
             el.ondragstart = e => { e.preventDefault(); e.stopPropagation(); };
             const out = el.querySelector('.port.out');
@@ -8812,6 +8816,8 @@
 
         board.onmousedown = e => {
             if(!canvas) return;
+            // 空格按住时，强制走平移，无视其他逻辑
+            if(spacePan && e.button === 0){ startBoardPan(e); return; }
             if(e.button === 1){
                 startBoardPan(e);
                 return;
@@ -9101,6 +9107,28 @@
         });
         window.addEventListener('keyup', e => {
             if(!isKnifeKey(e)) setKnifeMode(false);
+        });
+        // 空格键：按住=平移模式，松开=恢复；文本编辑时忽略
+        window.addEventListener('keydown', e => {
+            if(e.repeat) return;
+            if(e.code === 'Space' || e.key === ' '){
+                const tag = document.activeElement?.tagName;
+                const isEditable = document.activeElement?.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
+                if(isEditable) return;
+                if(spacePan) return;
+                spacePan = true;
+                document.body.classList.add('space-pan');
+            }
+        });
+        window.addEventListener('keyup', e => {
+            if(e.code === 'Space' || e.key === ' '){
+                spacePan = false;
+                document.body.classList.remove('space-pan');
+            }
+        });
+        window.addEventListener('blur', () => {
+            spacePan = false;
+            document.body.classList.remove('space-pan');
         });
         window.addEventListener('blur', () => setKnifeMode(false));
         window.addEventListener('blur', () => {
