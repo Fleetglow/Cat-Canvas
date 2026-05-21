@@ -8233,6 +8233,17 @@
                 if((c.type === 'group' || c.type === 'promptGroup') && c.items)
                     c.items = c.items.map(id => idMap.get(id) || id);
             });
+            // 复制 clipboard 节点之间的连接，以及连接外部节点的连接
+            const clipboardIds = new Set(clipboard.map(n => n.id));
+            clipboardConns = connections
+                .filter(c => clipboardIds.has(c.from) || clipboardIds.has(c.to))
+                .map(c => ({
+                    ...c,
+                    id: uid('c'),
+                    from: idMap.get(c.from) || c.from,
+                    to: idMap.get(c.to) || c.to
+                }));
+            connections.push(...clipboardConns);
             nodes.push(...copies);
             selected.clear();
             copies.forEach(c => selected.add(c.id));
@@ -8285,6 +8296,16 @@
                     } else {
                         nodes.push(copy);
                     }
+                    // 复制与原节点相关的连接（目标节点如也被复制则映射到新节点）
+                    const idMapSingle = new Map([[node.id, copy.id]]);
+                    connections.forEach(c => {
+                        if(c.from === node.id && idMapSingle.has(c.from)){
+                            connections.push({...c, id:uid('c'), from:copy.id, to:idMapSingle.get(c.to) || c.to});
+                        }
+                        if(c.to === node.id && idMapSingle.has(c.to)){
+                            connections.push({...c, id:uid('c'), from:idMapSingle.get(c.from) || c.from, to:copy.id});
+                        }
+                    });
                     selected.clear();
                     selected.add(copy.id);
                     dragTarget = copy;
