@@ -4838,7 +4838,10 @@
             return `pending:${pending?.id || ''}`;
         }
         function handleOutputBodyWheel(e){
-            if(isMultiSelectKey(e) || e.altKey){
+            // Shift 按住 → 不缩放
+            if(e.shiftKey) { e.stopPropagation(); return; }
+            // Ctrl/Alt 按住 → 缩放
+            if(e.ctrlKey || e.metaKey || e.altKey){
                 e.preventDefault();
                 e.stopPropagation();
                 applyWheelZoom(e);
@@ -5450,7 +5453,10 @@
             el.addEventListener('dblclick', stop);
             el.addEventListener('wheel', e => {
                 e.stopPropagation();
-                if(isMultiSelectKey(e) || e.altKey){
+                // Shift 按住 → 不缩放
+                if(e.shiftKey) return;
+                // Ctrl/Alt 按住 → 缩放
+                if(e.ctrlKey || e.metaKey || e.altKey){
                     e.preventDefault();
                     applyWheelZoom(e);
                 }
@@ -8870,8 +8876,9 @@
         }
         board.onwheel = e => {
             if(!canvas) return;
-            // 切割模式按键按住时不缩放，其他情况都缩放
-            if(isKnifeKey(e)) return;
+            // Shift 按住 → 不缩放（切割模式）；Ctrl/Alt 按住 → 缩放
+            if(e.shiftKey) return;
+            if(!(e.ctrlKey || e.metaKey || e.altKey)) return;
             e.preventDefault();
             applyWheelZoom(e);
         };
@@ -8924,15 +8931,16 @@
         window.addEventListener('wheel', e => {
             const tag = e.target.tagName;
             const isEditable = e.target.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
-            // 切割模式按键按住：非编辑区域阻止浏览器缩放；编辑区域放行让内容正常滚动
-            if(isKnifeKey(e)){
+            // Shift 按住 → 阻止浏览器缩放，但不执行画布缩放（切割模式）
+            if(e.shiftKey){
                 if(!isEditable){
                     e.preventDefault();
                     e.returnValue = false;
                 }
                 return;
             }
-            if(isEditable && (isMultiSelectKey(e) || e.altKey)){
+            // Ctrl/Alt 按住 → 执行画布缩放
+            if(e.ctrlKey || e.metaKey || e.altKey){
                 e.preventDefault();
                 e.returnValue = false;
                 applyWheelZoom(e);
