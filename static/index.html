@@ -25,7 +25,7 @@
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/static/theme.js?v=20260516-theme-sync"></script>
-    <script src="/static/i18n.js?v=20260519-update-check"></script>
+    <script src="/static/i18n.js?v=20260519-smart-canvas"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
 
@@ -473,6 +473,7 @@
         .side-pill.update-available {
             border-color:#22c55e;
             color:#16a34a;
+            overflow:visible;
         }
 
         html.theme-dark .side-pill.update-available,
@@ -482,81 +483,31 @@
         }
 
         .side-pill.update-available::after {
-            content:"";
+            content:"NEW";
             position:absolute;
-            top:7px;
-            right:8px;
-            width:7px;
-            height:7px;
+            top:-7px;
+            right:-9px;
+            min-width:28px;
+            height:16px;
+            padding:0 5px;
             border-radius:999px;
             background:#22c55e;
-            box-shadow:0 0 0 3px rgba(34,197,94,.14);
-        }
-
-        .update-card {
-            display:none;
-            width:44px;
-            min-height:36px;
-            padding:8px;
-            border-radius:18px;
-            border:1px solid rgba(34,197,94,.35);
-            background:rgba(240,253,244,.92);
-            color:#15803d;
-            overflow:hidden;
-            transition:width 0.3s var(--fluid-ease) 0.5s;
-        }
-
-        .update-card.show { display:block; }
-        .sidebar:hover .update-card { width:170px; transition-delay:0s; }
-        html.theme-dark .update-card,
-        body.theme-dark .update-card {
-            background:rgba(20,83,45,.22);
-            border-color:rgba(134,239,172,.28);
-            color:#bbf7d0;
-        }
-        .update-card-title {
             display:flex;
             align-items:center;
             justify-content:center;
-            gap:6px;
-            font-size:11px;
-            font-weight:900;
-            white-space:nowrap;
-        }
-        .sidebar:hover .update-card-title { justify-content:flex-start; }
-        .update-card-body {
-            display:none;
-            margin-top:5px;
-            font-size:10.5px;
-            line-height:1.35;
-            font-weight:700;
-            color:currentColor;
-            opacity:.86;
-        }
-        .sidebar:hover .update-card-body { display:block; }
-        .update-card-actions {
-            display:none;
-            gap:6px;
-            margin-top:8px;
-        }
-        .sidebar:hover .update-card-actions { display:flex; }
-        .update-link-btn {
-            height:26px;
-            padding:0 8px;
-            border-radius:999px;
-            background:#16a34a;
             color:#fff;
-            font-size:10px;
+            font-size:9px;
             font-weight:900;
+            letter-spacing:.02em;
+            box-shadow:0 6px 16px rgba(34,197,94,.28), 0 0 0 3px rgba(34,197,94,.12);
+            pointer-events:none;
         }
-        .update-dismiss-btn {
-            height:26px;
-            width:26px;
-            border-radius:999px;
-            border:1px solid rgba(21,128,61,.22);
-            color:currentColor;
-            font-size:14px;
-            line-height:1;
+
+        html.theme-dark .side-pill.update-available::after,
+        body.theme-dark .side-pill.update-available::after {
+            background:#4ade80;
+            color:#052e16;
+            box-shadow:0 6px 16px rgba(74,222,128,.22), 0 0 0 3px rgba(74,222,128,.12);
         }
 
         .side-pill svg { width: 16px; height: 16px; flex:0 0 auto; }
@@ -578,6 +529,48 @@
         /* 折叠态去除 gap，避免图标被推偏 */
         .side-pill { gap:0; }
         .sidebar:hover .side-pill { gap:8px; }
+
+        .update-now-btn {
+            display:none;
+            width:44px;
+            height:30px;
+            border-radius:999px;
+            border:1px solid rgba(34,197,94,.35);
+            background:rgba(34,197,94,.1);
+            color:#16a34a;
+            align-items:center;
+            justify-content:center;
+            gap:7px;
+            font-size:11px;
+            font-weight:900;
+            overflow:hidden;
+            transition:width 0.3s var(--fluid-ease) 0.5s, background-color .2s, color .2s, border-color .2s;
+        }
+        .update-now-btn.show { display:flex; }
+        .sidebar:hover .update-now-btn { width:170px; transition-delay:0s; }
+        .update-now-btn:hover { background:#16a34a; color:#fff; border-color:#16a34a; }
+        .update-now-btn[disabled] { opacity:.7; cursor:wait; }
+        .update-now-btn svg { width:14px; height:14px; flex:0 0 auto; }
+        .update-now-text {
+            opacity:0;
+            max-width:0;
+            white-space:nowrap;
+            overflow:hidden;
+            transition: opacity 0.3s 0.5s, max-width 0.3s var(--fluid-ease) 0.5s;
+        }
+        .sidebar:hover .update-now-text { opacity:1; max-width:110px; transition-delay:.15s; }
+        html.theme-dark .update-now-btn,
+        body.theme-dark .update-now-btn {
+            border-color:rgba(134,239,172,.42);
+            background:rgba(74,222,128,.12);
+            color:#86efac;
+        }
+        html.theme-dark .update-now-btn:hover,
+        body.theme-dark .update-now-btn:hover {
+            background:#86efac;
+            border-color:#86efac;
+            color:#052e16;
+        }
     </style>
 </head>
 
@@ -695,20 +688,13 @@
                     </svg>
                     <span class="side-pill-text" data-i18n="common.project">项目主页</span>
                 </button>
-                <div id="update-card" class="update-card">
-                    <div class="update-card-title">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex:0 0 auto">
-                            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
-                            <path d="M21 3v6h-6"></path>
-                        </svg>
-                        <span data-i18n="update.available">发现更新</span>
-                    </div>
-                    <div id="update-card-body" class="update-card-body"></div>
-                    <div class="update-card-actions">
-                        <button class="update-link-btn" type="button" onclick="openProjectPage()" data-i18n="update.openProject">打开项目</button>
-                        <button class="update-dismiss-btn" type="button" onclick="dismissUpdateNotice()" title="忽略">×</button>
-                    </div>
-                </div>
+                <button id="update-now-btn" class="update-now-btn" onclick="runProjectUpdate()" type="button" title="一键更新">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                        <path d="M21 3v6h-6"></path>
+                    </svg>
+                    <span id="update-now-text" class="update-now-text" data-i18n="update.oneClick">一键更新</span>
+                </button>
             </div>
 
             <div class="author-box">
@@ -765,7 +751,7 @@
             <iframe id="frame-angle" data-src="/static/angle.html?v=20260512-i18n2" scrolling="yes"></iframe>
             <iframe id="frame-online" data-src="/static/online.html?v=20260512-i18n2" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=20260514-provider-chat-models" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas.html?v=20260519-grid-presets-output-layout" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas.html?v=20260520-smart-prompt-drafts" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=20260519-relaxed-model-name" scrolling="yes"></iframe>
             <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=20260519-random-number-active-wrap" scrolling="yes"></iframe>
 
@@ -801,7 +787,6 @@
         const DEFAULT_PAGE_ID = 'zimage';
         const PAGE_IDS = ['zimage','enhance','klein','angle','online','gpt-chat','canvas','api-settings','comfyui-settings'];
         const PROJECT_URL = 'https://github.com/hero8152/Infinite-Canvas';
-        const UPDATE_DISMISS_KEY = 'studio_update_dismissed_version';
         let appInfo = { version:'', repo_url:PROJECT_URL, version_url:'https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION' };
 
         function switchUI(el, id, options = {}) {
@@ -914,7 +899,7 @@
             if(!window.StudioI18n) return;
             window.StudioI18n.toggle();
             document.querySelectorAll('iframe').forEach(frame => syncLanguageToFrame(frame));
-            renderUpdateCardText();
+            updateProjectUpdateTitle();
         }
 
         function syncLanguageToFrame(frame) {
@@ -973,37 +958,53 @@
             return String(a || '').trim() === String(b || '').trim() ? 0 : 1;
         }
 
-        function renderUpdateCardText() {
-            const card = document.getElementById('update-card');
-            if(!card?.classList.contains('show')) return;
-            const body = document.getElementById('update-card-body');
-            if(!body) return;
-            const remote = card.dataset.remoteVersion || '';
-            const local = card.dataset.localVersion || '';
-            const text = window.StudioI18n?.t
-                ? window.StudioI18n.t('update.versionLine').replace('{local}', local || '-').replace('{remote}', remote || '-')
-                : `本地 ${local || '-'} · 最新 ${remote || '-'}`;
-            body.textContent = text;
+        function updateProjectUpdateTitle() {
+            const gitBtn = document.getElementById('github-entry-btn');
+            if(!gitBtn?.classList.contains('update-available')) return;
+            const remoteVersion = gitBtn.dataset.remoteVersion || '';
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            gitBtn.title = isEn ? `New version available: ${remoteVersion || '-'}` : `发现新版本：${remoteVersion || '-'}`;
+            const updateBtn = document.getElementById('update-now-btn');
+            if(updateBtn) updateBtn.title = isEn ? 'Update main.py and static files from GitHub' : '从 GitHub 更新 main.py 和 static 文件';
         }
 
         function showUpdateNotice(localVersion, remoteVersion) {
-            if(localStorage.getItem(UPDATE_DISMISS_KEY) === remoteVersion) return;
-            const card = document.getElementById('update-card');
             const gitBtn = document.getElementById('github-entry-btn');
-            if(!card) return;
-            card.dataset.localVersion = localVersion || '';
-            card.dataset.remoteVersion = remoteVersion || '';
-            card.classList.add('show');
-            gitBtn?.classList.add('update-available');
-            renderUpdateCardText();
+            if(!gitBtn) return;
+            gitBtn.classList.add('update-available');
+            gitBtn.dataset.localVersion = localVersion || '';
+            gitBtn.dataset.remoteVersion = remoteVersion || '';
+            document.getElementById('update-now-btn')?.classList.add('show');
+            updateProjectUpdateTitle();
         }
 
-        function dismissUpdateNotice() {
-            const card = document.getElementById('update-card');
-            const remote = card?.dataset.remoteVersion || '';
-            if(remote) localStorage.setItem(UPDATE_DISMISS_KEY, remote);
-            card?.classList.remove('show');
-            document.getElementById('github-entry-btn')?.classList.remove('update-available');
+        async function runProjectUpdate() {
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            const message = isEn
+                ? 'Update main.py, VERSION, and static files from GitHub now? A backup will be created. Restart the backend after updating.'
+                : '现在从 GitHub 更新 main.py、VERSION 和 static 文件吗？更新前会自动备份，更新后需要重启后端。';
+            if(!confirm(message)) return;
+            const btn = document.getElementById('update-now-btn');
+            const text = document.getElementById('update-now-text');
+            const oldText = text?.textContent || '';
+            if(btn) btn.disabled = true;
+            if(text) text.textContent = isEn ? 'Updating...' : '更新中...';
+            try {
+                const res = await fetch('/api/update-from-github', { method:'POST' });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
+                const done = isEn
+                    ? `Updated ${data.count || 0} files. Please restart the backend, then refresh this page.`
+                    : `已更新 ${data.count || 0} 个文件。请重启后端，然后刷新页面。`;
+                alert(done);
+                document.getElementById('github-entry-btn')?.classList.remove('update-available');
+                btn?.classList.remove('show');
+            } catch(e) {
+                alert((isEn ? 'Update failed: ' : '更新失败：') + (e.message || e));
+            } finally {
+                if(btn) btn.disabled = false;
+                if(text) text.textContent = oldText || (isEn ? 'Update' : '一键更新');
+            }
         }
 
         async function checkForUpdates() {
