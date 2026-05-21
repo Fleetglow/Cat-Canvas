@@ -4761,15 +4761,7 @@
                     `<div class="output-img-wrap loading-wrap" data-pending-id="${escapeAttr(p.id)}"><span class="output-time-pill running">${formatRunDuration(nowMs() - Number(p.startedAt || nowMs()))}</span><div class="output-spinner"></div><button class="output-del" title="${tr('common.delete')}">×</button></div>`
                 ).join('');
                 body.innerHTML = renderOutputGrid(node, pendingHtml);
-                body.onwheel = e => {
-                    if(isMultiSelectKey(e) || e.altKey){
-                        e.preventDefault();
-                        e.stopPropagation();
-                        applyWheelZoom(e);
-                    } else {
-                        e.stopPropagation();
-                    }
-                };
+                body.onwheel = handleOutputBodyWheel;
                 body.querySelectorAll('.output-img-wrap').forEach(wrap => bindOutputWrap(wrap, node));
             }
             el.appendChild(body);
@@ -4845,12 +4837,20 @@
         function outputDomKeyForPending(pending){
             return `pending:${pending?.id || ''}`;
         }
+        function handleOutputBodyWheel(e){
+            if(isMultiSelectKey(e) || e.altKey){
+                e.preventDefault();
+                e.stopPropagation();
+                applyWheelZoom(e);
+            } else {
+                e.stopPropagation();
+            }
+        }
         function refreshOutputNodeContent(node){
             const el = nodesEl.querySelector(`.output-node[data-id="${CSS.escape(node.id)}"]`);
             const body = el?.querySelector('.node-body');
             const grid = body?.querySelector('.output-grid');
             if(!body || !grid) return false;
-            body.onwheel = e => { e.stopPropagation(); };
             const layout = outputGridLayout(node);
             grid.classList.toggle('grid-layout', !!layout);
             if(layout) grid.style.setProperty('--grid-cols', String(Math.max(1, Number(layout.cols || 1))));
