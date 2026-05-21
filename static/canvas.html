@@ -9110,7 +9110,7 @@
         window.addEventListener('keyup', e => {
             if(!isKnifeKey(e)) setKnifeMode(false);
         });
-        // 空格键：按住=平移模式，松开=恢复；文本编辑时忽略
+        // 空格键：按住=平移模式，松开=恢复；文本编辑时忽略；阻止浏览器默认滚动
         window.addEventListener('keydown', e => {
             if(e.repeat) return;
             if(e.code === 'Space' || e.key === ' '){
@@ -9118,6 +9118,7 @@
                 const isEditable = document.activeElement?.isContentEditable || tag === 'TEXTAREA' || tag === 'INPUT';
                 if(isEditable) return;
                 if(spacePan) return;
+                e.preventDefault(); // 阻止浏览器默认滚动（空格=向下翻页）
                 spacePan = true;
                 document.body.classList.add('space-pan');
             }
