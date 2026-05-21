@@ -4621,6 +4621,7 @@
                         openImageEditor(node.id);
                     };
                     body.onmousedown = e => {
+                        if(spacePan){ startBoardPan(e); return; }
                         if(e.detail >= 2){
                             openEditor(e);
                             return;
@@ -8816,8 +8817,8 @@
 
         board.onmousedown = e => {
             if(!canvas) return;
-            // 空格按住时，强制走平移，无视其他逻辑
-            if(spacePan && e.button === 0){ startBoardPan(e); return; }
+            // 空格按住时，强制走平移，无视其他逻辑（含中键）
+            if(spacePan){ startBoardPan(e); return; }
             if(e.button === 1){
                 startBoardPan(e);
                 return;
@@ -9130,6 +9131,14 @@
             spacePan = false;
             document.body.classList.remove('space-pan');
         });
+        // 捕获阶段：空格按住时，所有 mousedown 一律走平移，阻断其他交互
+        document.addEventListener('mousedown', e => {
+            if(spacePan && e.button === 0){
+                e.preventDefault();
+                e.stopPropagation();
+                startBoardPan(e);
+            }
+        }, true);
         window.addEventListener('blur', () => setKnifeMode(false));
         window.addEventListener('blur', () => {
             if(selectDrag){
