@@ -1165,6 +1165,7 @@
         const enableXDeleteSwitch = document.getElementById('enableXDeleteSwitch');
         if(enableXDeleteSwitch) enableXDeleteSwitch.checked = enableXDelete;
         let spacePan = false;
+        let spacePanDownPos = null; // 记录空格平移开始的鼠标位置，用于阻止误触 click
         const linksEl = document.getElementById('links');
         const linkControlsEl = document.getElementById('linkControls');
         const dropOverlay = document.getElementById('dropOverlay');
@@ -9132,11 +9133,21 @@
             document.body.classList.remove('space-pan');
         });
         // 捕获阶段：空格按住时，所有 mousedown 一律走平移，阻断其他交互
+        // 同时记录鼠标位置，用于后续阻止误触 click
         document.addEventListener('mousedown', e => {
             if(spacePan && e.button === 0){
+                spacePanDownPos = {x:e.clientX, y:e.clientY};
                 e.preventDefault();
                 e.stopPropagation();
                 startBoardPan(e);
+            }
+        }, true);
+        // 捕获阶段：空格平移后阻止误触 click（只要空格按下时点击，一律阻止）
+        document.addEventListener('click', e => {
+            if(spacePanDownPos){
+                spacePanDownPos = null;
+                e.preventDefault();
+                e.stopPropagation();
             }
         }, true);
         window.addEventListener('blur', () => setKnifeMode(false));
