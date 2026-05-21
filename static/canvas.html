@@ -1292,6 +1292,7 @@
         let hoveredConnectionId = '';
         let lastMouseBoard = {x: 0, y: 0};
         let undoStack = [];
+        let redoStack = [];
         const UNDO_MAX = 30;
         const cascadeRunningIds = new Set();
         const cascadeStopIds = new Set();
@@ -8193,10 +8194,22 @@
             if(!canvas) return;
             undoStack.push({nodes:JSON.parse(JSON.stringify(nodes)), connections:JSON.parse(JSON.stringify(connections))});
             if(undoStack.length > UNDO_MAX) undoStack.shift();
+            redoStack = [];
         }
         function performUndo(){
             if(!canvas || !undoStack.length) return;
+            redoStack.push({nodes:JSON.parse(JSON.stringify(nodes)), connections:JSON.parse(JSON.stringify(connections))});
             const state = undoStack.pop();
+            nodes = state.nodes;
+            connections = state.connections;
+            selected.clear();
+            render();
+            scheduleSave();
+        }
+        function performRedo(){
+            if(!canvas || !redoStack.length) return;
+            undoStack.push({nodes:JSON.parse(JSON.stringify(nodes)), connections:JSON.parse(JSON.stringify(connections))});
+            const state = redoStack.pop();
             nodes = state.nodes;
             connections = state.connections;
             selected.clear();
@@ -9143,6 +9156,11 @@
                 const tag = document.activeElement?.tagName;
                 if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
                 e.preventDefault(); performUndo();
+            }
+            if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+                const tag = document.activeElement?.tagName;
+                if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+                e.preventDefault(); performRedo();
             }
             if(e.key === 'Delete' || e.key === 'Backspace') {
                 const tag = document.activeElement?.tagName;
