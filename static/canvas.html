@@ -8870,6 +8870,8 @@
         }
         board.onwheel = e => {
             if(!canvas) return;
+            // 切割模式按键按住时不缩放，其他情况都缩放
+            if(isKnifeKey(e)) return;
             e.preventDefault();
             applyWheelZoom(e);
         };
