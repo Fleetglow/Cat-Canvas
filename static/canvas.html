@@ -8258,6 +8258,7 @@
             if(startKnifeDrag(e)) return;
             e.preventDefault();
             e.stopPropagation();
+            pushUndo();
             let dragTarget = node;
             if(e.altKey){
                 // 如果拖动的节点在多选里，则克隆所有选中节点
