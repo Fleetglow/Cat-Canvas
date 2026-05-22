@@ -7,6 +7,8 @@ import urllib.error
 import os
 import re
 import random
+import sys
+import subprocess
 import time
 import shutil
 import asyncio
@@ -173,11 +175,13 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
 OUTPUT_OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
+ASSET_LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 API_ENV_FILE = os.path.join(BASE_DIR, "API", ".env")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 CANVAS_DIR = os.path.join(DATA_DIR, "canvases")
+ASSET_LIBRARY_PATH = os.path.join(DATA_DIR, "asset_library.json")
 API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
 GLOBAL_CONFIG_FILE = os.path.join(BASE_DIR, "global_config.json")
 CANVAS_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
@@ -193,6 +197,7 @@ NEXT_TASK_ID = 1
 UPDATE_LOCK = Lock()
 
 PROVIDER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{2,40}$")
+SUPPORTED_PROVIDER_PROTOCOLS = {"openai", "apimart", "gemini"}
 
 def ensure_runtime_config_files():
     """首次运行时提前创建配置目录，避免第一次保存 API Key 时才创建目录/文件。"""
@@ -276,7 +281,7 @@ CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
 IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gpt-image-2")
 SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant.")
 MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "30"))
-AI_REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "120"))
+AI_REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "1800"))
 IMAGE_POLL_INTERVAL = float(os.getenv("IMAGE_POLL_INTERVAL", "2"))
 IMAGE_TASK_TIMEOUT = float(os.getenv("IMAGE_TASK_TIMEOUT", str(AI_REQUEST_TIMEOUT)))
 COMFYUI_HISTORY_TIMEOUT = int(float(os.getenv("COMFYUI_HISTORY_TIMEOUT", "1800")))
@@ -502,6 +507,8 @@ def provider_endpoint_url(provider, key, default_path):
         return override
     if base_url.endswith("/v1") and default_path.startswith("/v1/"):
         return f"{base_url}{default_path[3:]}"
+    if base_url.endswith("/v1beta") and default_path.startswith("/v1beta/"):
+        return f"{base_url}{default_path[7:]}"
     return f"{base_url}{default_path}"
 
 def normalize_provider(item):
@@ -513,7 +520,7 @@ def normalize_provider(item):
     if base_url and not re.match(r"^https?://", base_url):
         raise HTTPException(status_code=400, detail=f"{name} 的 Base URL 需要以 http:// 或 https:// 开头")
     protocol = str(item.get("protocol") or "openai").strip().lower()
-    if protocol not in {"openai", "apimart"}:
+    if protocol not in SUPPORTED_PROVIDER_PROTOCOLS:
         protocol = "openai"
     image_generation_endpoint = normalize_endpoint_override(item.get("image_generation_endpoint"), "文生图端口")
     image_edit_endpoint = normalize_endpoint_override(item.get("image_edit_endpoint"), "图生图/编辑端口")
@@ -635,6 +642,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_OUTPUT_DIR, exist_ok=True)
+os.makedirs(ASSET_LIBRARY_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(WORKFLOW_DIR, exist_ok=True)
 os.makedirs(CONVERSATION_DIR, exist_ok=True)
@@ -668,13 +676,38 @@ def update_allowed_file(path: str) -> bool:
         return False
     return path in {"main.py", "VERSION"} or path.startswith("static/")
 
-def github_json(url: str):
-    req = urllib.request.Request(url, headers={
+# 缓存 GitHub Tree API 响应（含 ETag），减少 60 次/h 限流压力
+GITHUB_TREE_CACHE: Dict[str, Any] = {"etag": "", "data": None, "expires_at": 0.0}
+
+def github_json(url: str, use_etag_cache: bool = False):
+    headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "Infinite-Canvas-Updater",
-    })
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+    }
+    cache_key = url
+    if use_etag_cache and cache_key == GITHUB_TREE_URL:
+        if GITHUB_TREE_CACHE["data"] and time.time() < GITHUB_TREE_CACHE["expires_at"]:
+            return GITHUB_TREE_CACHE["data"]
+        if GITHUB_TREE_CACHE["etag"]:
+            headers["If-None-Match"] = GITHUB_TREE_CACHE["etag"]
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            etag = resp.headers.get("ETag", "")
+            payload = json.loads(resp.read().decode("utf-8", errors="replace"))
+            if use_etag_cache and cache_key == GITHUB_TREE_URL:
+                GITHUB_TREE_CACHE.update({
+                    "etag": etag,
+                    "data": payload,
+                    "expires_at": time.time() + 600,  # 10 分钟内复用
+                })
+            return payload
+    except urllib.error.HTTPError as exc:
+        # 304 表示对方树未变，沿用缓存
+        if exc.code == 304 and use_etag_cache and GITHUB_TREE_CACHE["data"]:
+            GITHUB_TREE_CACHE["expires_at"] = time.time() + 600
+            return GITHUB_TREE_CACHE["data"]
+        raise
 
 def github_bytes(url: str) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": "Infinite-Canvas-Updater"})
@@ -691,12 +724,72 @@ def safe_update_target(path: str) -> str:
         raise ValueError(f"更新路径不安全：{rel}")
     return target
 
+def schedule_self_restart(delay_seconds: int = 3) -> bool:
+    """派生脱离父进程的小脚本，等几秒后启动启动服务脚本，并干掉当前 PID。"""
+    delay = max(1, int(delay_seconds or 3))
+    pid = os.getpid()
+    try:
+        if os.name == "nt":
+            launcher = os.path.join(BASE_DIR, "启动服务.bat")
+            if not os.path.exists(launcher):
+                launcher = os.path.join(BASE_DIR, "start.bat")
+            bat_path = os.path.join(BASE_DIR, "_self_restart.bat")
+            script = (
+                "@echo off\r\n"
+                "chcp 65001 >nul\r\n"
+                f"timeout /t {delay} /nobreak >nul\r\n"
+                f"taskkill /F /PID {pid} >nul 2>&1\r\n"
+                f"cd /d \"{BASE_DIR}\"\r\n"
+                f"if exist \"{launcher}\" start \"\" \"{launcher}\"\r\n"
+                "del \"%~f0\"\r\n"
+            )
+            with open(bat_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            subprocess.Popen(
+                ["cmd", "/c", bat_path],
+                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+                close_fds=True,
+            )
+        else:
+            launcher = os.path.join(BASE_DIR, "mac-启动服务.command")
+            if not os.path.exists(launcher):
+                launcher = os.path.join(BASE_DIR, "start.sh")
+            sh_path = os.path.join(BASE_DIR, "_self_restart.sh")
+            script = (
+                "#!/bin/sh\n"
+                f"sleep {delay}\n"
+                f"kill -9 {pid} 2>/dev/null\n"
+                f"cd \"{BASE_DIR}\"\n"
+                f"if [ -x \"{launcher}\" ]; then nohup \"{launcher}\" >/dev/null 2>&1 &\n"
+                f"elif [ -f \"{launcher}\" ]; then nohup /bin/sh \"{launcher}\" >/dev/null 2>&1 &\n"
+                "fi\n"
+                "rm -- \"$0\"\n"
+            )
+            with open(sh_path, "w", encoding="utf-8") as f:
+                f.write(script)
+            os.chmod(sh_path, 0o755)
+            subprocess.Popen(
+                ["/bin/sh", sh_path],
+                start_new_session=True,
+                close_fds=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        return True
+    except Exception as exc:
+        logging.exception("schedule_self_restart failed: %s", exc)
+        return False
+
+class UpdateRequest(BaseModel):
+    auto_restart: bool = False
+    restart_delay: int = 3
+
 @app.post("/api/update-from-github")
-def update_from_github():
+def update_from_github(req: UpdateRequest = UpdateRequest()):
     if not UPDATE_LOCK.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="正在更新中，请稍后再试")
     try:
-        tree_data = github_json(GITHUB_TREE_URL)
+        tree_data = github_json(GITHUB_TREE_URL, use_etag_cache=True)
         entries = tree_data.get("tree") or []
         files = []
         for entry in entries:
@@ -724,12 +817,16 @@ def update_from_github():
                 f.write(data)
             os.replace(temp_path, target)
             updated.append(rel)
+        restart_scheduled = False
+        if req.auto_restart and updated:
+            restart_scheduled = schedule_self_restart(req.restart_delay)
         return {
             "ok": True,
             "updated": updated,
             "count": len(updated),
             "backup_dir": backup_root if os.path.exists(backup_root) else "",
             "restart_required": True,
+            "restart_scheduled": restart_scheduled,
         }
     except urllib.error.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"GitHub 下载失败：HTTP {exc.code}") from exc
@@ -737,6 +834,89 @@ def update_from_github():
         raise HTTPException(status_code=502, detail=f"无法连接 GitHub：{exc.reason}") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"更新失败：{exc}") from exc
+    finally:
+        UPDATE_LOCK.release()
+
+def list_update_backups() -> List[Dict[str, Any]]:
+    root = os.path.join(DATA_DIR, "update_backups")
+    if not os.path.isdir(root):
+        return []
+    items = []
+    for name in sorted(os.listdir(root), reverse=True):
+        bp = os.path.join(root, name)
+        if not os.path.isdir(bp):
+            continue
+        file_count = 0
+        for _, _, fs in os.walk(bp):
+            file_count += len(fs)
+        try:
+            created_at = os.path.getmtime(bp)
+        except OSError:
+            created_at = 0.0
+        items.append({
+            "name": name,
+            "file_count": file_count,
+            "created_at": created_at,
+        })
+    return items
+
+@app.get("/api/update-backups")
+def get_update_backups():
+    return {"backups": list_update_backups()}
+
+class RollbackRequest(BaseModel):
+    name: str = ""
+    auto_restart: bool = False
+    restart_delay: int = 3
+
+@app.post("/api/update-rollback")
+def rollback_update(req: RollbackRequest):
+    if not req.name:
+        raise HTTPException(status_code=400, detail="缺少备份名称")
+    if not UPDATE_LOCK.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="正在更新中，请稍后再试")
+    try:
+        backup_root_abs = os.path.abspath(os.path.join(DATA_DIR, "update_backups"))
+        backup_dir = os.path.abspath(os.path.join(backup_root_abs, req.name))
+        if os.path.commonpath([backup_root_abs, backup_dir]) != backup_root_abs:
+            raise HTTPException(status_code=400, detail="备份路径不安全")
+        if not os.path.isdir(backup_dir):
+            raise HTTPException(status_code=404, detail="备份不存在")
+        restored = []
+        skipped = []
+        for dirpath, _, filenames in os.walk(backup_dir):
+            for fn in filenames:
+                src = os.path.join(dirpath, fn)
+                rel = os.path.relpath(src, backup_dir).replace("\\", "/")
+                if not update_allowed_file(rel):
+                    skipped.append(rel)
+                    continue
+                try:
+                    target = safe_update_target(rel)
+                except ValueError:
+                    skipped.append(rel)
+                    continue
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                temp_path = f"{target}.rollback_tmp"
+                with open(src, "rb") as fin, open(temp_path, "wb") as fout:
+                    shutil.copyfileobj(fin, fout)
+                os.replace(temp_path, target)
+                restored.append(rel)
+        restart_scheduled = False
+        if req.auto_restart and restored:
+            restart_scheduled = schedule_self_restart(req.restart_delay)
+        return {
+            "ok": True,
+            "restored": restored,
+            "skipped": skipped,
+            "count": len(restored),
+            "restart_required": True,
+            "restart_scheduled": restart_scheduled,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"回滚失败：{exc}") from exc
     finally:
         UPDATE_LOCK.release()
 
@@ -848,7 +1028,7 @@ class MsGenerateRequest(BaseModel):
 
 class CanvasLLMRequest(BaseModel):
     message: str = Field(min_length=1, max_length=LLM_MESSAGE_MAX_LENGTH)
-    system_prompt: str = "You are a helpful assistant."
+    system_prompt: str = ""
     model: str = ""
     messages: List[Dict[str, Any]] = []
     provider: str = "comfly"
@@ -880,6 +1060,18 @@ class CanvasAssetCheckRequest(BaseModel):
 class CanvasAssetDownloadRequest(BaseModel):
     urls: List[str] = []
     filename: str = "canvas-output-images.zip"
+
+class AssetLibraryCategoryRequest(BaseModel):
+    name: str = "新文件夹"
+    type: str = "image"
+
+class AssetLibraryAddRequest(BaseModel):
+    category_id: str = ""
+    url: str = ""
+    name: str = ""
+
+class AssetLibraryRenameRequest(BaseModel):
+    name: str = ""
 
 # --- 负载均衡 ---
 
@@ -1213,7 +1405,10 @@ def api_headers(json_body=True, provider=None):
         api_key = AI_API_KEY
         if not api_key:
             raise HTTPException(status_code=400, detail="未配置 COMFLY_API_KEY，请在 API/.env 中填写。")
-    headers = {"Accept": "application/json", "Authorization": f"Bearer {api_key}"}
+    if provider and provider_protocol(provider) == "gemini":
+        headers = {"Accept": "application/json", "x-goog-api-key": api_key}
+    else:
+        headers = {"Accept": "application/json", "Authorization": f"Bearer {api_key}"}
     if json_body:
         headers["Content-Type"] = "application/json"
     return headers
@@ -1275,6 +1470,28 @@ def sse_event(data):
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 def extract_image(data):
+    candidates = data.get("candidates") if isinstance(data, dict) else None
+    if isinstance(candidates, list):
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            content = candidate.get("content") or {}
+            parts = content.get("parts") if isinstance(content, dict) else None
+            if not isinstance(parts, list):
+                continue
+            for part in parts:
+                if not isinstance(part, dict):
+                    continue
+                inline = part.get("inlineData") or part.get("inline_data") or {}
+                if not isinstance(inline, dict):
+                    continue
+                value = inline.get("data")
+                if value:
+                    return {
+                        "type": "b64",
+                        "value": value,
+                        "mime_type": inline.get("mimeType") or inline.get("mime_type") or "image/png",
+                    }
     if isinstance(data.get("data"), dict) and isinstance(data["data"].get("result"), dict):
         data = data["data"]
     if isinstance(data.get("result"), dict):
@@ -1322,6 +1539,9 @@ def provider_protocol(provider):
 def is_apimart_provider(provider):
     base_url = str((provider or {}).get("base_url") or "").lower()
     return provider_protocol(provider) == "apimart" or "apimart.ai" in base_url
+
+def is_gemini_provider(provider):
+    return provider_protocol(provider) == "gemini"
 
 async def wait_for_image_task(client, task_id, provider=None):
     base_url = (provider.get("base_url") if provider else AI_BASE_URL).rstrip("/")
@@ -1386,6 +1606,49 @@ def output_file_from_url(url):
     if os.path.commonpath([output_root, path]) != output_root or not os.path.exists(path):
         return None
     return path
+
+def default_asset_library():
+    return {
+        "categories": [
+            {"id": "characters", "name": "角色", "type": "image", "items": []},
+            {"id": "scenes", "name": "场景", "type": "image", "items": []},
+            {"id": "workflows", "name": "工作流", "type": "workflow", "items": []},
+        ],
+        "updated_at": now_ms(),
+    }
+
+def load_asset_library():
+    if not os.path.exists(ASSET_LIBRARY_PATH):
+        lib = default_asset_library()
+        save_asset_library(lib)
+        return lib
+    try:
+        with open(ASSET_LIBRARY_PATH, "r", encoding="utf-8") as f:
+            lib = json.load(f)
+    except Exception:
+        lib = default_asset_library()
+    cats = lib.get("categories") if isinstance(lib.get("categories"), list) else []
+    if not any(c.get("type") == "workflow" for c in cats):
+        cats.append({"id": "workflows", "name": "工作流", "type": "workflow", "items": []})
+    lib["categories"] = cats
+    lib["updated_at"] = int(lib.get("updated_at") or now_ms())
+    return lib
+
+def save_asset_library(lib):
+    lib["updated_at"] = now_ms()
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(ASSET_LIBRARY_PATH, "w", encoding="utf-8") as f:
+        json.dump(lib, f, ensure_ascii=False, indent=2)
+
+def find_asset_category(lib, category_id):
+    for cat in lib.get("categories", []):
+        if cat.get("id") == category_id:
+            return cat
+    return None
+
+def sanitize_asset_name(name, fallback="asset"):
+    name = re.sub(r'[\\/:*?"<>|]+', "_", str(name or fallback)).strip()
+    return name[:120] or fallback
 
 def content_type_for_path(path):
     ext = os.path.splitext(path)[1].lower()
@@ -1680,6 +1943,13 @@ async def save_ai_image_to_output(image_data, prefix="online_", category="output
     filename = f"{prefix}{uuid.uuid4().hex[:10]}.png"
     path = output_path_for(filename, category)
     if image_data["type"] == "b64":
+        mime_type = str(image_data.get("mime_type") or "").lower()
+        if "jpeg" in mime_type or "jpg" in mime_type:
+            filename = filename[:-4] + ".jpg"
+            path = output_path_for(filename, category)
+        elif "webp" in mime_type:
+            filename = filename[:-4] + ".webp"
+            path = output_path_for(filename, category)
         with open(path, "wb") as f:
             f.write(base64.b64decode(image_data["value"]))
         return output_url_for(filename, category)
@@ -1861,10 +2131,65 @@ async def generate_modelscope_provider_image(prompt, size, model, reference_imag
                 raise HTTPException(status_code=502, detail=f"ModelScope 任务失败：{detail}")
         raise HTTPException(status_code=504, detail=f"ModelScope 生图任务超时：{last_payload}")
 
+def gemini_model_name(model):
+    value = selected_model(model, "gemini-3-pro-image-preview").strip()
+    return value[len("models/"):] if value.startswith("models/") else value
+
+def gemini_endpoint_url(provider, model):
+    model_name = urllib.parse.quote(gemini_model_name(model), safe="")
+    return provider_endpoint_url(provider, "image_generation_endpoint", f"/v1beta/models/{model_name}:generateContent")
+
+def gemini_image_config(size):
+    width, height = parse_size_pair(size)
+    if not width or not height:
+        raw = str(size or "").strip().upper()
+        if raw in {"1K", "2K", "4K"}:
+            return {"aspectRatio": "1:1", "imageSize": raw}
+        if re.fullmatch(r"\d+\s*:\s*\d+", raw):
+            return {"aspectRatio": raw.replace(" ", ""), "imageSize": "1K"}
+        return {"aspectRatio": "1:1", "imageSize": "2K"}
+    aspect_ratio, resolution = apimart_size_resolution(size)
+    return {"aspectRatio": aspect_ratio, "imageSize": resolution.upper()}
+
+def gemini_reference_part(ref):
+    value = reference_to_data_url(ref, max_size=1536)
+    if not value:
+        return None
+    if isinstance(value, str) and value.startswith("data:image/") and ";base64," in value:
+        header, encoded = value.split(";base64,", 1)
+        mime_type = header.replace("data:", "", 1) or "image/png"
+        return {"inlineData": {"mimeType": mime_type, "data": encoded}}
+    if isinstance(value, str) and value.startswith(("http://", "https://")):
+        return {"fileData": {"mimeType": "image/png", "fileUri": value}}
+    return None
+
+async def generate_gemini_provider_image(prompt, size, model, reference_images=None, provider=None):
+    model_name = gemini_model_name(model)
+    endpoint = gemini_endpoint_url(provider, model_name)
+    parts = [{"text": prompt.strip()}]
+    for ref in (reference_images or [])[:16]:
+        part = gemini_reference_part(ref)
+        if part:
+            parts.append(part)
+    body = {
+        "contents": [{"role": "user", "parts": parts}],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": gemini_image_config(size),
+        },
+    }
+    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0)) as client:
+        response = await client.post(endpoint, headers=api_headers(provider=provider), json=body)
+        response.raise_for_status()
+        raw = response.json()
+        return extract_image(raw), raw
+
 async def generate_ai_image(prompt, size, quality, model, reference_images=None, provider_id="comfly"):
     provider = get_api_provider(provider_id)
     if provider["id"] == "modelscope":
         return await generate_modelscope_provider_image(prompt, size, model, reference_images, provider)
+    if is_gemini_provider(provider):
+        return await generate_gemini_provider_image(prompt, size, model, reference_images, provider)
     is_gpt2 = is_gpt_image_2_model(model)
     is_apimart = is_apimart_provider(provider)
     quality = str(quality or "").strip().lower()
@@ -1880,7 +2205,7 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
     refs = [ref for ref in (reference_images or []) if ref.get("url")]
     mask_refs = [ref for ref in refs if str(ref.get("role") or "").strip().lower() == "mask" or str(ref.get("name") or "").lower().endswith("_mask.png")]
     image_refs = [ref for ref in refs if ref not in mask_refs]
-    request_timeout = httpx.Timeout(connect=20.0, read=600.0, write=120.0, pool=20.0) if (is_gpt2 or is_apimart) else AI_REQUEST_TIMEOUT
+    request_timeout = httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0) if (is_gpt2 or is_apimart) else AI_REQUEST_TIMEOUT
     async with httpx.AsyncClient(timeout=request_timeout) as client:
         response = None
         async def post_openai_edits(edit_files=None):
@@ -2176,6 +2501,56 @@ class TestConnectionPayload(BaseModel):
     base_url: str = ""
     api_key: str = ""
     provider_id: str = ""
+    protocol: str = "openai"
+
+def protocol_from_payload(payload):
+    protocol = str(getattr(payload, "protocol", "") or "openai").strip().lower()
+    return protocol if protocol in SUPPORTED_PROVIDER_PROTOCOLS else "openai"
+
+def upstream_models_url(base_url: str, protocol: str):
+    if protocol == "gemini":
+        return f"{base_url}/models" if base_url.endswith("/v1beta") else f"{base_url}/v1beta/models"
+    return f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
+
+def upstream_model_headers(api_key: str, protocol: str):
+    if protocol == "gemini":
+        return {"x-goog-api-key": api_key, "Accept": "application/json"}
+    return {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+
+def classify_upstream_model(mid):
+    lc = str(mid or "").lower()
+    video_keys = ["veo", "sora", "wan2", "wanx", "doubao-seedance", "doubao-1", "kling", "hailuo", "video", "t2v-", "i2v-", "s2v"]
+    if any(k in lc for k in video_keys):
+        return "video"
+    image_keys = ["banana", "image", "dalle", "dall-e", "imagen", "flux", "stable", "sdxl", "midjourney", "nano-banana", "ideogram", "fal-ai", "z-image", "qwen-image", "klein"]
+    if any(k in lc for k in image_keys):
+        return "image"
+    return "chat"
+
+def parse_upstream_models(raw, protocol="openai"):
+    items = raw.get("data") if isinstance(raw, dict) else None
+    if not items and isinstance(raw, dict):
+        items = raw.get("models") or raw.get("list") or []
+    if not isinstance(items, list):
+        items = []
+    ids = []
+    for it in items:
+        if isinstance(it, str):
+            mid = it
+        elif isinstance(it, dict):
+            mid = it.get("id") or it.get("name") or it.get("model")
+        else:
+            mid = ""
+        if mid:
+            mid = str(mid)
+            if protocol == "gemini" and mid.startswith("models/"):
+                mid = mid[len("models/"):]
+            ids.append(mid)
+    ids = sorted(set(ids))
+    grouped = {"image": [], "chat": [], "video": []}
+    for mid in ids:
+        grouped[classify_upstream_model(mid)].append(mid)
+    return grouped, ids
 
 @app.post("/api/providers/test-connection")
 async def test_provider_connection(payload: TestConnectionPayload):
@@ -2190,37 +2565,15 @@ async def test_provider_connection(payload: TestConnectionPayload):
         api_key = os.getenv(provider_key_env(payload.provider_id), "")
     if not api_key:
         raise HTTPException(status_code=400, detail="请先填写或保存 API Key")
-    url = f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
+    protocol = protocol_from_payload(payload)
+    url = upstream_models_url(base_url, protocol)
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(url, headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"})
+            resp = await client.get(url, headers=upstream_model_headers(api_key, protocol))
         if resp.status_code >= 400:
             return {"ok": False, "status": resp.status_code, "message": resp.text[:300]}
         data = resp.json() if resp.text else {}
-        items = (data.get("data") if isinstance(data, dict) else None) or []
-        # 抽取模型 id
-        ids = []
-        for it in items:
-            if isinstance(it, str):
-                ids.append(it)
-            elif isinstance(it, dict):
-                mid = it.get("id") or it.get("name") or it.get("model")
-                if mid:
-                    ids.append(str(mid))
-        ids = sorted(set(ids))
-        # 关键字分类
-        def classify(mid):
-            lc = mid.lower()
-            video_keys = ["veo", "sora", "wan2", "wanx", "doubao-seedance", "doubao-1", "kling", "hailuo", "video", "t2v-", "i2v-", "s2v"]
-            if any(k in lc for k in video_keys):
-                return "video"
-            image_keys = ["image", "dalle", "dall-e", "imagen", "flux", "stable", "sdxl", "midjourney", "nano-banana", "ideogram", "fal-ai", "z-image", "qwen-image", "klein"]
-            if any(k in lc for k in image_keys):
-                return "image"
-            return "chat"
-        grouped = {"image": [], "chat": [], "video": []}
-        for mid in ids:
-            grouped[classify(mid)].append(mid)
+        grouped, ids = parse_upstream_models(data, protocol)
         return {"ok": True, "status": resp.status_code, "model_count": len(ids), "image_models": grouped["image"], "chat_models": grouped["chat"], "video_models": grouped["video"], "all": ids}
     except httpx.HTTPError as e:
         return {"ok": False, "status": 0, "message": str(e)[:300]}
@@ -2274,8 +2627,8 @@ async def probe_async_endpoint(payload: TestConnectionPayload):
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=str(e)[:300])
 
-async def fetch_models_from_upstream(base_url: str, api_key: str):
-    """从 OpenAI 兼容 /v1/models 端点拉取模型，并按名称做轻量分类。"""
+async def fetch_models_from_upstream(base_url: str, api_key: str, protocol: str = "openai"):
+    """从上游模型列表端点拉取模型，并按名称做轻量分类。"""
     base_url = (base_url or "").strip().rstrip("/")
     if not base_url:
         raise HTTPException(status_code=400, detail="请先填写请求地址")
@@ -2284,43 +2637,18 @@ async def fetch_models_from_upstream(base_url: str, api_key: str):
     api_key = (api_key or "").strip()
     if not api_key:
         raise HTTPException(status_code=400, detail="请先填写或保存 API Key")
-    url = f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
+    protocol = protocol if protocol in SUPPORTED_PROVIDER_PROTOCOLS else "openai"
+    url = upstream_models_url(base_url, protocol)
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(url, headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"})
+            resp = await client.get(url, headers=upstream_model_headers(api_key, protocol))
             if resp.status_code >= 400:
-                raise HTTPException(status_code=resp.status_code, detail=f"上游 /v1/models 失败：{resp.text[:300]}")
+                endpoint_label = "/v1beta/models" if protocol == "gemini" else "/v1/models"
+                raise HTTPException(status_code=resp.status_code, detail=f"上游 {endpoint_label} 失败：{resp.text[:300]}")
             raw = resp.json()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"请求上游模型列表失败：{e}")
-    # 兼容多种返回结构：{data:[{id:...},...]} 或 {models:[...]}
-    items = raw.get("data") if isinstance(raw, dict) else None
-    if not items and isinstance(raw, dict):
-        items = raw.get("models") or raw.get("list") or []
-    if not isinstance(items, list):
-        items = []
-    ids = []
-    for it in items:
-        if isinstance(it, str):
-            ids.append(it)
-        elif isinstance(it, dict):
-            mid = it.get("id") or it.get("name") or it.get("model")
-            if mid:
-                ids.append(str(mid))
-    ids = sorted(set(ids))
-    # 分类规则（按关键字）
-    def classify(mid):
-        lc = mid.lower()
-        video_keys = ["veo", "sora", "wan2", "wanx", "doubao-seedance", "doubao-1", "kling", "hailuo", "video", "t2v-", "i2v-", "s2v"]
-        if any(k in lc for k in video_keys):
-            return "video"
-        image_keys = ["image", "dalle", "dall-e", "imagen", "flux", "stable", "sdxl", "midjourney", "nano-banana", "ideogram", "fal-ai", "z-image", "qwen-image", "klein"]
-        if any(k in lc for k in image_keys):
-            return "image"
-        return "chat"
-    grouped = {"image": [], "chat": [], "video": []}
-    for mid in ids:
-        grouped[classify(mid)].append(mid)
+    grouped, ids = parse_upstream_models(raw, protocol)
     return {"total": len(ids), "image_models": grouped["image"], "chat_models": grouped["chat"], "video_models": grouped["video"], "all": ids}
 
 @app.post("/api/providers/fetch-models")
@@ -2329,7 +2657,7 @@ async def fetch_upstream_models_from_payload(payload: TestConnectionPayload):
     api_key = (payload.api_key or "").strip()
     if not api_key and payload.provider_id:
         api_key = os.getenv(provider_key_env(payload.provider_id), "")
-    return await fetch_models_from_upstream(payload.base_url, api_key)
+    return await fetch_models_from_upstream(payload.base_url, api_key, protocol_from_payload(payload))
 
 @app.get("/api/providers/{provider_id}/fetch-models")
 async def fetch_upstream_models(provider_id: str):
@@ -2338,7 +2666,7 @@ async def fetch_upstream_models(provider_id: str):
     api_key = os.getenv(provider_key_env(provider["id"]), "")
     if not api_key:
         raise HTTPException(status_code=400, detail=f"{provider.get('name') or provider_id} 未配置 API Key")
-    return await fetch_models_from_upstream(provider.get("base_url") or "", api_key)
+    return await fetch_models_from_upstream(provider.get("base_url") or "", api_key, provider_protocol(provider))
 
 async def build_online_image_result(payload: OnlineImageRequest):
     provider = get_api_provider(payload.provider_id)
@@ -2739,7 +3067,8 @@ async def canvas_llm(payload: CanvasLLMRequest):
     # 判断协议：APIMart 异步 vs 标准 OpenAI
     _llm_provider = get_api_provider(payload.provider) if payload.provider not in ("modelscope",) else {}
     _is_apimart = is_apimart_provider(_llm_provider)
-    upstream_messages = [{"role": "system", "content": payload.system_prompt or SYSTEM_PROMPT}]
+    system_prompt = (payload.system_prompt or "").strip()
+    upstream_messages = [{"role": "system", "content": system_prompt}] if system_prompt else []
     for item in payload.messages[-MAX_HISTORY_MESSAGES:]:
         role = item.get("role")
         content = item.get("content")
@@ -2896,6 +3225,94 @@ async def download_canvas_assets(payload: CanvasAssetDownloadRequest):
     encoded = urllib.parse.quote(filename)
     headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"}
     return Response(buffer.getvalue(), media_type="application/zip", headers=headers)
+
+@app.get("/api/asset-library")
+async def get_asset_library():
+    return {"library": load_asset_library()}
+
+@app.post("/api/asset-library/categories")
+async def create_asset_library_category(payload: AssetLibraryCategoryRequest):
+    lib = load_asset_library()
+    cat_type = "workflow" if str(payload.type or "").lower() == "workflow" else "image"
+    category = {"id": f"cat_{uuid.uuid4().hex[:12]}", "name": sanitize_asset_name(payload.name, "新文件夹"), "type": cat_type, "items": []}
+    lib.setdefault("categories", []).append(category)
+    save_asset_library(lib)
+    return {"library": lib, "category": category}
+
+@app.patch("/api/asset-library/categories/{category_id}")
+async def rename_asset_library_category(category_id: str, payload: AssetLibraryRenameRequest):
+    lib = load_asset_library()
+    cat = find_asset_category(lib, category_id)
+    if not cat:
+        raise HTTPException(status_code=404, detail="分类不存在")
+    cat["name"] = sanitize_asset_name(payload.name, cat.get("name") or "新文件夹")
+    save_asset_library(lib)
+    return {"library": lib, "category": cat}
+
+@app.delete("/api/asset-library/categories/{category_id}")
+async def delete_asset_library_category(category_id: str):
+    lib = load_asset_library()
+    cat = find_asset_category(lib, category_id)
+    if not cat:
+        raise HTTPException(status_code=404, detail="分类不存在")
+    if cat.get("type") == "workflow" and category_id == "workflows":
+        raise HTTPException(status_code=400, detail="默认工作流分类不能删除")
+    lib["categories"] = [c for c in lib.get("categories", []) if c.get("id") != category_id]
+    save_asset_library(lib)
+    return {"library": lib}
+
+@app.post("/api/asset-library/items")
+async def add_asset_library_item(payload: AssetLibraryAddRequest):
+    lib = load_asset_library()
+    cat = find_asset_category(lib, payload.category_id)
+    if not cat:
+        raise HTTPException(status_code=404, detail="分类不存在")
+    if cat.get("type") != "image":
+        raise HTTPException(status_code=400, detail="该分类暂不支持添加图片")
+    src = output_file_from_url(payload.url)
+    if not src:
+        raise HTTPException(status_code=400, detail="只支持保存本地 /assets 或 /output 图片")
+    ext = os.path.splitext(src)[1].lower() or ".png"
+    if ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+        ext = ".png"
+    safe_name = sanitize_asset_name(payload.name or os.path.basename(src), "asset")
+    if not os.path.splitext(safe_name)[1]:
+        safe_name += ext
+    dest_name = f"lib_{uuid.uuid4().hex[:12]}_{safe_name}"
+    dest_path = os.path.join(ASSET_LIBRARY_DIR, dest_name)
+    shutil.copy2(src, dest_path)
+    item = {"id": f"asset_{uuid.uuid4().hex[:12]}", "name": os.path.splitext(safe_name)[0][:120], "url": f"/assets/library/{dest_name}", "created_at": now_ms()}
+    cat.setdefault("items", []).append(item)
+    save_asset_library(lib)
+    return {"library": lib, "item": item}
+
+@app.patch("/api/asset-library/items/{item_id}")
+async def rename_asset_library_item(item_id: str, payload: AssetLibraryRenameRequest):
+    lib = load_asset_library()
+    for cat in lib.get("categories", []):
+        for item in cat.get("items", []):
+            if item.get("id") == item_id:
+                item["name"] = sanitize_asset_name(payload.name, item.get("name") or "asset")
+                save_asset_library(lib)
+                return {"library": lib, "item": item}
+    raise HTTPException(status_code=404, detail="资产不存在")
+
+@app.delete("/api/asset-library/items/{item_id}")
+async def delete_asset_library_item(item_id: str):
+    lib = load_asset_library()
+    removed = None
+    for cat in lib.get("categories", []):
+        keep = []
+        for item in cat.get("items", []):
+            if item.get("id") == item_id:
+                removed = item
+            else:
+                keep.append(item)
+        cat["items"] = keep
+    if not removed:
+        raise HTTPException(status_code=404, detail="资产不存在")
+    save_asset_library(lib)
+    return {"library": lib}
 
 @app.put("/api/canvases/{canvas_id}")
 async def update_canvas(canvas_id: str, payload: CanvasSaveRequest):

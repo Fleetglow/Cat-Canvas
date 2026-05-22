@@ -25,7 +25,7 @@
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/static/theme.js?v=20260516-theme-sync"></script>
-    <script src="/static/i18n.js?v=20260519-smart-canvas"></script>
+    <script src="/static/i18n.js?v=20260520-asset-library"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
 
@@ -751,8 +751,8 @@
             <iframe id="frame-angle" data-src="/static/angle.html?v=20260512-i18n2" scrolling="yes"></iframe>
             <iframe id="frame-online" data-src="/static/online.html?v=20260512-i18n2" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=20260514-provider-chat-models" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas.html?v=20260520-smart-prompt-drafts" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=20260519-relaxed-model-name" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas.html?v=20260521-mention-token-restore" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=20260521-manual-protocol" scrolling="yes"></iframe>
             <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=20260519-random-number-active-wrap" scrolling="yes"></iframe>
 
             <div class="nano-monitor" id="nano-monitor">
@@ -978,34 +978,101 @@
             updateProjectUpdateTitle();
         }
 
+        function describeNetworkError(err, isEn){
+            const msg = String(err?.message || err || '');
+            const isNetwork = (err instanceof TypeError) || /Failed to fetch|NetworkError|ERR_|timed? ?out|超时|无法连接|GitHub|HTTP 4|HTTP 5/i.test(msg);
+            if(isNetwork){
+                return isEn
+                    ? 'Cannot reach GitHub. Please make sure this machine has internet access (and can reach github.com / raw.githubusercontent.com). If you are in a restricted network you may need a proxy or VPN.'
+                    : '无法连接 GitHub。请检查本机网络是否能访问外网（特别是 github.com / raw.githubusercontent.com）。如果在受限网络中，可能需要走代理或外网环境再试。';
+            }
+            return msg || (isEn ? 'Update failed' : '更新失败');
+        }
+
         async function runProjectUpdate() {
             const isEn = window.StudioI18n?.lang?.() === 'en';
-            const message = isEn
-                ? 'Update main.py, VERSION, and static files from GitHub now? A backup will be created. Restart the backend after updating.'
-                : '现在从 GitHub 更新 main.py、VERSION 和 static 文件吗？更新前会自动备份，更新后需要重启后端。';
-            if(!confirm(message)) return;
+            const askMessage = isEn
+                ? 'Update main.py, VERSION, and static files from GitHub now? A backup will be created. Click OK to update and auto-restart the backend. Requires an internet connection (github.com).'
+                : '现在从 GitHub 更新 main.py、VERSION 和 static 文件吗？更新前会自动备份，更新后将自动重启后端。需要本机能访问外网（github.com）。';
+            if(!confirm(askMessage)) return;
             const btn = document.getElementById('update-now-btn');
             const text = document.getElementById('update-now-text');
             const oldText = text?.textContent || '';
             if(btn) btn.disabled = true;
             if(text) text.textContent = isEn ? 'Updating...' : '更新中...';
             try {
-                const res = await fetch('/api/update-from-github', { method:'POST' });
+                const res = await fetch('/api/update-from-github', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ auto_restart:true, restart_delay:3 })
+                });
                 const data = await res.json().catch(() => ({}));
                 if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
-                const done = isEn
-                    ? `Updated ${data.count || 0} files. Please restart the backend, then refresh this page.`
-                    : `已更新 ${data.count || 0} 个文件。请重启后端，然后刷新页面。`;
+                const restarting = data.restart_scheduled;
+                const done = restarting
+                    ? (isEn
+                        ? `Updated ${data.count || 0} files. The backend will restart in ~3 seconds. This page will auto-reload when it's back.`
+                        : `已更新 ${data.count || 0} 个文件。后端将在约 3 秒后自动重启，本页面在后端恢复后会自动刷新。`)
+                    : (isEn
+                        ? `Updated ${data.count || 0} files. Please restart the backend, then refresh this page.`
+                        : `已更新 ${data.count || 0} 个文件。请重启后端，然后刷新页面。`);
                 alert(done);
                 document.getElementById('github-entry-btn')?.classList.remove('update-available');
                 btn?.classList.remove('show');
+                if(restarting) waitForBackendAndReload();
             } catch(e) {
-                alert((isEn ? 'Update failed: ' : '更新失败：') + (e.message || e));
+                alert((isEn ? 'Update failed: ' : '更新失败：') + describeNetworkError(e, isEn));
             } finally {
                 if(btn) btn.disabled = false;
                 if(text) text.textContent = oldText || (isEn ? 'Update' : '一键更新');
             }
         }
+        async function waitForBackendAndReload() {
+            const deadline = Date.now() + 90 * 1000;
+            await new Promise(r => setTimeout(r, 4000));
+            while(Date.now() < deadline) {
+                try {
+                    const r = await fetch('/api/app-info', { cache:'no-store' });
+                    if(r.ok) { location.reload(); return; }
+                } catch {}
+                await new Promise(r => setTimeout(r, 1500));
+            }
+        }
+        async function rollbackProjectUpdate() {
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            try {
+                const list = await fetch('/api/update-backups').then(r => r.json());
+                const backups = list.backups || [];
+                if(!backups.length){ alert(isEn ? 'No backups available.' : '没有可用的备份'); return; }
+                const lines = backups.slice(0, 8).map((b, i) => {
+                    const d = new Date((b.created_at || 0) * 1000);
+                    const ts = d.toLocaleString();
+                    return `${i + 1}. ${b.name}  (${b.file_count} files, ${ts})`;
+                });
+                const promptMsg = (isEn
+                    ? 'Select a backup to restore (enter the number):\n'
+                    : '选择要还原的备份（输入序号）：\n') + lines.join('\n');
+                const answer = prompt(promptMsg, '1');
+                const idx = Number(answer) - 1;
+                if(!(idx >= 0 && idx < backups.length)) return;
+                const target = backups[idx];
+                if(!confirm(isEn ? `Restore "${target.name}"? Backend will restart.` : `要还原 "${target.name}" 吗？后端会自动重启。`)) return;
+                const res = await fetch('/api/update-rollback', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ name:target.name, auto_restart:true, restart_delay:3 })
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Rollback failed' : '回滚失败'));
+                alert(isEn
+                    ? `Restored ${data.count || 0} files. Backend is restarting.`
+                    : `已还原 ${data.count || 0} 个文件。后端正在重启。`);
+                if(data.restart_scheduled) waitForBackendAndReload();
+            } catch(e) {
+                alert((isEn ? 'Rollback failed: ' : '回滚失败：') + describeNetworkError(e, isEn));
+            }
+        }
+        window.rollbackProjectUpdate = rollbackProjectUpdate;
 
         async function checkForUpdates() {
             try {

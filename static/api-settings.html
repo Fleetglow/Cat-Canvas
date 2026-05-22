@@ -337,6 +337,7 @@
                                     <select id="protocolInput" style="height:34px;padding:0 10px;border:0;background:transparent;color:var(--text);outline:none;font-size:13px;font-weight:650;white-space:nowrap">
                                         <option value="openai" data-i18n="api.protocolOpenAI">OpenAI 兼容</option>
                                         <option value="apimart" data-i18n="api.protocolApimart">APIMart 异步</option>
+                                        <option value="gemini" data-i18n="api.protocolGemini">Gemini</option>
                                     </select>
                                 </div>
                                 <button id="advancedToggleBtn" class="action-btn" type="button" onclick="toggleAdvancedEndpoints()">
@@ -573,6 +574,13 @@
             const key = keyInput.value.trim();
             if(key) item.api_key = key;
         }
+        function updateProtocolFromInput(){
+            const item = provider();
+            if(!item || !protocolInput || item.id === 'modelscope') return;
+            const value = String(protocolInput.value || 'openai').toLowerCase();
+            item.protocol = ['openai', 'apimart', 'gemini'].includes(value) ? value : 'openai';
+            clearVerifyResult();
+        }
         function sortedProviders(){
             const builtin = ['modelscope', 'comfly'];
             return [...providers].sort((a, b) => {
@@ -712,7 +720,7 @@
                 });
                 const isAsync = data.ok === true;
                 // 自动设置协议下拉
-                if(protocolInput){
+                if(protocolInput && protocolInput.value !== 'gemini'){
                     protocolInput.value = isAsync ? 'apimart' : 'openai';
                     // 触发 change 以便其他地方同步
                     protocolInput.dispatchEvent(new Event('change'));
@@ -729,8 +737,10 @@
                         <pre style="margin-top:6px;padding:10px 12px;border-radius:10px;background:var(--soft);border:1px solid var(--line-2);font-size:10.5px;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;color:var(--text);max-height:200px;overflow:auto">${escapeHtml(rawJson)}</pre>
                     </details>`);
             } catch(e){
-                if(protocolInput){ protocolInput.value = 'openai'; protocolInput.dispatchEvent(new Event('change')); }
-                showVerifyResult(`<div style="font-size:11px;font-weight:800;color:#b45309">⚠ ${escapeHtml(e.message || String(e))}，协议已设为 OpenAI 兼容</div>`);
+                const keepManualGemini = protocolInput?.value === 'gemini';
+                if(protocolInput && !keepManualGemini){ protocolInput.value = 'openai'; protocolInput.dispatchEvent(new Event('change')); }
+                const suffix = keepManualGemini ? '，已保留当前手动选择的 Gemini 协议' : '，协议已设为 OpenAI 兼容';
+                showVerifyResult(`<div style="font-size:11px;font-weight:800;color:#b45309">⚠ ${escapeHtml(e.message || String(e))}${suffix}</div>`);
             } finally {
                 if(btn){ btn.disabled = false; btn.querySelector('span').textContent = '验证协议'; refreshIcons(); }
             }
@@ -748,7 +758,7 @@
                 const apiKey = keyInput.value.trim();
                 const data = await fetch('/api/providers/test-connection', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ base_url: baseUrl, api_key: apiKey, provider_id: item.id })
+                    body: JSON.stringify({ base_url: baseUrl, api_key: apiKey, provider_id: item.id, protocol: protocolInput?.value || 'openai' })
                 }).then(async r => {
                     if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '验证失败'));
                     return r.json();
@@ -792,7 +802,7 @@
                 const data = await fetch('/api/providers/fetch-models', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({base_url:baseUrl, api_key:apiKey, provider_id:item.id})
+                    body:JSON.stringify({base_url:baseUrl, api_key:apiKey, provider_id:item.id, protocol:protocolInput?.value || 'openai'})
                 }).then(async r => {
                     if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '拉取失败'));
                     return r.json();
@@ -1039,7 +1049,7 @@
             let id = 'custom-api';
             let index = 2;
             while(providers.some(item => item.id === id)) id = `custom-api-${index++}`;
-            providers.push({id, name:tr('api.newProvider'), base_url:'https://', protocol:'openai', image_generation_endpoint:'', image_edit_endpoint:'', enabled:true, primary:false, image_models:[], chat_models:[], video_models:[], has_key:false, key_preview:''});
+            providers.push({id, name:'API', base_url:'https://', protocol:'openai', image_generation_endpoint:'', image_edit_endpoint:'', enabled:true, primary:false, image_models:[], chat_models:[], video_models:[], has_key:false, key_preview:''});
             selectedId = id;
             renderEditor();
         }
@@ -1090,7 +1100,7 @@
             try {
                 providers.forEach(item => {
                     item.id = normalizeId(item.id);
-                    item.protocol = ['openai', 'apimart'].includes(String(item.protocol || '').toLowerCase()) ? String(item.protocol).toLowerCase() : 'openai';
+                    item.protocol = ['openai', 'apimart', 'gemini'].includes(String(item.protocol || '').toLowerCase()) ? String(item.protocol).toLowerCase() : 'openai';
                     item.image_generation_endpoint = normalizeEndpointSetting(item.image_generation_endpoint);
                     item.image_edit_endpoint = normalizeEndpointSetting(item.image_edit_endpoint);
                     validateEndpointSetting(item.image_generation_endpoint, '文生图端口');
@@ -1174,6 +1184,7 @@
             loadProviders();
             // 平台名输入时实时预览生成的 ID
             if(nameInput) nameInput.addEventListener('input', updateIdPreview);
+            if(protocolInput) protocolInput.addEventListener('change', updateProtocolFromInput);
         };
     </script>
 </body>

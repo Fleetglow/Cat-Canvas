@@ -247,6 +247,9 @@
         .node.sized.loop-node .loop-field { flex:1; min-height:0; }
         .node.sized.loop-node .loop-field textarea { height:100%; }
         .loop-preview { min-width:0; padding:8px 10px; border-radius:12px; border:1px dashed var(--line-2); background:var(--soft); color:var(--muted); font-size:11px; line-height:1.45; white-space:pre-wrap; overflow:hidden; overflow-wrap:anywhere; }
+        .loop-prompt-hint { min-width:0; color:var(--muted); font-size:11px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .loop-variable-editor.is-disabled { opacity:.55; color:var(--faint); background:var(--soft); cursor:not-allowed; }
+        .loop-variable-editor.is-disabled .loop-token-chip { opacity:.6; }
         .generator-node { width:380px; }
         .comfy-node { width:420px; height:460px; }
         .generator-body { min-height:0; }
@@ -2265,7 +2268,7 @@
         }
         function openSmartCanvasPage(id){
             if(!id) return;
-            window.location.href = `/static/smart-canvas.html?id=${encodeURIComponent(id)}&v=20260520-smart-prompt-drafts`;
+            window.location.href = `/static/smart-canvas.html?id=${encodeURIComponent(id)}&v=20260521-mention-token-restore`;
         }
         function toggleEmojiPicker(id, event){
             event?.preventDefault();
@@ -3850,13 +3853,31 @@
         function brushColor(){
             return document.getElementById('paintBrushColor')?.value || '#ff2d55';
         }
+        const MASK_BRUSH_ALPHA = 115;
+        const MASK_BRUSH_COLOR = `rgba(255,255,255,${MASK_BRUSH_ALPHA / 255})`;
         function setupDrawStyle(ctx){
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.lineWidth = editBrushSize();
-            ctx.strokeStyle = imageEditMode === 'mask' ? 'rgba(255,255,255,0.78)' : brushColor();
-            ctx.fillStyle = imageEditMode === 'mask' ? 'rgba(255,255,255,0.78)' : brushColor();
+            ctx.strokeStyle = imageEditMode === 'mask' ? MASK_BRUSH_COLOR : brushColor();
+            ctx.fillStyle = imageEditMode === 'mask' ? MASK_BRUSH_COLOR : brushColor();
             ctx.globalCompositeOperation = 'source-over';
+        }
+        function normalizeMaskPreviewCanvas(canvasEl=editDrawCanvas()){
+            if(imageEditMode !== 'mask' || !canvasEl?.width || !canvasEl?.height) return;
+            const ctx = canvasEl.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+            const data = imageData.data;
+            let changed = false;
+            for(let i = 0; i < data.length; i += 4){
+                if(data[i + 3] <= 0) continue;
+                data[i] = 255;
+                data[i + 1] = 255;
+                data[i + 2] = 255;
+                if(data[i + 3] > MASK_BRUSH_ALPHA) data[i + 3] = MASK_BRUSH_ALPHA;
+                changed = true;
+            }
+            if(changed) ctx.putImageData(imageData, 0, 0);
         }
         function circledNumber(n){
             if(n >= 1 && n <= 20) return String.fromCharCode(0x2460 + n - 1);
@@ -3941,6 +3962,7 @@
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p.x + 0.01, p.y + 0.01);
             if(imageEditMode === 'mask' || brushTool === 'free') ctx.stroke();
+            normalizeMaskPreviewCanvas(canvasEl);
         }
         function moveEditDraw(event){
             if(imageEditMode === 'grid' && gridCustomMode && gridCustomDrag){
@@ -3967,6 +3989,7 @@
             ctx.stroke();
             editDrawState.x = p.x;
             editDrawState.y = p.y;
+            normalizeMaskPreviewCanvas();
         }
         function endEditDraw(event){
             if(editDrawState && event?.pointerId != null) editDrawCanvas().releasePointerCapture?.(event.pointerId);
@@ -4416,14 +4439,7 @@
             if(!cropState) return;
             const node = nodes.find(n => n.id === cropState.nodeId);
             if(!node || !editCanvasHasPixels()) return;
-            const src = editDrawCanvas();
-            const mask = document.createElement('canvas');
-            mask.width = src.width;
-            mask.height = src.height;
-            const ctx = mask.getContext('2d');
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, mask.width, mask.height);
-            ctx.drawImage(src, 0, 0);
+            const mask = maskCanvasFromDrawCanvas(editDrawCanvas());
             const blob = await new Promise(resolve => mask.toBlob(resolve, 'image/png'));
             if(!blob) return;
             const base = (node.name || 'image').replace(/\.[^.]+$/, '');
@@ -4434,6 +4450,25 @@
                 render();
                 scheduleSave();
             }
+        }
+        function maskCanvasFromDrawCanvas(src){
+            const mask = document.createElement('canvas');
+            mask.width = src.width;
+            mask.height = src.height;
+            const srcCtx = src.getContext('2d');
+            const srcData = srcCtx.getImageData(0, 0, src.width, src.height);
+            const ctx = mask.getContext('2d');
+            const out = ctx.createImageData(mask.width, mask.height);
+            for(let i = 0; i < srcData.data.length; i += 4){
+                const painted = srcData.data[i + 3] > 8;
+                const v = painted ? 255 : 0;
+                out.data[i] = v;
+                out.data[i + 1] = v;
+                out.data[i + 2] = v;
+                out.data[i + 3] = 255;
+            }
+            ctx.putImageData(out, 0, 0);
+            return mask;
         }
         async function applyImageBrush(){
             if(!cropState) return;
@@ -4780,7 +4815,7 @@
                 if(e.button !== 0 || !isNodeDragSurface(e.target)) return;
                 startNodeDrag(e, node);
             };
-            const canInput = ['generator','comfy','output','llm','msgen','video'].includes(node.type) || (node.type === 'loop' && node.imageInput);
+            const canInput = ['generator','comfy','output','llm','msgen','video'].includes(node.type) || (node.type === 'loop' && (node.imageInput || node.showPrompt));
             const canOutput = ['image','prompt','loop','group','promptGroup','generator','comfy','llm','msgen','video'].includes(node.type);
             if(canInput) el.insertAdjacentHTML('beforeend', `<div class="port in" title="${tr('canvas.connectHere')}"></div>`);
             if(canOutput) el.insertAdjacentHTML('beforeend', `<div class="port out" title="${tr('canvas.dragConnect')}"></div>`);
@@ -4909,6 +4944,49 @@
         function loopCount(node){
             return Math.max(1, Math.min(100, Number(node?.count || 1) || 1));
         }
+        function splitPromptIntoItems(text){
+            const trimmed = String(text || '').trim();
+            if(!trimmed) return [];
+            const numbered = trimmed.split(/\s*(?:^|\s)\d+\s*[.、)）．]\s+/).map(s => s.trim()).filter(Boolean);
+            if(numbered.length >= 2) return numbered;
+            const lines = trimmed.split(/\r?\n+/).map(s => s.trim()).filter(Boolean);
+            if(lines.length >= 2) return lines;
+            return [trimmed];
+        }
+        const loopPromptVisiting = new Set();
+        function loopInputPromptItems(node){
+            if(!node?.showPrompt) return [];
+            if(loopPromptVisiting.has(node.id)) return [];
+            loopPromptVisiting.add(node.id);
+            try {
+                const items = [];
+                connections.filter(c => c.to === node.id)
+                    .map(c => nodes.find(n => n.id === c.from))
+                    .filter(Boolean)
+                    .forEach(n => {
+                        let text = '';
+                        if(n.type === 'prompt') text = n.text || '';
+                        else if(n.type === 'promptGroup') {
+                            const parts = (n.items || []).map(id => nodes.find(x => x.id === id)).filter(Boolean).map(p => p.text || '').filter(Boolean);
+                            parts.forEach(part => splitPromptIntoItems(part).forEach(item => items.push(item)));
+                            return;
+                        }
+                        else if(n.type === 'loop') text = renderLoopPrompt(n);
+                        else if(n.type === 'llm') text = n.outputText || '';
+                        splitPromptIntoItems(text).forEach(item => items.push(item));
+                    });
+                return items;
+            } finally {
+                loopPromptVisiting.delete(node.id);
+            }
+        }
+        function loopInputPrompt(node, ctx=loopContext){
+            const items = loopInputPromptItems(node);
+            if(!items.length) return '';
+            const startBase = Math.max(1, Number(node?.loopStart) || 1);
+            const currentIndex = Math.max(1, Number(ctx?.index || startBase) || startBase);
+            return items[(currentIndex - 1) % items.length];
+        }
         function renderLoopPrompt(node, ctx=loopContext){
             if(!node?.showPrompt) return '';
             const variable = String(node?.variablePrompt || '').trim();
@@ -4922,6 +5000,8 @@
                 .replaceAll(`[${tr('canvas.counterToken')}]`, String(index))
                 .replaceAll(`[${tr('canvas.totalToken')}]`, String(total))
                 .replaceAll(`[${tr('canvas.progressToken')}]`, `${index}/${total}`);
+            const selected = loopInputPrompt(node, ctx);
+            if(selected) return replaceVars(selected);
             return replaceVars(variable);
         }
         function imageRefsFromNode(node){
@@ -5043,6 +5123,8 @@
             node.showPrompt = Boolean(node.showPrompt);
             node.imageInput = Boolean(node.imageInput);
             const imageInputCount = loopInputImageRefs(node, {index:node.loopStart}).length;
+            const promptItemCount = node.showPrompt ? loopInputPromptItems(node).length : 0;
+            const hasUpstreamPrompt = promptItemCount > 0;
             const loopTargetId = findLoopCascadeTarget(node.id);
             const loopTargetOrder = loopTargetId ? computeCascadeOrder(loopTargetId) : [];
             const loopRunHtml = loopTargetId ? (cascadeSerialIds.has(loopTargetId)
@@ -5075,10 +5157,11 @@
                     </div>
                     <div class="loop-image-hint">${imageInputCount ? trf('canvas.loopImageWillOutput', {n:imageInputCount}) : tr('canvas.loopImageEmpty')}</div>
                 </div>` : ''}
-                ${node.showPrompt ? `<div class="loop-prompt-panel">
+                ${node.showPrompt ? `<div class="loop-prompt-panel ${hasUpstreamPrompt ? 'has-upstream' : ''}">
                     <div class="loop-field">
-                        <div class="loop-variable-editor" contenteditable="true" data-placeholder="${escapeAttr(tr('canvas.loopVariablePlaceholder'))}">${loopVariableHtml(node.variablePrompt || '')}</div>
+                        <div class="loop-variable-editor ${hasUpstreamPrompt ? 'is-disabled' : ''}" contenteditable="${hasUpstreamPrompt ? 'false' : 'true'}" data-placeholder="${escapeAttr(tr('canvas.loopVariablePlaceholder'))}">${loopVariableHtml(node.variablePrompt || '')}</div>
                     </div>
+                    ${hasUpstreamPrompt ? `<div class="loop-prompt-hint">已识别 ${promptItemCount} 条提示词，按计数轮流输出</div>` : ''}
                     <div class="loop-start-row">
                         <button class="loop-token-btn loop-counter-token-btn" type="button" data-token="《计数》">${tr('canvas.counterToken')}</button>
                         <span class="loop-count-label">${tr('canvas.loopStart')}</span>
@@ -5181,6 +5264,9 @@
                 node.showPrompt = opening;
                 autoSizeLoopNode(node, opening);
                 autoSizeLoopForPanels(node);
+                if(!opening){
+                    connections = connections.filter(c => c.to !== node.id || canConnect(c.from, node.id));
+                }
                 render();
                 scheduleSave();
                 syncGeneratorInputs();
@@ -5229,7 +5315,7 @@
                         node.loopStart = Math.max(1, Number(node.loopStart) || 1);
                         node.imageBatchSize = Math.max(1, Math.min(100, Number(node.imageBatchSize) || 1));
                     } else {
-                        connections = connections.filter(c => c.to !== node.id);
+                        connections = connections.filter(c => c.to !== node.id || canConnect(c.from, node.id));
                     }
                     autoSizeLoopForPanels(node);
                     render();
@@ -8507,7 +8593,11 @@
                 }
                 return false;
             }
-            if(to.type === 'loop') return Boolean(to.imageInput) && ['image','group','output'].includes(from.type);
+            if(to.type === 'loop'){
+                const allowImage = Boolean(to.imageInput) && ['image','group','output'].includes(from.type);
+                const allowPrompt = Boolean(to.showPrompt) && ['prompt','promptGroup','loop','llm'].includes(from.type);
+                return allowImage || allowPrompt;
+            }
             if(to.type === 'llm') return ['prompt','loop','promptGroup','llm','image','group','output'].includes(from.type);
             if(from.type === 'llm') return CANVAS_GENERATOR_TYPES.includes(to.type);
             return CANVAS_GENERATOR_TYPES.includes(to.type) && ['image','prompt','loop','group','promptGroup','output','llm'].includes(from.type);
