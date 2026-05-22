@@ -483,7 +483,7 @@
         .log-panel { width:min(1200px, 96vw); max-height:92vh; display:flex; flex-direction:column; border-radius:22px; background:var(--card-solid); border:1px solid var(--line); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
         .log-head { height:64px; flex-shrink:0; padding:0 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
         .log-title { font-size:14px; font-weight:900; color:var(--text); }
-        .log-list { padding:16px 16px 28px; overflow:auto; display:flex; flex-direction:column; gap:10px; }
+        .log-list { padding:16px 16px 28px; overflow:auto; display:flex; flex-direction:column; gap:10px; position:relative; }
         .log-list.grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
         .log-list.grid .log-item { display:flex; flex-direction:column; gap:8px; }
         .log-list.grid .log-thumbs { order:-1; justify-content:flex-start; max-width:none; }
@@ -524,9 +524,12 @@
         html.theme-dark .log-batch-btn.danger,
         body.theme-dark .log-batch-btn.danger { color:#f87171; }
         .log-select-cb { display:none; width:16px; height:16px; accent-color:var(--strong); flex-shrink:0; }
-        .log-item.batch-mode .log-select-cb { display:inline-block; }
-        .log-item.batch-mode { cursor:default; }
+        .log-item.batch-mode { cursor:pointer; }
         .log-item.batch-mode .log-main { opacity:.65; pointer-events:none; }
+        .log-item.batch-selected { border-color:rgba(59,130,246,.5); background:rgba(59,130,246,.06); }
+        html.theme-dark .log-item.batch-selected,
+        body.theme-dark .log-item.batch-selected { border-color:rgba(96,165,250,.5); background:rgba(96,165,250,.1); }
+        .log-batch-select-rect { position:absolute; border:2px dashed rgba(59,130,246,.7); background:rgba(59,130,246,.08); pointer-events:none; z-index:5; display:none; }
         .help-modal { position:absolute; inset:0; z-index:76; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
         .help-modal.open { display:flex; }
         .help-panel { width:min(480px, 94vw); max-height:86vh; display:flex; flex-direction:column; border-radius:22px; background:var(--card-solid); border:1px solid var(--line); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
@@ -988,7 +991,9 @@
                         <button class="log-batch-btn" type="button" onclick="batchDownloadLogs()"><i data-lucide="download" class="w-3.5 h-3.5"></i> 下载选中</button>
                     </div>
                 </div>
-                <div id="logList" class="log-list"></div>
+                <div id="logList" class="log-list">
+                    <div class="log-batch-select-rect" id="logSelectRect"></div>
+                </div>
             </div>
         </div>
         <div id="helpModal" class="help-modal" onclick="closeHelpModal()">
@@ -7651,6 +7656,84 @@
                 };
             });
             refreshIcons();
+            // 重新插入框选矩形（innerHTML 会清掉它）
+            let rectEl = document.getElementById('logSelectRect');
+            if(!rectEl){
+                rectEl = document.createElement('div');
+                rectEl.className = 'log-batch-select-rect';
+                rectEl.id = 'logSelectRect';
+            }
+            if(!logList.contains(rectEl)) logList.appendChild(rectEl);
+            // 整行点击切换选中
+            logList.querySelectorAll('.log-item.batch-mode').forEach(item => {
+                item.onclick = e => {
+                    if(e.target.closest('.log-select-cb')) return;
+                    const cb = item.querySelector('.log-cb');
+                    if(!cb) return;
+                    cb.checked = !cb.checked;
+                    item.classList.toggle('batch-selected', cb.checked);
+                };
+            });
+            initLogBatchSelection();
+            // 同步复选框高亮
+            logList.querySelectorAll('.log-cb').forEach(cb => {
+                cb.onchange = () => {
+                    const item = cb.closest('.log-item');
+                    if(item) item.classList.toggle('batch-selected', cb.checked);
+                };
+            });
+        }
+        // 框选功能
+        let logBatchDrag = null;
+        function initLogBatchSelection(){
+            if(logBatchDrag && logBatchDrag.initialized) return;
+            const rectEl = document.getElementById('logSelectRect');
+            if(!rectEl) return;
+            let dragging = false, startX = 0, startY = 0, startScrollTop = 0;
+            logList.onmousedown = function onDown(e){
+                if(!logBatchMode) return;
+                if(e.button !== 0) return;
+                if(e.target.closest('.log-item')) return;
+                if(e.target.closest('.log-batch-bar')) return;
+                startX = e.clientX;
+                startY = e.clientY;
+                startScrollTop = logList.scrollTop;
+                dragging = false;
+                const onMove = ev => {
+                    const dx = ev.clientX - startX;
+                    const dy = ev.clientY - startY;
+                    if(!dragging && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+                    ev.preventDefault();
+                    dragging = true;
+                    const rect = logList.getBoundingClientRect();
+                    const sx = Math.min(startX, ev.clientX);
+                    const sy = Math.min(startY, ev.clientY);
+                    rectEl.style.left = (sx - rect.left + logList.scrollLeft) + 'px';
+                    rectEl.style.top = (sy - rect.top + logList.scrollTop) + 'px';
+                    rectEl.style.width = Math.abs(dx) + 'px';
+                    rectEl.style.height = Math.abs(dy) + 'px';
+                    rectEl.style.display = 'block';
+                };
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    if(dragging){
+                        const selRect = rectEl.getBoundingClientRect();
+                        logList.querySelectorAll('.log-item.batch-mode').forEach(item => {
+                            const ir = item.getBoundingClientRect();
+                            if(ir.right > selRect.left && ir.left < selRect.right && ir.bottom > selRect.top && ir.top < selRect.bottom){
+                                const cb = item.querySelector('.log-cb');
+                                if(cb){ cb.checked = true; item.classList.add('batch-selected'); }
+                            }
+                        });
+                    }
+                    rectEl.style.display = 'none';
+                    dragging = false;
+                };
+                document.addEventListener('mousemove', onMove, {passive:false});
+                document.addEventListener('mouseup', onUp);
+            };
+            logBatchDrag = {initialized:true};
         }
         let logBatchMode = false;
         function toggleLogBatch(){
