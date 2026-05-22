@@ -7558,7 +7558,7 @@
         }
         function renderCanvasLog(){
             const logs = canvas?.logs || [];
-            logList.innerHTML = logs.length ? logs.map(log => {
+            logList.innerHTML = logs.length ? logs.map((log, i) => {
                 const thumbs = (log.outputs || []).slice(0, 8).map(url => {
                     const safe = escapeAttr(url);
                     if(isMissingAssetUrl(url)) return `<div class="missing-asset compact" data-url="${safe}"><i data-lucide="image-off" class="w-4 h-4"></i></div>`;
@@ -7586,7 +7586,7 @@
                             <span class="log-chip">${escapeHtml(log.platform || '-')}</span>
                             ${taskLabel ? `<span class="log-chip">${escapeHtml(taskLabel)}</span>` : ''}
                             <span class="log-chip">${escapeHtml(formatRunDuration(log.runMs || 0))}</span>
-                            <button class="log-delete-btn" data-index="${index}" title="删除此记录" aria-label="删除此记录"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            <button class="log-delete-btn" data-index="${i}" title="删除此记录" aria-label="删除此记录"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                         </div>
                         <div class="log-subline">${subParts.map(part => `<span title="${escapeAttr(part)}">${escapeHtml(part)}</span>`).join('')}</div>
                         ${log.error ? `<div class="log-error" title="${escapeAttr(log.error)}">${escapeHtml(log.error)}</div>` : ''}
