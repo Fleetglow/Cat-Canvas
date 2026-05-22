@@ -496,6 +496,10 @@
         .log-item.failed { border-color:#fecaca; background:#fff7f7; }
         .log-main { min-width:0; }
         .log-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:5px; }
+        .log-delete-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; border:none; background:transparent; cursor:pointer; color:var(--faint); transition:color .15s, background .15s; flex-shrink:0; }
+        .log-delete-btn:hover { color:#dc2626; background:rgba(239,68,68,.12); }
+        html.theme-dark .log-delete-btn:hover,
+        body.theme-dark .log-delete-btn:hover { color:#f87171; background:rgba(239,68,68,.2); }
         .log-chip { height:22px; border-radius:999px; padding:0 8px; display:flex; align-items:center; background:var(--card-solid); border:1px solid var(--line); color:var(--muted); font-size:10px; font-weight:900; }
         .log-chip.status-ok { background:rgba(16,185,129,.14); border-color:rgba(16,185,129,.28); color:#047857; }
         .log-chip.status-failed { background:rgba(239,68,68,.14); border-color:rgba(239,68,68,.28); color:#dc2626; }
@@ -7582,6 +7586,7 @@
                             <span class="log-chip">${escapeHtml(log.platform || '-')}</span>
                             ${taskLabel ? `<span class="log-chip">${escapeHtml(taskLabel)}</span>` : ''}
                             <span class="log-chip">${escapeHtml(formatRunDuration(log.runMs || 0))}</span>
+                            <button class="log-delete-btn" data-index="${index}" title="删除此记录" aria-label="删除此记录"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                         </div>
                         <div class="log-subline">${subParts.map(part => `<span title="${escapeAttr(part)}">${escapeHtml(part)}</span>`).join('')}</div>
                         ${log.error ? `<div class="log-error" title="${escapeAttr(log.error)}">${escapeHtml(log.error)}</div>` : ''}
@@ -7608,6 +7613,17 @@
                         el.textContent = oldText;
                         el.classList.remove('copied');
                     }, 900);
+                };
+            });
+            logList.querySelectorAll('.log-delete-btn').forEach(el => {
+                el.onclick = e => {
+                    e.stopPropagation();
+                    const idx = parseInt(el.dataset.index, 10);
+                    if(isNaN(idx) || idx < 0 || idx >= canvas.logs.length) return;
+                    if(!confirm('确定要删除这条生成记录吗？')) return;
+                    canvas.logs.splice(idx, 1);
+                    scheduleSave();
+                    renderCanvasLog();
                 };
             });
             refreshIcons();
