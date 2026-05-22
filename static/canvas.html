@@ -516,6 +516,17 @@
         .log-thumbs img, .log-thumbs video { width:38px; height:38px; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0f172a; cursor:pointer; }
         .log-thumb-placeholder { display:none; }
         .log-list.grid .log-thumb-placeholder { display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1; border-radius:12px; border:1px dashed var(--line); background:var(--card-solid); color:var(--faint); }
+        .log-batch-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; border-bottom:1px solid var(--line); background:var(--soft); flex-shrink:0; }
+        .log-batch-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card-solid); font-size:11px; font-weight:700; color:var(--text); cursor:pointer; transition:background .15s, color .15s; }
+        .log-batch-btn:hover { background:var(--line); }
+        .log-batch-btn.danger { color:#dc2626; border-color:rgba(239,68,68,.3); }
+        .log-batch-btn.danger:hover { background:rgba(239,68,68,.1); }
+        html.theme-dark .log-batch-btn.danger,
+        body.theme-dark .log-batch-btn.danger { color:#f87171; }
+        .log-select-cb { display:none; width:16px; height:16px; accent-color:var(--strong); flex-shrink:0; }
+        .log-item.batch-mode .log-select-cb { display:inline-block; }
+        .log-item.batch-mode { cursor:default; }
+        .log-item.batch-mode .log-main { opacity:.65; pointer-events:none; }
         .help-modal { position:absolute; inset:0; z-index:76; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
         .help-modal.open { display:flex; }
         .help-panel { width:min(480px, 94vw); max-height:86vh; display:flex; flex-direction:column; border-radius:22px; background:var(--card-solid); border:1px solid var(--line); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
@@ -962,9 +973,19 @@
                 <div class="log-head">
                     <div class="log-title" data-i18n="canvas.generationLogs">生成日志</div>
                     <div style="display:flex;align-items:center;gap:4px;">
+                        <button class="preview-icon-btn" type="button" id="logBatchBtn" onclick="toggleLogBatch()" title="批量操作" aria-label="批量操作"><i data-lucide="check-square" class="w-4 h-4"></i></button>
                         <button class="preview-icon-btn" type="button" id="logLayoutListBtn" onclick="setLogLayout('list')" title="列表"><i data-lucide="layout-list" class="w-4 h-4"></i></button>
                         <button class="preview-icon-btn" type="button" id="logLayoutGridBtn" onclick="setLogLayout('grid')" title="网格"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
                         <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+                <div id="logBatchBar" class="log-batch-bar" style="display:none;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;">
+                        <input type="checkbox" id="logSelectAll" onchange="toggleSelectAllLogs(this.checked)"> 全选
+                    </label>
+                    <div style="display:flex;gap:6px;">
+                        <button class="log-batch-btn danger" type="button" onclick="batchDeleteLogs()"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 删除选中</button>
+                        <button class="log-batch-btn" type="button" onclick="batchDownloadLogs()"><i data-lucide="download" class="w-3.5 h-3.5"></i> 下载选中</button>
                     </div>
                 </div>
                 <div id="logList" class="log-list"></div>
@@ -7579,7 +7600,10 @@
                     idText ? `ID ${idText}` : '',
                     backendText,
                 ].filter(Boolean);
-                return `<div class="log-item ${log.status === 'failed' ? 'failed' : ''}">
+                return `<div class="log-item ${log.status === 'failed' ? 'failed' : ''} ${logBatchMode ? 'batch-mode' : ''}" data-log-index="${i}">
+                    <label class="log-select-cb" style="display:${logBatchMode ? 'inline-block' : 'none'};">
+                        <input type="checkbox" class="log-cb" data-idx="${i}">
+                    </label>
                     <div class="log-main">
                         <div class="log-meta">
                             <span class="log-chip ${log.status === 'failed' ? 'status-failed' : 'status-ok'}">${escapeHtml(log.status === 'failed' ? tr('canvas.failed') : tr('canvas.success'))}</span>
@@ -7628,8 +7652,55 @@
             });
             refreshIcons();
         }
+        let logBatchMode = false;
+        function toggleLogBatch(){
+            logBatchMode = !logBatchMode;
+            const bar = document.getElementById('logBatchBar');
+            const btn = document.getElementById('logBatchBtn');
+            bar.style.display = logBatchMode ? 'flex' : 'none';
+            btn.style.background = logBatchMode ? 'var(--line)' : '';
+            if(!logBatchMode) document.getElementById('logSelectAll').checked = false;
+            renderCanvasLog();
+        }
+        function toggleSelectAllLogs(checked){
+            document.querySelectorAll('.log-cb').forEach(cb => cb.checked = checked);
+        }
+        function getSelectedLogIndices(){
+            return [...document.querySelectorAll('.log-cb:checked')].map(cb => parseInt(cb.dataset.idx, 10)).filter(i => !isNaN(i));
+        }
+        function batchDeleteLogs(){
+            const indices = getSelectedLogIndices();
+            if(!indices.length) return alert('请先选择要删除的记录');
+            if(!confirm(`确定要删除选中的 ${indices.length} 条记录吗？`)) return;
+            const toRemove = new Set(indices);
+            canvas.logs = canvas.logs.filter((_, i) => !toRemove.has(i));
+            scheduleSave();
+            toggleSelectAllLogs(false);
+            renderCanvasLog();
+        }
+        function batchDownloadLogs(){
+            const indices = getSelectedLogIndices();
+            if(!indices.length) return alert('请先选择要下载的记录');
+            const logs = canvas.logs;
+            indices.forEach(i => {
+                (logs[i]?.outputs || []).forEach(url => {
+                    if(isMissingAssetUrl(url)) return;
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '';
+                    a.target = '_blank';
+                    a.rel = 'noopener';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                });
+            });
+        }
         function openCanvasLog(){
             if(!ensureCanvas()) return;
+            logBatchMode = false;
+            document.getElementById('logBatchBar').style.display = 'none';
+            document.getElementById('logBatchBtn').style.background = '';
             renderCanvasLog();
             logModal.classList.add('open');
         }
