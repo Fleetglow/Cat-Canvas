@@ -214,6 +214,13 @@
                         </div>
                         <input id="enableXDeleteSwitch" type="checkbox" class="settings-switch" onchange="onEnableXDeleteChange(this.checked)">
                     </label>
+                    <label class="settings-row" style="align-items:flex-start;">
+                        <div style="display:flex;flex-direction:column;gap:2px;">
+                            <span class="settings-label">复制时保持连线</span>
+                            <span style="font-size:11px;color:var(--faint);line-height:1.35;">开启后，复制节点时同时复制相关连接</span>
+                        </div>
+                        <input id="preserveConnectionsSwitch" type="checkbox" class="settings-switch" onchange="onPreserveConnectionsChange(this.checked)">
+                    </label>
                 </div>
             </div>
         </div>

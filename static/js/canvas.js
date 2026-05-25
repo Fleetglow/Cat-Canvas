@@ -60,6 +60,9 @@ if(swapCtrlShiftSwitch) swapCtrlShiftSwitch.checked = swapCtrlShift;
 let enableXDelete = localStorage.getItem('canvas_enableXDelete') === '1';
 const enableXDeleteSwitch = document.getElementById('enableXDeleteSwitch');
 if(enableXDeleteSwitch) enableXDeleteSwitch.checked = enableXDelete;
+let preserveConnections = localStorage.getItem('canvas_preserveConnections') !== '0';
+const preserveConnectionsSwitch = document.getElementById('preserveConnectionsSwitch');
+if(preserveConnectionsSwitch) preserveConnectionsSwitch.checked = preserveConnections;
 let spacePan = false;
 let spacePanDownPos = null; // 记录空格平移开始的鼠标位置，用于阻止误触 click
 const linksEl = document.getElementById('links');
@@ -6685,6 +6688,10 @@ function onEnableXDeleteChange(checked){
     enableXDelete = checked;
     localStorage.setItem('canvas_enableXDelete', checked ? '1' : '0');
 }
+function onPreserveConnectionsChange(checked){
+    preserveConnections = checked;
+    localStorage.setItem('canvas_preserveConnections', checked ? '1' : '0');
+}
 function toggleMinimap(){
     const el = document.getElementById('minimap');
     if(!el) return;
@@ -7351,10 +7358,14 @@ function copySelectedNodes(){
     if(!toCopy.length) return;
     clipboard.nodes = JSON.parse(JSON.stringify(toCopy));
     // 保存所有与选中节点相关的连接（含内部连接和与外部节点的输入/输出）
-    const selSet = new Set([...selected]);
-    clipboard.connections = connections
-        .filter(c => selSet.has(c.from) || selSet.has(c.to))
-        .map(c => ({...c}));
+    if(preserveConnections){
+        const selSet = new Set([...selected]);
+        clipboard.connections = connections
+            .filter(c => selSet.has(c.from) || selSet.has(c.to))
+            .map(c => ({...c}));
+    } else {
+        clipboard.connections = [];
+    }
 }
 function pasteNodes(){
     if(!canvas || !clipboard?.nodes?.length) return;
@@ -7408,11 +7419,13 @@ function startNodeDrag(e, node){
                 }
             });
             // 复制与选中节点相关的所有连接（含与外部节点的输入/输出）
-            const selSet = new Set([...selected]);
-            const newConns = connections
-                .filter(c => selSet.has(c.from) || selSet.has(c.to))
-                .map(c => ({...c, id:uid('c'), from:idMap.get(c.from) || c.from, to:idMap.get(c.to) || c.to}));
-            connections.push(...newConns);
+            if(preserveConnections){
+                const selSet = new Set([...selected]);
+                const newConns = connections
+                    .filter(c => selSet.has(c.from) || selSet.has(c.to))
+                    .map(c => ({...c, id:uid('c'), from:idMap.get(c.from) || c.from, to:idMap.get(c.to) || c.to}));
+                connections.push(...newConns);
+            }
             nodes.push(...copies);
             selected.clear();
             copies.forEach(c => selected.add(c.id));
@@ -7433,17 +7446,19 @@ function startNodeDrag(e, node){
                 nodes.push(copy);
             }
             // 复制与原节点相关的所有连接（含与未复制节点的连接）
-            const idMapSingle = new Map([[node.id, copy.id]]);
-            connections.forEach(c => {
-                if(c.from === node.id || c.to === node.id){
-                    connections.push({
-                        ...c,
-                        id: uid('c'),
-                        from: idMapSingle.get(c.from) || c.from,
-                        to: idMapSingle.get(c.to) || c.to
-                    });
-                }
-            });
+            if(preserveConnections){
+                const idMapSingle = new Map([[node.id, copy.id]]);
+                connections.forEach(c => {
+                    if(c.from === node.id || c.to === node.id){
+                        connections.push({
+                            ...c,
+                            id: uid('c'),
+                            from: idMapSingle.get(c.from) || c.from,
+                            to: idMapSingle.get(c.to) || c.to
+                        });
+                    }
+                });
+            }
             selected.clear();
             selected.add(copy.id);
             dragTarget = copy;
