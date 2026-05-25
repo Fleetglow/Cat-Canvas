@@ -6919,8 +6919,13 @@ function setOutputDragPreview(event, img){
     if(!event.dataTransfer || !img) return;
     const wrap = document.createElement('div');
     wrap.className = 'output-drag-preview';
+    wrap.style.position = 'fixed';
+    wrap.style.left = '-9999px';
     const clone = img.cloneNode();
     clone.removeAttribute('id');
+    clone.style.maxWidth = '200px';
+    clone.style.maxHeight = '200px';
+    clone.style.objectFit = 'contain';
     wrap.appendChild(clone);
     document.body.appendChild(wrap);
     const rect = img.getBoundingClientRect();
