@@ -1,5 +1,39 @@
 # 猫猫画布 更新日志
 
+## [未发布] - 2026-05-25
+
+### ✨ 新增功能
+- **日志面板网格视图**：删除列表视图，只保留网格视图；缩略图改为 16:9 比例；一行展示 5 条记录；复选框移至缩略图右上角
+- **批量下载打包**：批量下载改为调用后端接口，所有文件打包为单个 zip 一次性下载
+- **RunningHub 静态配置支持**：支持从 `static/runninghub/api_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
+- **LTX Director 节点**：新增 LTX Director 节点，配套时间线编辑器
+- **本地图片批量导入**：新增本地图片批量导入接口（`LocalImageImportRequest`）
+
+### 🎨 优化
+- **API 设置页**：`.wrap` 最大宽度 1100→1200px；`.layout` gap 36→16px；侧边栏宽度 260→280px
+- **日志面板批量按钮**：从右上角图标改为左侧文字按钮；新增"删除失败记录"按钮
+- **复制保持连线设置项**：在画布设置面板添加开关，默认开启，可在设置中切换
+- **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 `hidden` 标记移除预设项
+- **日志面板选中状态**：选中状态加强（边框加粗 + box-shadow 发光效果）
+
+### 🐛 修复
+- **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort_order` 字段；修复 `normalize_provider` 返回值缺少 `sort_order`
+- **日志网格视图缩略图消失**：修复 `.log-item` 两条 CSS 规则互相覆盖（`display:grid` 覆盖 `display:flex`），导致缩略图区域宽度为 0
+- **缩略图不显示**：修复 CSS 缺少 `display:block`，导致图片为 inline 元素，`aspect-ratio:16/9` 高度为 0
+- **Ctrl+框选逻辑错误**：修复 Ctrl+框选时会错误选中未选中项，改为 Ctrl 时只取消已选中项，不选中未选中项
+- **批量模式图片点击**：修复进入批量模式后点击图片仍打开灯箱，改为选中整行
+- **批量模式框选无法从缩略图区域开始**：修复 `onDown` 拦截了 `.log-item` 内的 mousedown，改为只排除 checkbox 和删除按钮
+- **图片默认拖拽行为**：修复批量模式下在图片上拖动会触发浏览器图片拖拽，彻底禁止图片默认拖拽行为（`-webkit-user-drag:none` + `draggable="false"`）
+- **批量模式文字选中**：修复框选时会选中文字，添加 `user-select:none`
+- **复选框位置错误**：删除重复的 `.log-select-cb` CSS 规则，确保 `position:absolute` 生效
+- **画布底部提示文字**：删除画布底部操作提示文字
+
+### ⚡ 性能
+- F 键聚焦选中节点功能上线
+- Alt+滚轮新增为画布缩放触发方式（与 Ctrl+滚轮并列）
+
+---
+
 ## [未发布] - 2026-05-21
 
 ### ✨ 新增功能
@@ -45,10 +79,6 @@
 - **全局禁用浏览器缩放快捷键**：Ctrl+/-/0 不再触发浏览器自带缩放
 - **Ctrl/Shift 交换功能**：修复多处硬编码 key 判断导致交换后不生效的问题（continueKnifeDrag、board mousemove、keydown、keyup）
 - **画布边界调整**：优化画布可视区域边界逻辑
-
-### ⚡ 性能
-- F 键聚焦选中节点功能上线
-- Alt+滚轮新增为画布缩放触发方式（与 Ctrl+滚轮并列）
 
 ---
 
