@@ -6496,6 +6496,17 @@ function renderCanvasLog(){
             e.stopPropagation();
             openOutputLightbox(el.dataset.url, null);
         };
+        // 批量模式下阻止图片默认拖拽行为，使框选能从图片区域开始
+        el.onmousedown = e => {
+            if(!logBatchMode) return;
+            e.preventDefault();
+        };
+        el.ondragstart = e => {
+            if(logBatchMode) e.preventDefault();
+        };
+        // 彻底禁止浏览器对图片的默认拖拽
+        if(logBatchMode) el.setAttribute('draggable', 'false');
+        else el.removeAttribute('draggable');
     });
     logList.querySelectorAll('[data-prompt]').forEach(el => {
         el.onclick = e => {
@@ -6611,6 +6622,8 @@ let logBatchMode = false;
 let logJustDragged = false;
 function toggleLogBatch(){
     logBatchMode = !logBatchMode;
+    // 进入批量模式时重置初始化标记，确保 onmousedown 重新绑定
+    if(logBatchMode) logBatchDrag = null;
     const bar = document.getElementById('logBatchBar');
     const btn = document.getElementById('logBatchBtn');
     bar.style.display = logBatchMode ? 'flex' : 'none';
