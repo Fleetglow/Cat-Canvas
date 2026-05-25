@@ -489,7 +489,7 @@
         .log-subline span { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .log-error { margin:0 0 7px; padding:7px 8px; border-radius:10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#dc2626; font-size:11px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .log-thumbs { display:flex; gap:4px; align-items:flex-start; justify-content:flex-start; width:100%; flex-wrap:wrap; position:relative; }
-        .log-thumbs img, .log-thumbs video { width:100%; height:auto; aspect-ratio:16/9; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0f172a; cursor:pointer; -webkit-user-drag:none; user-drag:none; }
+        .log-thumbs img, .log-thumbs video { display:block; width:100%; height:auto; min-height:72px; aspect-ratio:16/9; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0f172a; cursor:pointer; -webkit-user-drag:none; user-drag:none; }
         .log-select-cb { display:none; position:absolute; top:6px; right:6px; z-index:4; width:18px; height:18px; accent-color:var(--strong); flex-shrink:0; background:rgba(255,255,255,.85); border-radius:4px; padding:1px; }
         .log-thumb-placeholder { display:none; }
         .log-list .log-thumb-placeholder { display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:16/9; border-radius:12px; border:1px dashed var(--line); background:var(--card-solid); color:var(--faint); }
@@ -500,8 +500,7 @@
         .log-batch-btn.danger:hover { background:rgba(239,68,68,.1); }
         html.theme-dark .log-batch-btn.danger,
         body.theme-dark .log-batch-btn.danger { color:#f87171; }
-        .log-select-cb { display:none; width:16px; height:16px; accent-color:var(--strong); flex-shrink:0; }
-        .log-item.batch-mode { cursor:pointer; }
+        .log-item.batch-mode { cursor:pointer; user-select:none; -webkit-user-select:none; }
         .log-item.batch-mode .log-main { opacity:.65; pointer-events:none; }
         .log-item.batch-selected { border-color:#3b82f6; border-width:2px; background:rgba(59,130,246,.12); box-shadow:0 0 0 3px rgba(59,130,246,.25); }
         html.theme-dark .log-item.batch-selected,
