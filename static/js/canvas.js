@@ -108,10 +108,7 @@ const outputCopyPromptBtn = document.getElementById('outputCopyPromptBtn');
 const outputRerunBtn = document.getElementById('outputRerunBtn');
 const logModal = document.getElementById('logModal');
 const logList = document.getElementById('logList');
-const logLayoutListBtn = document.getElementById('logLayoutListBtn');
-const logLayoutGridBtn = document.getElementById('logLayoutGridBtn');
-let logLayout = localStorage.getItem('canvas_logLayout') || 'grid';
-setLogLayout(logLayout);
+let logLayout = 'grid'; // 只保留网格视图
 const errorModal = document.getElementById('errorModal');
 const errorTitle = document.getElementById('errorTitle');
 const errorMessage = document.getElementById('errorMessage');
@@ -6472,9 +6469,6 @@ function renderCanvasLog(){
             backendText,
         ].filter(Boolean);
         return `<div class="log-item ${log.status === 'failed' ? 'failed' : ''} ${logBatchMode ? 'batch-mode' : ''}" data-log-index="${i}">
-            <label class="log-select-cb" style="display:${logBatchMode ? 'inline-block' : 'none'};">
-                <input type="checkbox" class="log-cb" data-idx="${i}">
-            </label>
             <div class="log-main">
                 <div class="log-meta">
                     <span class="log-chip ${log.status === 'failed' ? 'status-failed' : 'status-ok'}">${escapeHtml(log.status === 'failed' ? tr('canvas.failed') : tr('canvas.success'))}</span>
@@ -6487,7 +6481,11 @@ function renderCanvasLog(){
                 ${log.error ? `<div class="log-error" title="${escapeAttr(log.error)}">${escapeHtml(log.error)}</div>` : ''}
                 <div class="log-prompt" title="${escapeAttr(log.prompt || tr('canvas.noPromptMeta'))}" data-prompt="${escapeAttr(log.prompt || '')}">${escapeHtml(log.prompt || tr('canvas.noPromptMeta'))}</div>
             </div>
-            <div class="log-thumbs">${thumbs}</div>
+            <div class="log-thumbs">${thumbs}
+                <label class="log-select-cb" style="display:${logBatchMode ? 'flex' : 'none'};">
+                    <input type="checkbox" class="log-cb" data-idx="${i}">
+                </label>
+            </div>
         </div>`;
     }).join('') : `<div class="log-empty">${tr('canvas.noLogs')}</div>`;
     logList.querySelectorAll('[data-url]').forEach(el => {
@@ -6599,11 +6597,19 @@ function initLogBatchSelection(){
             document.removeEventListener('mouseup', onUp);
             if(dragging){
                 const selRect = rectEl.getBoundingClientRect();
+                const isCtrl = e.ctrlKey || e.metaKey;
                 logList.querySelectorAll('.log-item.batch-mode').forEach(item => {
                     const ir = item.getBoundingClientRect();
                     if(ir.right > selRect.left && ir.left < selRect.right && ir.bottom > selRect.top && ir.top < selRect.bottom){
                         const cb = item.querySelector('.log-cb');
-                        if(cb){ cb.checked = true; item.classList.add('batch-selected'); }
+                        if(!cb) return;
+                        if(isCtrl && cb.checked){
+                            cb.checked = false;
+                            item.classList.remove('batch-selected');
+                        } else {
+                            cb.checked = true;
+                            item.classList.add('batch-selected');
+                        }
                     }
                 });
                 logJustDragged = true;
@@ -6684,13 +6690,6 @@ function openCanvasLog(){
 }
 function closeCanvasLog(){
     logModal.classList.remove('open');
-}
-function setLogLayout(mode){
-    logLayout = mode;
-    localStorage.setItem('canvas_logLayout', mode);
-    if(logList) logList.classList.toggle('grid', mode === 'grid');
-    if(logLayoutListBtn) logLayoutListBtn.style.opacity = mode === 'list' ? '1' : '.35';
-    if(logLayoutGridBtn) logLayoutGridBtn.style.opacity = mode === 'grid' ? '1' : '.35';
 }
 function toggleHelpModal(){
     helpModal.classList.toggle('open');
