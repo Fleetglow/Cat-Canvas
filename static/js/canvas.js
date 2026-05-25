@@ -3715,7 +3715,12 @@ function renderNode(node){
     el.insertAdjacentHTML('beforeend', `<div class="resize-handle" title="${tr('canvas.resize')}"></div>`);
     el.querySelector('.node-head').onmousedown = e => { if(e.button === 0 && !spacePan) startNodeDrag(e, node); };
     el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
-    el.ondragstart = e => { e.preventDefault(); e.stopPropagation(); };
+    el.ondragstart = e => {
+        // 输出节点图片拖动时，不阻止默认行为
+        if(e.target.tagName === 'IMG' && e.target.dataset.url) return;
+        e.preventDefault();
+        e.stopPropagation();
+    };
     const out = el.querySelector('.port.out');
     if(out) out.onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startLink(e, node.id, 'out'); };
     const inp = el.querySelector('.port.in');
