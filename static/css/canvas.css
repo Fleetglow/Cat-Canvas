@@ -463,7 +463,7 @@
         .log-list { padding:16px 16px 28px; overflow:auto; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:10px; position:relative; }
         .log-item { display:flex; flex-direction:column; gap:8px; }
         .log-thumbs { order:-1; justify-content:flex-start; max-width:none; }
-        .log-thumbs img, .log-thumbs video { width:100%; height:auto; aspect-ratio:16/9; }
+        .log-thumbs img, .log-thumbs video { display:block; width:100%; height:auto; min-height:72px; aspect-ratio:16/9; object-fit:cover; }
         .log-subline { display:none; }
         .log-error { display:none; }
         .log-prompt { max-width:none; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }

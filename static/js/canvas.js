@@ -6603,10 +6603,14 @@ function initLogBatchSelection(){
                     if(ir.right > selRect.left && ir.left < selRect.right && ir.bottom > selRect.top && ir.top < selRect.bottom){
                         const cb = item.querySelector('.log-cb');
                         if(!cb) return;
-                        if(isCtrl && cb.checked){
-                            cb.checked = false;
-                            item.classList.remove('batch-selected');
+                        if(isCtrl){
+                            // Ctrl+框选：只取消已选中的，不选中未选中的
+                            if(cb.checked){
+                                cb.checked = false;
+                                item.classList.remove('batch-selected');
+                            }
                         } else {
+                            // 非Ctrl：正常选中
                             cb.checked = true;
                             item.classList.add('batch-selected');
                         }
