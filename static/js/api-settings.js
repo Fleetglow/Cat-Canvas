@@ -1,5 +1,7 @@
 let providers = [];
 let selectedId = '';
+let dragId = null;
+let justDragged = false;
 const providerList = document.getElementById('providerList');
 const editorTitle = document.getElementById('editorTitle');
 const statusEl = document.getElementById('status');
@@ -1618,22 +1620,26 @@ function applyRecommendedApi(index){
     setStatus(`已填写 ${api.name}，请填入 API Key 后保存或验证。`);
 }
 function sortedProviders(){
-    const order = ['modelscope', 'runninghub', 'comfly'];
-    return visibleProviders().sort((a, b) => {
-        const ai = order.indexOf(a.id);
-        const bi = order.indexOf(b.id);
-        if(ai === -1 && bi === -1) return 0;
-        if(ai === -1) return 1;
-        if(bi === -1) return -1;
-        return ai - bi;
+    const builtin = ['modelscope', 'runninghub', 'comfly'];
+    return [...visibleProviders()].sort((a, b) => {
+        const ai = builtin.indexOf(a.id);
+        const bi = builtin.indexOf(b.id);
+        if(ai !== -1 && bi !== -1) return ai - bi;
+        if(ai !== -1) return -1;
+        if(bi !== -1) return 1;
+        return (a.sort_order || 0) - (b.sort_order || 0);
     });
 }
 function renderProviderList(){
     providerList.innerHTML = sortedProviders().map(item => {
         const active = item.id === selectedId ? 'active' : '';
+        const builtin = ['modelscope', 'runninghub', 'comfly'];
+        const isDraggable = !builtin.includes(item.id);
+        const dragAttrs = isDraggable ? `draggable="true" data-id="${escapeHtml(item.id)}"` : '';
+        const clickGuard = isDraggable ? `if(window.justDragged){event.preventDefault();return;}selectProvider('${escapeHtml(item.id)}')` : `selectProvider('${escapeHtml(item.id)}')`;
         if(item.id === 'modelscope'){
             return `
-                <button class="provider-card provider-card-banner ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+                <button class="provider-card provider-card-banner ${active}" type="button" ${dragAttrs} onclick="${clickGuard}">
                     <img src="/static/images/modelscope.gif" alt="ModelScope" class="ms-icon-light">
                     <img src="/static/images/modelscope-1.gif" alt="ModelScope" class="ms-icon-dark">
                 </button>
@@ -1641,14 +1647,14 @@ function renderProviderList(){
         }
         if(item.id === 'runninghub'){
             return `
-                <button class="provider-card provider-card-banner ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+                <button class="provider-card provider-card-banner ${active}" type="button" ${dragAttrs} onclick="${clickGuard}">
                     <img src="/static/images/RunningHub-B.png" alt="RunningHub" class="runninghub-icon ms-icon-light">
                     <img src="/static/images/RunningHub-W.png" alt="RunningHub" class="runninghub-icon ms-icon-dark">
                 </button>
             `;
         }
         return `
-            <button class="provider-card ${active}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
+            <button class="provider-card ${active}" type="button" ${dragAttrs} onclick="${clickGuard}">
                 <span class="provider-mark"><i data-lucide="${item.has_key ? 'key-round' : 'key'}" class="w-4 h-4"></i></span>
                 <span class="min-w-0">
                     <div class="provider-name">${escapeHtml(item.name || item.id)}</div>
@@ -1657,7 +1663,55 @@ function renderProviderList(){
             </button>
         `;
     }).join('');
+    providerList.querySelectorAll('.provider-card[draggable="true"]').forEach(el => {
+        el.addEventListener('dragstart', handleDragStart);
+        el.addEventListener('dragend', handleDragEnd);
+    });
+    providerList.addEventListener('dragover', handleDragOver);
+    providerList.addEventListener('drop', handleDrop);
     refreshIcons();
+}
+function handleDragStart(e){
+    dragId = e.currentTarget.dataset.id;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragId);
+}
+function handleDragEnd(e){
+    justDragged = true;
+    e.currentTarget.classList.remove('dragging');
+    dragId = null;
+    providerList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    setTimeout(() => justDragged = false, 50);
+}
+function handleDragOver(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const target = e.target.closest('.provider-card[draggable="true"]');
+    if(!target || target.dataset.id === dragId) return;
+    providerList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    target.classList.add('drag-over');
+}
+function handleDrop(e){
+    e.preventDefault();
+    const target = e.target.closest('.provider-card[draggable="true"]');
+    if(!target) return;
+    const targetId = target.dataset.id;
+    if(!targetId || targetId === dragId) return;
+    const sorted = sortedProviders();
+    const fromIndex = sorted.findIndex(p => p.id === dragId);
+    const toIndex = sorted.findIndex(p => p.id === targetId);
+    if(fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+    const [moved] = sorted.splice(fromIndex, 1);
+    sorted.splice(toIndex, 0, moved);
+    const builtin = ['modelscope', 'runninghub', 'comfly'];
+    let order = 0;
+    sorted.forEach(item => {
+        const p = providers.find(p => p.id === item.id);
+        if(p && !builtin.includes(p.id)) p.sort_order = order++;
+    });
+    renderProviderList();
+    saveProviders();
 }
 function renderEditor(){
     const item = provider();
@@ -2197,6 +2251,7 @@ async function saveProviders(){
                 ms_defaults_version:item.id === 'modelscope' ? (item.ms_defaults_version || 1) : 0,
                 rh_apps:item.id === 'runninghub' ? (item.rh_apps || []) : [],
                 rh_workflows:item.id === 'runninghub' ? (item.rh_workflows || []) : [],
+                sort_order:item.sort_order || 0,
                 api_key:item.api_key || undefined,
                 wallet_api_key:item.wallet_api_key || undefined,
                 clear_key:item._clearKey === true,
