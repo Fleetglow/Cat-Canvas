@@ -468,7 +468,7 @@
         .log-error { display:none; }
         .log-prompt { max-width:none; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
         .log-empty { padding:28px; text-align:center; color:var(--muted); font-size:12px; font-weight:700; }
-        .log-item { border:1px solid var(--line); border-radius:14px; background:var(--soft); padding:9px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; }
+        .log-item { border:1px solid var(--line); border-radius:14px; background:var(--soft); padding:9px; display:flex; flex-direction:column; gap:10px; }
         .log-item.failed { border-color:#fecaca; background:#fff7f7; }
         .log-main { min-width:0; }
         .log-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:5px; }
