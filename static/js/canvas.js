@@ -6669,19 +6669,36 @@ function deleteFailedLogs(){
 function batchDownloadLogs(){
     const indices = getSelectedLogIndices();
     if(!indices.length) return alert('请先选择要下载的记录');
-    const logs = canvas.logs;
+    const urls = [];
     indices.forEach(i => {
-        (logs[i]?.outputs || []).forEach(url => {
+        (canvas.logs[i]?.outputs || []).forEach(url => {
             if(isMissingAssetUrl(url)) return;
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = '';
-            a.target = '_blank';
-            a.rel = 'noopener';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            if(!urls.includes(url)) urls.push(url);
         });
+    });
+    if(!urls.length) return alert('没有可下载的文件');
+    const btn = document.getElementById('logBatchDownloadBtn');
+    if(btn) { btn.disabled = true; btn.textContent = '打包中…'; }
+    fetch('/api/canvas-assets/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: urls, filename: 'canvas-outputs.zip' })
+    }).then(resp => {
+        if(!resp.ok) return resp.json().then(e => { throw new Error(e.detail || '下载失败'); });
+        return resp.blob();
+    }).then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'canvas-outputs.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }).catch(e => {
+        alert('打包下载失败：' + (e.message || e));
+    }).finally(() => {
+        if(btn) { btn.disabled = false; btn.textContent = '批量下载'; }
     });
 }
 function openCanvasLog(){
