@@ -8389,6 +8389,15 @@ function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']
 function escapeAttr(str){ return escapeHtml(str); }
 
 window.onload = async () => {
+    // 等待 StudioI18n 就绪（i18n.js 异步加载可能需要时间，最多等 3 秒）
+    if(!window.StudioI18n){
+        let waited = 0;
+        while(!window.StudioI18n && waited < 3000){
+            await new Promise(r => setTimeout(r, 50));
+            waited += 50;
+        }
+        if(!window.StudioI18n) console.warn('StudioI18n not loaded after 3s, continuing anyway');
+    }
     applyTheme(localStorage.getItem('studio_theme') || localStorage.getItem(CANVAS_THEME_KEY) || 'light');
     applyQuickToolbarState();
     if(window.StudioI18n) StudioI18n.apply();
