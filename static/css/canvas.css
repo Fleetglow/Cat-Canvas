@@ -490,7 +490,7 @@
         .log-subline span { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .log-error { margin:0 0 7px; padding:7px 8px; border-radius:10px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.22); color:#dc2626; font-size:11px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .log-thumbs { display:flex; gap:6px; align-items:flex-start; justify-content:flex-end; max-width:126px; flex-wrap:wrap; }
-        .log-thumbs img, .log-thumbs video { width:38px; height:38px; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0f172a; cursor:pointer; }
+        .log-thumbs img, .log-thumbs video { width:38px; height:38px; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#0f172a; cursor:pointer; -webkit-user-drag:none; user-drag:none; }
         .log-thumb-placeholder { display:none; }
         .log-list.grid .log-thumb-placeholder { display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1; border-radius:12px; border:1px dashed var(--line); background:var(--card-solid); color:var(--faint); }
         .log-batch-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; border-bottom:1px solid var(--line); background:var(--soft); flex-shrink:0; }
@@ -507,6 +507,7 @@
         html.theme-dark .log-item.batch-selected,
         body.theme-dark .log-item.batch-selected { border-color:rgba(96,165,250,.5); background:rgba(96,165,250,.1); }
         .log-batch-select-rect { position:absolute; border:2px dashed rgba(59,130,246,.7); background:rgba(59,130,246,.08); pointer-events:none; z-index:5; display:none; }
+        [data-url] { -webkit-user-drag:none; user-drag:none; user-select:none; }
         .help-modal { position:absolute; inset:0; z-index:76; display:none; align-items:center; justify-content:center; padding:28px; background:rgba(248,250,252,.42); backdrop-filter:blur(18px); }
         .help-modal.open { display:flex; }
         .help-panel { width:min(480px, 94vw); max-height:86vh; display:flex; flex-direction:column; border-radius:22px; background:var(--card-solid); border:1px solid var(--line); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
