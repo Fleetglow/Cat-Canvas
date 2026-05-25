@@ -1653,8 +1653,10 @@ function renderProviderList(){
                 </button>
             `;
         }
+        const dragHandle = isDraggable ? '<i data-lucide="grip-vertical" class="provider-drag-handle w-4 h-4"></i>' : '';
         return `
             <button class="provider-card ${active}" type="button" ${dragAttrs} onclick="${clickGuard}">
+                ${dragHandle}
                 <span class="provider-mark"><i data-lucide="${item.has_key ? 'key-round' : 'key'}" class="w-4 h-4"></i></span>
                 <span class="min-w-0">
                     <div class="provider-name">${escapeHtml(item.name || item.id)}</div>
@@ -1679,10 +1681,11 @@ function handleDragStart(e){
 }
 function handleDragEnd(e){
     justDragged = true;
+    window.justDragged = true;
     e.currentTarget.classList.remove('dragging');
     dragId = null;
     providerList.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-    setTimeout(() => justDragged = false, 50);
+    setTimeout(() => { justDragged = false; window.justDragged = false; }, 50);
 }
 function handleDragOver(e){
     e.preventDefault();
@@ -1700,9 +1703,10 @@ function handleDrop(e){
     if(!targetId || targetId === dragId) return;
     const sorted = sortedProviders();
     const fromIndex = sorted.findIndex(p => p.id === dragId);
-    const toIndex = sorted.findIndex(p => p.id === targetId);
+    let toIndex = sorted.findIndex(p => p.id === targetId);
     if(fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
     const [moved] = sorted.splice(fromIndex, 1);
+    if(fromIndex < toIndex) toIndex--;
     sorted.splice(toIndex, 0, moved);
     const builtin = ['modelscope', 'runninghub', 'comfly'];
     let order = 0;

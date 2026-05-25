@@ -732,6 +732,7 @@ def normalize_provider(item):
         "ms_defaults_version": int(item.get("ms_defaults_version") or 0),
         "rh_apps": normalize_runninghub_entries(item.get("rh_apps") or [], "app"),
         "rh_workflows": normalize_runninghub_entries(item.get("rh_workflows") or [], "workflow"),
+        "sort_order": int(item.get("sort_order") or 0),
     }
 
 def load_api_providers():
@@ -1401,6 +1402,7 @@ class ApiProviderPayload(BaseModel):
     ms_defaults_version: int = 0
     rh_apps: List[Dict[str, Any]] = []
     rh_workflows: List[Dict[str, Any]] = []
+    sort_order: int = 0
     api_key: Optional[str] = None
     wallet_api_key: Optional[str] = None
     clear_key: bool = False
