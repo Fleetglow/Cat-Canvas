@@ -853,7 +853,10 @@
             try {
                 const res = await fetch('/api/upload', { method: 'POST', body: formData });
                 const data = await res.json();
-                uploadedPath = data.files[0].comfy_name;
+                // 兼容 ComfyUI 上传和本地回退两种格式
+                const fileInfo = data.files && data.files[0];
+                uploadedPath = fileInfo?.local_path || fileInfo?.comfy_name || "";
+                uploadedFile = file; // Store for cloud usage
                 btn.disabled = false;
                 btnText.innerText = tr('studio.generateAngle');
             } catch (err) {

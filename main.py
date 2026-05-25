@@ -3500,7 +3500,26 @@ async def upload_image(files: List[UploadFile] = File(...)):
         if success_count > 0 and last_result:
             uploaded_files.append({"comfy_name": last_result.get("name", file.filename)})
         else:
-            raise HTTPException(status_code=500, detail="Failed to upload to any backend")
+            # ComfyUI 不可用，改为保存到本地 assets/input/ 目录
+            try:
+                os.makedirs(ASSETS_INPUT_DIR, exist_ok=True)
+                safe_name = re.sub(r'[^\\w.-]', '_', os.path.basename(file.filename or "upload.png"))[:100]
+                # 避免重名
+                base, ext = os.path.splitext(safe_name)
+                counter = 1
+                final_name = safe_name
+                while os.path.exists(os.path.join(ASSETS_INPUT_DIR, final_name)):
+                    final_name = f"{base}_{counter}{ext}"
+                    counter += 1
+                local_path = os.path.join(ASSETS_INPUT_DIR, final_name)
+                with open(local_path, "wb") as f:
+                    f.write(content)
+                # 返回本地路径，供 angle 页面使用
+                uploaded_files.append({"comfy_name": final_name, "local_path": f"/assets/input/{final_name}"})
+                print(f"Saved uploaded file locally: {local_path}")
+            except Exception as e:
+                print(f"Local save error: {e}")
+                raise HTTPException(status_code=500, detail="上传失败：ComfyUI 不可用，且本地保存也失败")
 
     return {"files": uploaded_files}
 
