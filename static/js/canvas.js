@@ -6492,6 +6492,7 @@ function renderCanvasLog(){
     }).join('') : `<div class="log-empty">${tr('canvas.noLogs')}</div>`;
     logList.querySelectorAll('[data-url]').forEach(el => {
         el.onclick = e => {
+            if(logBatchMode) return; // 批量模式下不打开图片，让整行点击生效
             e.stopPropagation();
             openOutputLightbox(el.dataset.url, null);
         };
@@ -6533,6 +6534,7 @@ function renderCanvasLog(){
     // 整行点击切换选中
     logList.querySelectorAll('.log-item.batch-mode').forEach(item => {
         item.onclick = e => {
+            if(logJustDragged) return;
             if(e.target.closest('.log-select-cb')) return;
             const cb = item.querySelector('.log-cb');
             if(!cb) return;
@@ -6559,7 +6561,8 @@ function initLogBatchSelection(){
     logList.onmousedown = function onDown(e){
         if(!logBatchMode) return;
         if(e.button !== 0) return;
-        if(e.target.closest('.log-item')) return;
+        if(e.target.closest('.log-select-cb')) return;
+        if(e.target.closest('.log-delete-btn')) return;
         if(e.target.closest('.log-batch-bar')) return;
         startX = e.clientX;
         startY = e.clientY;
@@ -6592,6 +6595,9 @@ function initLogBatchSelection(){
                         if(cb){ cb.checked = true; item.classList.add('batch-selected'); }
                     }
                 });
+                logJustDragged = true;
+                window.logJustDragged = true;
+                setTimeout(() => { logJustDragged = false; window.logJustDragged = false; }, 50);
             }
             rectEl.style.display = 'none';
             dragging = false;
@@ -6602,6 +6608,7 @@ function initLogBatchSelection(){
     logBatchDrag = {initialized:true};
 }
 let logBatchMode = false;
+let logJustDragged = false;
 function toggleLogBatch(){
     logBatchMode = !logBatchMode;
     const bar = document.getElementById('logBatchBar');
