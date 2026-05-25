@@ -148,9 +148,12 @@
         <div id="logModal" class="log-modal" onclick="closeCanvasLog()">
             <div class="log-panel" onclick="event.stopPropagation()">
                 <div class="log-head">
-                    <div class="log-title" data-i18n="canvas.generationLogs">生成日志</div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="log-title" data-i18n="canvas.generationLogs">生成日志</div>
+                        <button class="log-batch-btn" type="button" id="logBatchBtn" onclick="toggleLogBatch()"><i data-lucide="check-square" class="w-3.5 h-3.5"></i> 批量</button>
+                        <button class="log-batch-btn danger" type="button" onclick="deleteFailedLogs()"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 删除失败记录</button>
+                    </div>
                     <div style="display:flex;align-items:center;gap:4px;">
-                        <button class="preview-icon-btn" type="button" id="logBatchBtn" onclick="toggleLogBatch()" title="批量操作" aria-label="批量操作"><i data-lucide="check-square" class="w-4 h-4"></i></button>
                         <button class="preview-icon-btn" type="button" id="logLayoutListBtn" onclick="setLogLayout('list')" title="列表"><i data-lucide="layout-list" class="w-4 h-4"></i></button>
                         <button class="preview-icon-btn" type="button" id="logLayoutGridBtn" onclick="setLogLayout('grid')" title="网格"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
                         <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
@@ -195,6 +198,13 @@
                 <div class="settings-body">
                     <label class="settings-row" style="align-items:flex-start;">
                         <div style="display:flex;flex-direction:column;gap:2px;">
+                            <span class="settings-label">复制节点时保持连线</span>
+                            <span style="font-size:11px;color:var(--faint);line-height:1.35;">开启后，复制节点会保持连线</span>
+                        </div>
+                        <input id="preserveConnectionsSwitch" type="checkbox" class="settings-switch" onchange="onPreserveConnectionsChange(this.checked)">
+                    </label>
+                    <label class="settings-row" style="align-items:flex-start;">
+                        <div style="display:flex;flex-direction:column;gap:2px;">
                             <span class="settings-label">显示图片生成时间</span>
                             <span style="font-size:11px;color:var(--faint);line-height:1.35;">开启后，图片右上角常驻显示生成时间</span>
                         </div>
@@ -213,13 +223,6 @@
                             <span style="font-size:11px;color:var(--faint);line-height:1.35;">Blender 风格，文本输入时自动忽略</span>
                         </div>
                         <input id="enableXDeleteSwitch" type="checkbox" class="settings-switch" onchange="onEnableXDeleteChange(this.checked)">
-                    </label>
-                    <label class="settings-row" style="align-items:flex-start;">
-                        <div style="display:flex;flex-direction:column;gap:2px;">
-                            <span class="settings-label">复制时保持连线</span>
-                            <span style="font-size:11px;color:var(--faint);line-height:1.35;">开启后，复制节点时同时复制相关连接</span>
-                        </div>
-                        <input id="preserveConnectionsSwitch" type="checkbox" class="settings-switch" onchange="onPreserveConnectionsChange(this.checked)">
                     </label>
                 </div>
             </div>

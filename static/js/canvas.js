@@ -6627,6 +6627,15 @@ function batchDeleteLogs(){
     toggleSelectAllLogs(false);
     renderCanvasLog();
 }
+function deleteFailedLogs(){
+    const failedIndices = canvas.logs.map((log, i) => log.status === 'failed' ? i : -1).filter(i => i !== -1);
+    if(!failedIndices.length) return alert('没有失败记录');
+    if(!confirm(`确定要删除 ${failedIndices.length} 条失败记录吗？`)) return;
+    const toRemove = new Set(failedIndices);
+    canvas.logs = canvas.logs.filter((_, i) => !toRemove.has(i));
+    scheduleSave();
+    renderCanvasLog();
+}
 function batchDownloadLogs(){
     const indices = getSelectedLogIndices();
     if(!indices.length) return alert('请先选择要下载的记录');
