@@ -435,7 +435,6 @@
         .output-preview video { display:block; width:100%; height:100%; object-fit:contain; background:#0f172a; }
         .output-preview.panning { cursor:grabbing; }
         .output-preview.panning img { transition:none; }
-        .space-pan, .space-pan * { cursor:grabbing !important; }
         .output-single-img { cursor:inherit; }
         .output-compare { position:absolute; inset:0; display:none; width:100%; height:100%; background:#f8f8f9; }
         .output-preview.compare-mode .output-compare { display:block; }
