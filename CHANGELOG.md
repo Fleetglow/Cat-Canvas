@@ -9,6 +9,7 @@
 - **LTX Director 节点**：新增 LTX Director 节点，配套时间线编辑器
 - **本地图片批量导入**：新增本地图片批量导入接口（`LocalImageImportRequest`）
 - **上传接口本地回退**：ComfyUI 不可用时，`/api/upload` 自动将文件保存到本地 `assets/input/` 目录
+- **Lightbox 预览窗口重新设计**：左右分栏布局（左侧大图 + 右侧信息面板）；信息面板包含提示词（可展开）、参考图、参数配置；底部操作栏（再次运行、发送到画布、删除记录）
 
 ### 🎨 优化
 - **API 设置页**：`.wrap` 最大宽度 1100→1200px；`.layout` gap 36→16px；侧边栏宽度 260→280px
@@ -17,6 +18,7 @@
 - **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 `hidden` 标记移除预设项
 - **日志面板选中状态**：选中状态加强（边框加粗 + box-shadow 发光效果）
 - **合并上游更新**：保留拖拽排序（`sort_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
+- **Lightbox 预览铺满全屏**：`.output-lightbox` padding 20px→0；`.output-lightbox-shell` 宽高改为 100vw/100vh，border-radius 改为 0，去掉 box-shadow
 
 ### 🐛 修复
 - **输出节点图片拖拽预览过大**：`setOutputDragPreview` 克隆图片未限制尺寸，ghost 图像按原图大小显示，改为 `max-width:200px; max-height:200px`
@@ -34,6 +36,8 @@
 - **`.stage` 样式被上游覆盖**：恢复 `margin:0; border-radius:0`
 - **`api-settings.css` 被上游覆盖**：恢复 wrap 1200px、layout gap 16px、侧边栏 280px、拖拽样式 `.drag-over`/`.dragging`
 - **角度控制页面上传失败**：ComfyUI 不可用时改为保存到本地 `assets/input/` 目录，不再返回 500 错误
+- **Lightbox 预览缺失生图耗时**：`setupLightboxInfoPanel` 中耗时只读取 `meta?.runMs`，从日志打开时 `log.runMs` 未被使用，修复为 `(meta?.runMs || log?.runMs)`
+- **日志预览键盘导航失效**：`outputLightboxItems()` 在日志模式下只返回当前日志条目的 `outputs`，导致只有一张图片时键盘导航完全失效；修复为返回所有日志记录的 `outputs`，确保可以在所有日志记录间切换
 
 ### ⚡ 性能
 - F 键聚焦选中节点功能上线
