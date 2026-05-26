@@ -112,6 +112,7 @@ const outputDeleteBtn = document.getElementById('outputDeleteBtn');
 const outputRefsSection = document.getElementById('outputRefsSection');
 const outputRefsList = document.getElementById('outputRefsList');
 const outputParamsGrid = document.getElementById('outputParamsGrid');
+const outputCopyToast = document.getElementById('outputCopyToast');
 const logModal = document.getElementById('logModal');
 const logList = document.getElementById('logList');
 let logLayout = 'grid'; // 只保留网格视图
@@ -187,6 +188,7 @@ let currentOutputMeta = null;
 let currentOutputLog = null;
 let currentOutputLightboxOutId = '';
 let currentOutputLightboxUrl = '';
+let currentOutputFromLog = false;
 const missingAssetUrls = new Set();
 let outputTimer = null;
 let loopContext = null;
@@ -549,13 +551,6 @@ async function copyTextToClipboard(text){
     } catch(_) {
         return false;
     }
-}
-function showCopyToast(msg='复制成功'){
-    const toast = document.createElement('div');
-    toast.textContent = msg;
-    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:8px 20px;border-radius:10px;background:rgba(15,23,42,.88);color:#fff;font-size:12px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s;opacity:1;';
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 1500);
 }
 function parseRatioValue(value){
     const raw = String(value || '').trim();
@@ -7088,7 +7083,10 @@ function setupLightboxInfoPanel(meta, log){
         clearTimeout(outputCopyPromptBtn._copyTimer);
         outputCopyPromptBtn._copyTimer = setTimeout(() => outputCopyPromptBtn.classList.remove('copied'), 1200);
         // 显示复制成功提示
-        showCopyToast();
+        outputCopyToast.style.display = '';
+        outputCopyToast.textContent = '已复制';
+        clearTimeout(outputCopyToast._timer);
+        outputCopyToast._timer = setTimeout(() => { outputCopyToast.style.display = 'none'; }, 1500);
     };
     // 参考图
     const refs = meta?.run?.refs || log?.refs || [];
@@ -7138,7 +7136,8 @@ function setupLightboxInfoPanel(meta, log){
         const url = currentOutputLightboxUrl;
         if(url) sendOutputToCanvas(url);
     };
-    // 删除记录
+    // 删除记录（仅从日志打开时显示）
+    outputDeleteBtn.style.display = currentOutputFromLog ? '' : 'none';
     outputDeleteBtn.onclick = e => {
         e.stopPropagation();
         deleteOutputFromLightbox();
@@ -7314,6 +7313,7 @@ function openOutputLightbox(url, out){
     resetOutputPreviewZoom();
     currentOutputLightboxOutId = out?.id || '';
     currentOutputLightboxUrl = url;
+    currentOutputFromLog = !out; // 没有 out 参数说明是从日志打开的
     const meta = outputMetaFor(url, out);
     const log = findLogForOutputUrl(url);
     markOutputViewed(out, url);
@@ -7387,7 +7387,9 @@ function closeOutputLightbox(){
     currentOutputLog = null;
     currentOutputLightboxOutId = '';
     currentOutputLightboxUrl = '';
+    currentOutputFromLog = false;
     outputPromptText.classList.remove('expanded');
+    outputCopyToast.style.display = 'none';
     outputRefsList.innerHTML = '';
     outputParamsGrid.innerHTML = '';
     setupOutputPromptPanel(null);

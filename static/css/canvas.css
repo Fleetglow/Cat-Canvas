@@ -429,7 +429,7 @@
         .canvas-gate { position:absolute; inset:0; z-index:18; display:flex; align-items:center; justify-content:center; padding:32px; background:#f8fafc; background-image:radial-gradient(#d9e1ea 1px, transparent 1px); background-size:24px 24px; }
         .output-lightbox { position:absolute; inset:0; z-index:86; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(248,250,252,.34); backdrop-filter:blur(18px) saturate(1.08); }
         .output-lightbox.open { display:flex; }
-        .output-lightbox-shell { width:min(1600px, 96vw); height:min(960px, 92vh); display:flex; border-radius:24px; background:rgba(255,255,255,.92); border:1px solid rgba(255,255,255,.64); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
+        .output-lightbox-shell { width:min(1400px, 96vw); height:min(960px, 92vh); display:flex; border-radius:24px; background:rgba(255,255,255,.92); border:1px solid rgba(255,255,255,.64); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
         /* 主体左右分栏 */
         .lightbox-body { display:grid; grid-template-columns:1fr 400px; width:100%; height:100%; }
         /* 左侧图片预览 */
@@ -453,12 +453,10 @@
         .preview-icon-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.92); color:#111827; border:1px solid rgba(255,255,255,.5); cursor:pointer; transition:all .15s; }
         .preview-icon-btn:hover { background:#111827; color:#fff; }
         /* 右侧信息面板 */
-        .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; }
-        .lightbox-info-topbar { display:flex; align-items:center; justify-content:space-between; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--line); gap:8px; }
-        .lightbox-info-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-        .lightbox-close-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:all .15s; flex-shrink:0; }
+        .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; position:relative; }
+        .lightbox-close-btn { position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:all .15s; z-index:2; }
         .lightbox-close-btn:hover { background:var(--soft); color:var(--text); }
-        .info-section { padding-bottom:16px; margin-bottom:4px; border-bottom:1px solid var(--line); }
+        .info-section { padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--line); }
         .info-section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
         .info-section-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
         .info-copy-btn { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--faint); border:none; cursor:pointer; transition:all .15s; flex-shrink:0; }
@@ -475,6 +473,15 @@
         .info-param-item { display:flex; flex-direction:column; gap:2px; }
         .info-param-label { font-size:11px; color:var(--faint); }
         .info-param-value { font-size:12px; color:var(--text); font-weight:600; }
+        /* 操作按钮 */
+        .lightbox-info-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding-top:8px; }
+        .lightbox-action-btn { height:36px; border-radius:10px; padding:0 16px; display:flex; align-items:center; gap:6px; background:var(--soft); color:var(--text); border:1px solid var(--line); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
+        .lightbox-action-btn:hover { background:#111827; color:#fff; border-color:#111827; }
+        .lightbox-action-btn.danger { color:#dc2626; }
+        .lightbox-action-btn.danger:hover { background:#dc2626; color:#fff; border-color:#dc2626; }
+        /* 复制成功提示 */
+        .info-copy-toast { font-size:11px; color:#10b981; font-weight:600; animation:fadeInOut 1.5s ease; }
+        @keyframes fadeInOut { 0%{opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{opacity:0} }
         .lightbox-action-btn { height:36px; border-radius:10px; padding:0 16px; display:flex; align-items:center; gap:6px; background:var(--soft); color:var(--text); border:1px solid var(--line); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
         .lightbox-action-btn:hover { background:#111827; color:#fff; border-color:#111827; }
         .lightbox-action-btn.danger { color:#dc2626; }
