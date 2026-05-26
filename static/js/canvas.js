@@ -1605,6 +1605,26 @@ function addNode(node){
     return node;
 }
 function defaultPoint(dx=0, dy=0){ return screenToWorld(window.innerWidth / 2 + dx, window.innerHeight / 2 + dy); }
+function findEmptyPoint(w, h, margin=80){
+    if(!nodes || !nodes.length){
+        const rect = board.getBoundingClientRect();
+        const center = screenToWorld(rect.width / 2, rect.height / 2);
+        return {x: center.x - (w||0)/2, y: center.y - (h||0)/2};
+    }
+    const m = margin || 80;
+    const rightMost = Math.max(...nodes.map(n => n.x + (n.w || defaultNodeSize(n.type).w || 200)));
+    const topMost = Math.min(...nodes.map(n => n.y));
+    return {x: rightMost + m, y: topMost};
+}
+function focusOnPoint(x, y, w, h){
+    if(!board) return;
+    const rect = board.getBoundingClientRect();
+    const scale = viewport.scale || 1;
+    viewport.x = rect.width / 2 - (x + (w||0) / 2) * scale;
+    viewport.y = rect.height / 2 - (y + (h||0) / 2) * scale;
+    applyTransform();
+    scheduleSave();
+}
 function addImageNode(point){
     const p = point || defaultPoint(-120, 0);
     return addNode({id:uid('img'), type:'image', x:p.x, y:p.y, url:'', name:'空白图片'});
@@ -6457,6 +6477,8 @@ function addGenerationLog({run, outputs=[], runMs=0, error=''}) {
         refs:run?.refs || [],
         runMs:Number(runMs || 0),
         error:error ? String(error) : '',
+        // 保存完整 run 快照，供「再次运行」从日志还原节点
+        run: run ? {nodeType:run.nodeType, node:run.node, prompt:run.prompt, refs:run.refs, taskLabel:run.taskLabel} : null,
     };
     canvas.logs = [entry, ...canvas.logs].slice(0, 500);
 }
@@ -6489,7 +6511,7 @@ function renderCanvasLog(){
                     <span class="log-chip ${log.status === 'failed' ? 'status-failed' : 'status-ok'}">${escapeHtml(log.status === 'failed' ? tr('canvas.failed') : tr('canvas.success'))}</span>
                     <span class="log-chip">${escapeHtml(log.platform || '-')}</span>
                     ${taskLabel ? `<span class="log-chip">${escapeHtml(taskLabel)}</span>` : ''}
-                    <span class="log-chip">${escapeHtml(formatRunDuration(log.runMs || 0))}</span>
+                    ${log.runMs ? `<span class="log-chip">${escapeHtml(formatRunDuration(log.runMs))}</span>` : ''}
                     <button class="log-delete-btn" data-index="${i}" title="删除此记录" aria-label="删除此记录"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                 </div>
                 <div class="log-subline">${subParts.map(part => `<span title="${escapeAttr(part)}">${escapeHtml(part)}</span>`).join('')}</div>
@@ -7052,7 +7074,7 @@ function outputResolutionText(text, meta=null, log=null){
         const g = gcd(w,h);
         parts.push(`≈${w/g}:${h/g}`);
     }
-    if(meta?.runMs) parts.push(formatRunDuration(meta.runMs));
+    if(meta?.runMs || log?.runMs) parts.push(formatRunDuration(meta?.runMs || log?.runMs));
     outputResolution.innerHTML = parts.map((p,i) => i > 0 ? `<span style="opacity:.38">|</span>${p}` : p).join('');
 }
 function findLogForOutputUrl(url){
@@ -7109,7 +7131,7 @@ function setupLightboxInfoPanel(meta, log){
     const quality = node.quality || '';
     const format = node.format || 'png';
     const createdStr = log?.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '';
-    const runStr = meta?.runMs ? formatRunDuration(meta.runMs) : '';
+    const runStr = (meta?.runMs || log?.runMs) ? formatRunDuration(meta?.runMs || log?.runMs) : '';
     const params = [
         platform && {label:'平台', value:platform},
         model && {label:'模型', value:model},
@@ -7125,7 +7147,9 @@ function setupLightboxInfoPanel(meta, log){
         const timeText = [createdStr && `创建于 ${createdStr}`, runStr && `耗时 ${runStr}`].filter(Boolean).join(' · ');
         outputParamsGrid.innerHTML += `<div class="info-param-item" style="grid-column:1/-1"><span class="info-param-value" style="font-weight:400;color:var(--faint);font-size:11px">${escapeHtml(timeText)}</span></div>`;
     }
-    // 再次运行
+    // 再次运行（只在有 run 数据时显示）
+    const hasRunData = !!(meta?.run?.nodeType || log?.run?.nodeType);
+    outputRerunBtn.style.display = hasRunData ? '' : 'none';
     outputRerunBtn.onclick = e => {
         e.stopPropagation();
         rerunFromOutputMeta(currentOutputMeta);
@@ -7149,18 +7173,26 @@ function sendOutputToCanvas(url){
         return;
     }
     if(!url) return;
-    const p = defaultPoint(180, 40);
     const img = new Image();
     img.onload = () => {
+        const w = Math.min(img.naturalWidth, 512);
+        const h = Math.min(img.naturalHeight, 512);
+        const p = findEmptyPoint(w, h);
         const node = {
             id:uid('image'), type:'image', x:p.x, y:p.y,
-            w:Math.min(img.naturalWidth, 512), h:Math.min(img.naturalHeight, 512),
-            url, inputs:[]
+            w, h, url, inputs:[]
         };
         nodes.push(node);
         render();
         scheduleSave();
         closeOutputLightbox();
+        closeCanvasLog();
+        // 聚焦到新节点
+        const rect = board.getBoundingClientRect();
+        const scale = viewport.scale || 1;
+        viewport.x = rect.width / 2 - (p.x + w / 2) * scale;
+        viewport.y = rect.height / 2 - (p.y + h / 2) * scale;
+        applyTransform();
     };
     img.src = url;
 }
@@ -7188,9 +7220,13 @@ function setupOutputPromptPanel(meta, log){
     setupLightboxInfoPanel(meta, log);
 }
 function rerunFromOutputMeta(meta){
+    const log = currentOutputLog;
+    if(!meta?.run?.nodeType && log?.run?.nodeType) meta = {run: log.run};
     if(!ensureCanvas() || !meta?.run?.nodeType) return;
     const base = JSON.parse(JSON.stringify(meta.run.node || {}));
-    const p = defaultPoint(180, 40);
+    const mainW = (base.w || defaultNodeSize(meta.run.nodeType).w || 200);
+    const mainH = (base.h || defaultNodeSize(meta.run.nodeType).h || 160);
+    const p = findEmptyPoint(mainW, mainH);
     const node = {...base, id:uid(base.type || meta.run.nodeType), type:meta.run.nodeType, x:p.x, y:p.y, inputs:[], running:false};
     nodes.push(node);
     const prompt = meta.run.prompt || '';
@@ -7205,8 +7241,15 @@ function rerunFromOutputMeta(meta){
         connections.push({id:uid('c'), from:imgNode.id, to:node.id});
     });
     closeOutputLightbox();
+    closeCanvasLog();
     render();
     scheduleSave();
+    // 聚焦到主节点
+    const rect = board.getBoundingClientRect();
+    const scale = viewport.scale || 1;
+    viewport.x = rect.width / 2 - (p.x + mainW / 2) * scale;
+    viewport.y = rect.height / 2 - (p.y + mainH / 2) * scale;
+    applyTransform();
 }
 function updateOutputCompareSlider(clientX){
     const rect = outputCompareContainer.getBoundingClientRect();
