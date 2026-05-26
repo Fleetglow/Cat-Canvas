@@ -7032,8 +7032,19 @@ function outputLightboxItems(out=null){
 }
 function navigateOutputLightbox(direction){
     if(!outputLightbox.classList.contains('open') || !currentOutputLightboxUrl) return false;
-    const out = currentOutputLightboxOutId ? nodes.find(n => n.id === currentOutputLightboxOutId) : null;
-    const items = outputLightboxItems(out);
+    let items = [];
+    if(currentOutputFromLog){
+        // 从日志打开时，直接使用当前日志的 outputs（若 currentOutputLog 为空则回退查找）
+        const log = currentOutputLog || findLogForOutputUrl(currentOutputLightboxUrl);
+        if(log?.outputs?.length){
+            items = log.outputs
+                .filter(url => !isVideoUrl(url))
+                .map(url => ({url, outId: ''}));
+        }
+    } else {
+        const out = currentOutputLightboxOutId ? nodes.find(n => n.id === currentOutputLightboxOutId) : null;
+        items = outputLightboxItems(out);
+    }
     if(items.length < 2) return false;
     let idx = items.findIndex(item => item.url === currentOutputLightboxUrl);
     if(idx < 0) idx = 0;
