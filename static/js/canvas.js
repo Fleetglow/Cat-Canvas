@@ -67,6 +67,7 @@ let spacePan = false;
 let spacePanDownPos = null; // 记录空格平移开始的鼠标位置，用于阻止误触 click
 const linksEl = document.getElementById('links');
 const linkControlsEl = document.getElementById('linkControls');
+const knifeTrailSvg = document.getElementById('knifeTrailSvg');
 const dropOverlay = document.getElementById('dropOverlay');
 const createMenu = document.getElementById('createMenu');
 const linkCreateMenu = document.getElementById('linkCreateMenu');
@@ -7727,7 +7728,7 @@ function endDrag(event=null){
     knifeActive = false;
     knifePoint = null;
     knifeTrail = [];
-    knifeTrailEl = null;
+    if(knifeTrailEl){ knifeTrailEl.remove(); knifeTrailEl = null; }
     const shouldRenderKnife = knifeNeedsRender;
     knifeChanged = false;
     knifeNeedsRender = false;
@@ -7848,14 +7849,13 @@ function renderLinks(){
     if(tempLink){
         linksEl.appendChild(pathEl(tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2, 'link temp'));
     }
-    renderKnifeTrail();
 }
 function renderKnifeTrail(){
     if(!knifeActive || knifeTrail.length < 2) return;
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d', smoothKnifePath(knifeTrail));
     path.setAttribute('class', 'link knife-trail');
-    linksEl.appendChild(path);
+    knifeTrailSvg.appendChild(path);
     knifeTrailEl = path;
 }
 function renderKnifeTrailOnly(){
@@ -7863,7 +7863,7 @@ function renderKnifeTrailOnly(){
     if(!knifeTrailEl){
         knifeTrailEl = document.createElementNS('http://www.w3.org/2000/svg','path');
         knifeTrailEl.setAttribute('class', 'link knife-trail');
-        linksEl.appendChild(knifeTrailEl);
+        knifeTrailSvg.appendChild(knifeTrailEl);
     }
     knifeTrailEl.setAttribute('d', smoothKnifePath(knifeTrail));
 }
@@ -8035,7 +8035,7 @@ function setKnifeMode(active){
         knifeTrail = [];
         knifeChanged = false;
         knifeNeedsRender = false;
-        knifeTrailEl = null;
+        if(knifeTrailEl){ knifeTrailEl.remove(); knifeTrailEl = null; }
         renderLinks();
     }
 }
@@ -8051,7 +8051,7 @@ function startKnifeDrag(e){
     knifeNeedsRender = false;
     knifePoint = screenToWorld(e.clientX, e.clientY);
     knifeTrail = [knifePoint];
-    renderLinks();
+    renderKnifeTrail();
     window.onmousemove = continueKnifeDrag;
     window.onmouseup = endDrag;
     return true;
