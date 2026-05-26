@@ -7148,7 +7148,7 @@ function sendOutputToCanvas(url){
             url, inputs:[]
         };
         nodes.push(node);
-        renderNodes();
+        render();
         scheduleSave();
         closeOutputLightbox();
     };
