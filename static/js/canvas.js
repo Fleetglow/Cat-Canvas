@@ -7233,9 +7233,9 @@ function initOutputPreviewZoomEvents(){
             y:(localY - outputPreviewPan.y) / outputPreviewZoom
         };
         const factor = e.deltaY > 0 ? .9 : 1.1;
-        const nextZoom = Math.max(1, Math.min(6, outputPreviewZoom * factor));
+        const nextZoom = Math.max(0.25, Math.min(6, outputPreviewZoom * factor));
         outputPreviewZoom = nextZoom;
-        outputPreviewPan = nextZoom <= 1.001 ? {x: 0, y: 0} : {
+        outputPreviewPan = {
             x:localX - before.x * nextZoom,
             y:localY - before.y * nextZoom
         };
@@ -7243,7 +7243,7 @@ function initOutputPreviewZoomEvents(){
     }, {passive:false});
     outputPreview.addEventListener('mousedown', e => {
         if(outputLightboxVideo.style.display === 'block') return;
-        if(e.button !== 0 || outputPreviewZoom <= 1.001) return;
+        if(e.button !== 0) return;
         if(e.target.closest('.output-preview-actions, .output-resolution, .output-compare-slider')) return;
         outputPreviewPanDrag = {
             sx:e.clientX,
