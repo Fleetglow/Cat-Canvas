@@ -7015,9 +7015,16 @@ function outputLightboxItems(out=null){
         if(!url || isVideoUrl(url)) return null;
         return {url, outId:sourceOut?.id || ''};
     };
-    // 从日志记录打开时，只返回当前日志的 outputs（保持记录中的顺序）
-    if(currentOutputFromLog && currentOutputLog?.outputs?.length){
-        return currentOutputLog.outputs.map(url => normalize(url, null)).filter(Boolean);
+    // 从日志记录打开时，返回所有日志的 outputs（保持记录中的顺序）
+    if(currentOutputFromLog){
+        const allItems = [];
+        (canvas?.logs || []).forEach(log => {
+            (log.outputs || []).forEach(url => {
+                const normalized = normalize(url, null);
+                if(normalized) allItems.push(normalized);
+            });
+        });
+        return allItems;
     }
     const sourceOut = out?.id ? nodes.find(n => n.id === out.id) || out : null;
     if(sourceOut){
@@ -7034,13 +7041,8 @@ function navigateOutputLightbox(direction){
     if(!outputLightbox.classList.contains('open') || !currentOutputLightboxUrl) return false;
     let items = [];
     if(currentOutputFromLog){
-        // 从日志打开时，直接使用当前日志的 outputs（若 currentOutputLog 为空则回退查找）
-        const log = currentOutputLog || findLogForOutputUrl(currentOutputLightboxUrl);
-        if(log?.outputs?.length){
-            items = log.outputs
-                .filter(url => !isVideoUrl(url))
-                .map(url => ({url, outId: ''}));
-        }
+        // 从日志打开时，使用所有日志的 outputs（与 outputLightboxItems 一致）
+        items = outputLightboxItems(null);
     } else {
         const out = currentOutputLightboxOutId ? nodes.find(n => n.id === currentOutputLightboxOutId) : null;
         items = outputLightboxItems(out);
