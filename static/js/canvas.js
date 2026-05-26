@@ -8083,14 +8083,16 @@ function startBoardPan(e){
 
 board.onmousedown = e => {
     if(!canvas) return;
+    // 切割模式下右键拖动切割，需阻止浏览器手势（在 contextmenu 之前）
+    if(e.button === 2 && isKnifeKey(e)) e.preventDefault();
     // 空格按住时，强制走平移，无视其他逻辑（含中键）
     if(spacePan){ startBoardPan(e); return; }
     if(e.button === 1){
         startBoardPan(e);
         return;
     }
-    if(e.button !== 0) return;
     if(startKnifeDrag(e)) return;
+    if(e.button !== 0) return;
     // Dismiss any open native select dropdown
     if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
