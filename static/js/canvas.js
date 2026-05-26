@@ -7187,12 +7187,12 @@ function sendOutputToCanvas(url){
         scheduleSave();
         closeOutputLightbox();
         closeCanvasLog();
-        // 聚焦到新节点
+        // 聚焦到新节点，缩放设为 100%
+        viewport.scale = 1;
         const rect = board.getBoundingClientRect();
-        const scale = viewport.scale || 1;
-        viewport.x = rect.width / 2 - (p.x + w / 2) * scale;
-        viewport.y = rect.height / 2 - (p.y + h / 2) * scale;
-        applyTransform();
+        viewport.x = rect.width / 2 - (p.x + w / 2) * viewport.scale;
+        viewport.y = rect.height / 2 - (p.y + h / 2) * viewport.scale;
+        applyViewport();
     };
     img.src = url;
 }
@@ -7244,12 +7244,12 @@ function rerunFromOutputMeta(meta){
     closeCanvasLog();
     render();
     scheduleSave();
-    // 聚焦到主节点
+    // 聚焦到主节点，缩放设为 100%
+    viewport.scale = 1;
     const rect = board.getBoundingClientRect();
-    const scale = viewport.scale || 1;
-    viewport.x = rect.width / 2 - (p.x + mainW / 2) * scale;
-    viewport.y = rect.height / 2 - (p.y + mainH / 2) * scale;
-    applyTransform();
+    viewport.x = rect.width / 2 - (p.x + mainW / 2) * viewport.scale;
+    viewport.y = rect.height / 2 - (p.y + mainH / 2) * viewport.scale;
+    applyViewport();
 }
 function updateOutputCompareSlider(clientX){
     const rect = outputCompareContainer.getBoundingClientRect();
