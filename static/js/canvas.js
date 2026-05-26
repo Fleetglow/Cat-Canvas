@@ -7134,7 +7134,11 @@ function setupLightboxInfoPanel(meta, log){
     };
 }
 function sendOutputToCanvas(url){
-    if(!ensureCanvas() || !url) return;
+    if(!ensureCanvas()){
+        alert('需要先打开一个画布才能发送图片');
+        return;
+    }
+    if(!url) return;
     const p = defaultPoint(180, 40);
     const img = new Image();
     img.onload = () => {
