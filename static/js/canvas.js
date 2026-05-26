@@ -7240,7 +7240,7 @@ function initOutputPreviewZoomEvents(){
     outputPreview.addEventListener('mousedown', e => {
         if(outputLightboxVideo.style.display === 'block') return;
         if(e.button !== 0 || outputPreviewZoom <= 1.001) return;
-        if(e.target.closest('.lightbox-topbar-actions, .output-resolution, .output-compare-slider')) return;
+        if(e.target.closest('.output-preview-actions, .output-resolution, .output-compare-slider')) return;
         outputPreviewPanDrag = {
             sx:e.clientX,
             sy:e.clientY,

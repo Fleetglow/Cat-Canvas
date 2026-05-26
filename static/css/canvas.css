@@ -429,15 +429,9 @@
         .canvas-gate { position:absolute; inset:0; z-index:18; display:flex; align-items:center; justify-content:center; padding:32px; background:#f8fafc; background-image:radial-gradient(#d9e1ea 1px, transparent 1px); background-size:24px 24px; }
         .output-lightbox { position:absolute; inset:0; z-index:86; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(248,250,252,.34); backdrop-filter:blur(18px) saturate(1.08); }
         .output-lightbox.open { display:flex; }
-        .output-lightbox-shell { width:min(1280px, 96vw); height:min(900px, 92vh); display:flex; flex-direction:column; border-radius:24px; background:rgba(255,255,255,.92); border:1px solid rgba(255,255,255,.64); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
-        /* 顶部栏 */
-        .lightbox-topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--line); flex-shrink:0; }
-        .lightbox-topbar .output-resolution { background:var(--soft); border:1px solid var(--line); color:var(--text); height:30px; border-radius:999px; padding:0 12px; display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; }
-        .lightbox-topbar-actions { display:flex; gap:8px; }
-        .preview-icon-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:var(--soft); color:var(--muted); border:1px solid var(--line); cursor:pointer; transition:all .15s; }
-        .preview-icon-btn:hover { background:#111827; color:#fff; border-color:#111827; }
+        .output-lightbox-shell { width:min(1600px, 96vw); height:min(960px, 92vh); display:flex; border-radius:24px; background:rgba(255,255,255,.92); border:1px solid rgba(255,255,255,.64); box-shadow:0 30px 90px rgba(15,23,42,.22); overflow:hidden; }
         /* 主体左右分栏 */
-        .lightbox-body { display:grid; grid-template-columns:1fr 380px; flex:1; overflow:hidden; }
+        .lightbox-body { display:grid; grid-template-columns:1fr 400px; width:100%; height:100%; }
         /* 左侧图片预览 */
         .output-preview { position:relative; background:var(--soft); overflow:hidden; cursor:grab; }
         .output-preview img { display:block; width:100%; height:100%; object-fit:contain; transition:transform .12s ease-out; transform-origin:0 0; }
@@ -452,8 +446,16 @@
         .output-compare-original-wrap { position:absolute; inset:0; overflow:hidden; border-right:2px solid rgba(255,255,255,.85); clip-path:inset(0 50% 0 0); z-index:1; }
         .output-compare-slider { position:absolute; inset-block:0; left:50%; width:2px; background:#fff; z-index:2; cursor:ew-resize; }
         .output-compare-handle { position:absolute; top:50%; left:50%; width:42px; height:42px; transform:translate(-50%,-50%); border-radius:999px; display:flex; align-items:center; justify-content:center; background:#fff; color:#111827; border:1px solid rgba(226,232,240,.9); box-shadow:0 18px 38px rgba(15,23,42,.18); }
+        /* 图片上的浮层 */
+        .output-preview-bar { position:absolute; top:14px; left:14px; right:14px; display:flex; align-items:center; justify-content:space-between; pointer-events:none; z-index:3; }
+        .output-resolution { height:30px; border-radius:999px; padding:0 12px; display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.9); color:#111827; font-size:11px; font-weight:700; pointer-events:auto; }
+        .output-preview-actions { display:flex; gap:8px; pointer-events:auto; }
+        .preview-icon-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.92); color:#111827; border:1px solid rgba(255,255,255,.5); cursor:pointer; transition:all .15s; }
+        .preview-icon-btn:hover { background:#111827; color:#fff; }
         /* 右侧信息面板 */
-        .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; gap:4px; }
+        .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; position:relative; }
+        .lightbox-close-btn { position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:all .15s; z-index:2; }
+        .lightbox-close-btn:hover { background:var(--soft); color:var(--text); }
         .info-section { padding-bottom:16px; margin-bottom:4px; border-bottom:1px solid var(--line); }
         .info-section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
         .info-section-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
@@ -471,8 +473,8 @@
         .info-param-item { display:flex; flex-direction:column; gap:2px; }
         .info-param-label { font-size:11px; color:var(--faint); }
         .info-param-value { font-size:12px; color:var(--text); font-weight:600; }
-        /* 底部操作栏 */
-        .lightbox-bottombar { display:flex; align-items:center; justify-content:center; gap:12px; padding:12px 20px; border-top:1px solid var(--line); flex-shrink:0; }
+        /* 信息面板底部操作按钮 */
+        .lightbox-info-actions { display:flex; align-items:center; justify-content:center; gap:12px; padding-top:16px; margin-top:auto; border-top:1px solid var(--line); }
         .lightbox-action-btn { height:36px; border-radius:10px; padding:0 16px; display:flex; align-items:center; gap:6px; background:var(--soft); color:var(--text); border:1px solid var(--line); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
         .lightbox-action-btn:hover { background:#111827; color:#fff; border-color:#111827; }
         .lightbox-action-btn.danger { color:#dc2626; }
@@ -696,13 +698,15 @@
         .theme-dark .output-preview { background:#020617; }
         .theme-dark .output-preview img,
         .theme-dark .output-compare { background:#020617; }
-        .theme-dark .lightbox-topbar .output-resolution,
+        .theme-dark .output-resolution,
         .theme-dark .preview-icon-btn,
         .theme-dark .lightbox-action-btn { background:rgba(15,23,42,.82); color:#e5e7eb; border-color:rgba(148,163,184,.28); }
         .theme-dark .preview-icon-btn:hover,
         .theme-dark .lightbox-action-btn:hover { background:#e5e7eb; color:#0f172a; }
         .theme-dark .lightbox-info-panel { border-color:rgba(148,163,184,.18); }
         .theme-dark .info-section { border-color:rgba(148,163,184,.12); }
+        .theme-dark .lightbox-close-btn { color:#94a3b8; }
+        .theme-dark .lightbox-close-btn:hover { background:rgba(148,163,184,.12); color:#e5e7eb; }
         .theme-dark .output-grid img,
         .theme-dark .output-img-wrap.loading-wrap,
         body.theme-dark .output-img-wrap.loading-wrap { background:#0f172a; border-color:var(--line); color:var(--text); }

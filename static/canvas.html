@@ -116,17 +116,16 @@
         </div>
         <div id="outputLightbox" class="output-lightbox" onclick="closeOutputLightbox()">
             <div id="outputLightboxShell" class="output-lightbox-shell" onclick="event.stopPropagation()">
-                <!-- 顶部信息栏 -->
-                <div class="lightbox-topbar">
-                    <div id="outputResolution" class="output-resolution">--</div>
-                    <div class="lightbox-topbar-actions">
-                        <button id="outputDownloadBtn" class="preview-icon-btn" type="button" title="下载" aria-label="下载" data-i18n-title="canvas.download"><i data-lucide="download" class="w-4 h-4"></i></button>
-                        <button class="preview-icon-btn" type="button" title="关闭" aria-label="关闭" onclick="closeOutputLightbox()" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
-                    </div>
-                </div>
                 <!-- 主体：左图 + 右信息面板 -->
                 <div class="lightbox-body">
                     <div id="outputPreview" class="output-preview">
+                        <!-- 浮层：分辨率信息（左上角）-->
+                        <div class="output-preview-bar">
+                            <div id="outputResolution" class="output-resolution">--</div>
+                            <div class="output-preview-actions">
+                                <button id="outputDownloadBtn" class="preview-icon-btn" type="button" title="下载" aria-label="下载" data-i18n-title="canvas.download"><i data-lucide="download" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
                         <div id="outputCompareContainer" class="output-compare">
                             <img id="outputCompareResult" alt="result image">
                             <div id="outputCompareOriginalWrap" class="output-compare-original-wrap">
@@ -140,6 +139,8 @@
                         <video id="outputLightboxVideo" class="output-single-video" src="" controls playsinline style="display:none"></video>
                     </div>
                     <div class="lightbox-info-panel">
+                        <!-- 关闭按钮 -->
+                        <button class="lightbox-close-btn" type="button" title="关闭" aria-label="关闭" onclick="closeOutputLightbox()" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                         <!-- 提示词 -->
                         <div class="info-section">
                             <div class="info-section-title">
@@ -159,13 +160,13 @@
                             <div class="info-section-title">参数配置</div>
                             <div id="outputParamsGrid" class="info-params-grid"></div>
                         </div>
+                        <!-- 底部操作按钮 -->
+                        <div class="lightbox-info-actions">
+                            <button id="outputRerunBtn" class="lightbox-action-btn" type="button"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>再次运行</span></button>
+                            <button id="outputSendToCanvasBtn" class="lightbox-action-btn" type="button"><i data-lucide="send" class="w-3.5 h-3.5"></i><span>发送到画布</span></button>
+                            <button id="outputDeleteBtn" class="lightbox-action-btn danger" type="button"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>删除记录</span></button>
+                        </div>
                     </div>
-                </div>
-                <!-- 底部操作栏 -->
-                <div class="lightbox-bottombar">
-                    <button id="outputRerunBtn" class="lightbox-action-btn" type="button"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>再次运行</span></button>
-                    <button id="outputSendToCanvasBtn" class="lightbox-action-btn" type="button"><i data-lucide="send" class="w-3.5 h-3.5"></i><span>发送到画布</span></button>
-                    <button id="outputDeleteBtn" class="lightbox-action-btn danger" type="button"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>删除记录</span></button>
                 </div>
             </div>
         </div>
