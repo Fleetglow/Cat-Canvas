@@ -64,11 +64,12 @@
         .tool-btn { height:38px; min-width:38px; padding:0 12px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:7px; color:var(--muted); background:var(--card-solid); border:1px solid var(--line); font-size:11px; font-weight:700; transition:all .2s var(--ease); pointer-events:auto; }
         .tool-btn:hover { background:var(--soft-2); color:var(--text); }
         .theme-toggle.active { background:var(--strong); color:var(--strong-text); border-color:var(--strong); }
-        .board { position:absolute; inset:0; cursor:grab; background-color:var(--page); background-image:radial-gradient(var(--grid) 1px, transparent 1px); background-size:24px 24px; }
+        .space-pan .board { cursor:grabbing !important; }
         body.canvas-knife .board,
         body.canvas-knife .node,
         body.canvas-knife .link-hit { cursor:crosshair !important; }
         body.canvas-knife .node { outline:1px dashed rgba(220,38,38,.45); outline-offset:4px; }
+
         body.canvas-board-pan,
         body.canvas-board-pan * { cursor:grabbing !important; user-select:none !important; }
         .world { position:absolute; left:0; top:0; width:6000px; height:4000px; transform-origin:0 0; }
@@ -433,8 +434,7 @@
         .output-preview video { display:block; width:100%; height:100%; object-fit:contain; background:#0f172a; }
         .output-preview.panning { cursor:grabbing; }
         .output-preview.panning img { transition:none; }
-        .space-pan, .space-pan * { cursor:grab !important; }
-        .space-pan.dragging, .space-pan *.dragging { cursor:grabbing !important; }
+        .space-pan, .space-pan * { cursor:grabbing !important; }
         .output-single-img { cursor:inherit; }
         .output-compare { position:absolute; inset:0; display:none; width:100%; height:100%; background:#f8f8f9; }
         .output-preview.compare-mode .output-compare { display:block; }
