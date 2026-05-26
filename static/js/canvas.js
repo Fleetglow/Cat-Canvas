@@ -8014,7 +8014,7 @@ function setKnifeMode(active){
     }
 }
 function startKnifeDrag(e){
-    if(!canvas || e.button !== 0 || !isKnifeKey(e) || isEditableTarget(e.target)) return false;
+    if(!canvas || e.button !== 2 || !isKnifeKey(e) || isEditableTarget(e.target)) return false;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
@@ -8128,6 +8128,8 @@ board.oncontextmenu = e => {
     if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
     e.preventDefault();
     e.stopPropagation();
+    // 切割模式下右键不打开创建菜单，交给切割逻辑处理
+    if(isKnifeKey(e)) return;
     openCreateMenu(e.clientX, e.clientY);
 };
 board.addEventListener('mousedown', e => {
