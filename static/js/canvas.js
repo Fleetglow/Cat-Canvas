@@ -7850,10 +7850,33 @@ function renderLinks(){
 }
 function renderKnifeTrail(){
     if(!knifeActive || knifeTrail.length < 2) return;
-    const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-    poly.setAttribute('points', knifeTrail.map(p => `${p.x},${p.y}`).join(' '));
-    poly.setAttribute('class', 'link knife-trail');
-    linksEl.appendChild(poly);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', smoothKnifePath(knifeTrail));
+    path.setAttribute('class', 'link knife-trail');
+    linksEl.appendChild(path);
+}
+function renderKnifeTrailOnly(){
+    let el = linksEl.querySelector('.knife-trail');
+    if(!knifeActive || knifeTrail.length < 2){ if(el) el.remove(); return; }
+    if(!el){
+        el = document.createElementNS('http://www.w3.org/2000/svg','path');
+        el.setAttribute('class', 'link knife-trail');
+        linksEl.appendChild(el);
+    }
+    el.setAttribute('d', smoothKnifePath(knifeTrail));
+}
+function smoothKnifePath(pts){
+    if(pts.length < 2) return '';
+    if(pts.length === 2) return `M${pts[0].x},${pts[0].y} L${pts[1].x},${pts[1].y}`;
+    let d = `M${pts[0].x},${pts[0].y}`;
+    for(let i = 1; i < pts.length - 1; i++){
+        const prev = pts[i - 1], cur = pts[i], next = pts[i + 1];
+        const cx = (prev.x + next.x) / 2, cy = (prev.y + next.y) / 2;
+        d += ` Q${cur.x},${cur.y} ${cx},${cy}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L${last.x},${last.y}`;
+    return d;
 }
 function linkDeleteButton(connection, a, b){
     const btn = document.createElement('button');
@@ -8041,7 +8064,7 @@ function continueKnifeDrag(e){
     knifePoint = point;
     knifeTrail.push(point);
     if(knifeTrail.length > 120) knifeTrail = knifeTrail.slice(-120);
-    renderLinks();
+    renderKnifeTrailOnly();
 }
 function isEditableTarget(target){
     const tag = target?.tagName;
