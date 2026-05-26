@@ -7015,6 +7015,10 @@ function outputLightboxItems(out=null){
         if(!url || isVideoUrl(url)) return null;
         return {url, outId:sourceOut?.id || ''};
     };
+    // 从日志记录打开时，只返回当前日志的 outputs（保持记录中的顺序）
+    if(currentOutputLog?.outputs?.length){
+        return currentOutputLog.outputs.map(url => normalize(url, null)).filter(Boolean);
+    }
     const sourceOut = out?.id ? nodes.find(n => n.id === out.id) || out : null;
     if(sourceOut){
         return (sourceOut.images || []).map(item => normalize(item, sourceOut)).filter(Boolean);
