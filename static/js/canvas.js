@@ -131,6 +131,7 @@ let knifePoint = null;
 let knifeTrail = [];
 let knifeChanged = false;
 let knifeNeedsRender = false;
+let knifeTrailEl = null;
 let selectDrag = null;
 let menuPoint = null;
 let linkCreateState = null;
@@ -7726,6 +7727,7 @@ function endDrag(event=null){
     knifeActive = false;
     knifePoint = null;
     knifeTrail = [];
+    knifeTrailEl = null;
     const shouldRenderKnife = knifeNeedsRender;
     knifeChanged = false;
     knifeNeedsRender = false;
@@ -7854,16 +7856,16 @@ function renderKnifeTrail(){
     path.setAttribute('d', smoothKnifePath(knifeTrail));
     path.setAttribute('class', 'link knife-trail');
     linksEl.appendChild(path);
+    knifeTrailEl = path;
 }
 function renderKnifeTrailOnly(){
-    let el = linksEl.querySelector('.knife-trail');
-    if(!knifeActive || knifeTrail.length < 2){ if(el) el.remove(); return; }
-    if(!el){
-        el = document.createElementNS('http://www.w3.org/2000/svg','path');
-        el.setAttribute('class', 'link knife-trail');
-        linksEl.appendChild(el);
+    if(!knifeActive || knifeTrail.length < 2){ if(knifeTrailEl){ knifeTrailEl.remove(); knifeTrailEl = null; } return; }
+    if(!knifeTrailEl){
+        knifeTrailEl = document.createElementNS('http://www.w3.org/2000/svg','path');
+        knifeTrailEl.setAttribute('class', 'link knife-trail');
+        linksEl.appendChild(knifeTrailEl);
     }
-    el.setAttribute('d', smoothKnifePath(knifeTrail));
+    knifeTrailEl.setAttribute('d', smoothKnifePath(knifeTrail));
 }
 function smoothKnifePath(pts){
     if(pts.length < 2) return '';
@@ -8033,6 +8035,7 @@ function setKnifeMode(active){
         knifeTrail = [];
         knifeChanged = false;
         knifeNeedsRender = false;
+        knifeTrailEl = null;
         renderLinks();
     }
 }
@@ -8061,9 +8064,23 @@ function continueKnifeDrag(e){
     }
     const point = screenToWorld(e.clientX, e.clientY);
     if(knifePoint) applyKnifeCut(knifePoint, point);
+    // 快速移动时在两点之间插值补点，避免曲线采样不足
+    if(knifeTrail.length > 0){
+        const last = knifeTrail[knifeTrail.length - 1];
+        const dx = point.x - last.x, dy = point.y - last.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const step = 12; // 每 12px 插一个点
+        if(dist > step){
+            const count = Math.floor(dist / step);
+            for(let i = 1; i <= count; i++){
+                const t = i / (count + 1);
+                knifeTrail.push({x: last.x + dx * t, y: last.y + dy * t});
+            }
+        }
+    }
     knifePoint = point;
     knifeTrail.push(point);
-    if(knifeTrail.length > 120) knifeTrail = knifeTrail.slice(-120);
+    if(knifeTrail.length > 300) knifeTrail = knifeTrail.slice(-300);
     renderKnifeTrailOnly();
 }
 function isEditableTarget(target){
