@@ -103,10 +103,15 @@ const outputCompareSlider = document.getElementById('outputCompareSlider');
 const outputResolution = document.getElementById('outputResolution');
 const outputDownloadBtn = document.getElementById('outputDownloadBtn');
 const outputLightboxVideo = document.getElementById('outputLightboxVideo');
-const outputPromptPanel = document.getElementById('outputPromptPanel');
 const outputPromptText = document.getElementById('outputPromptText');
+const outputPromptExpandBtn = document.getElementById('outputPromptExpandBtn');
 const outputCopyPromptBtn = document.getElementById('outputCopyPromptBtn');
 const outputRerunBtn = document.getElementById('outputRerunBtn');
+const outputSendToCanvasBtn = document.getElementById('outputSendToCanvasBtn');
+const outputDeleteBtn = document.getElementById('outputDeleteBtn');
+const outputRefsSection = document.getElementById('outputRefsSection');
+const outputRefsList = document.getElementById('outputRefsList');
+const outputParamsGrid = document.getElementById('outputParamsGrid');
 const logModal = document.getElementById('logModal');
 const logList = document.getElementById('logList');
 let logLayout = 'grid'; // 只保留网格视图
@@ -179,6 +184,7 @@ let outputPreviewPan = {x: 0, y: 0};
 let outputPreviewPanDrag = null;
 let currentOutputCompareUrl = '';
 let currentOutputMeta = null;
+let currentOutputLog = null;
 let currentOutputLightboxOutId = '';
 let currentOutputLightboxUrl = '';
 const missingAssetUrls = new Set();
@@ -7035,34 +7041,137 @@ function setOutputCompareMode(active){
         outputCompareSlider.style.left = '50%';
     }
 }
-function outputResolutionText(text, meta=null){
+function outputResolutionText(text, meta=null, log=null){
     const parts = [text || '--'];
-    if(meta?.runMs) parts.push(`<span>${formatRunDuration(meta.runMs)}</span>`);
-    outputResolution.innerHTML = parts.join('<span style="opacity:.38">|</span>');
+    // 比例
+    if(meta?.run?.node?.width && meta?.run?.node?.height){
+        const w = meta.run.node.width, h = meta.run.node.height;
+        const gcd = (a,b) => b ? gcd(b, a%b) : a;
+        const g = gcd(w,h);
+        parts.push(`≈${w/g}:${h/g}`);
+    }
+    if(meta?.runMs) parts.push(formatRunDuration(meta.runMs));
+    outputResolution.innerHTML = parts.map((p,i) => i > 0 ? `<span style="opacity:.38">|</span>${p}` : p).join('');
 }
-function setupOutputPromptPanel(meta){
+function findLogForOutputUrl(url){
+    return (canvas?.logs || []).find(log => (log.outputs || []).includes(url)) || null;
+}
+function setupLightboxInfoPanel(meta, log){
     currentOutputMeta = meta || null;
-    const prompt = meta?.run?.prompt || '';
-    outputPromptPanel.classList.toggle('open', !!prompt || !!meta?.run);
-    outputPromptText.textContent = prompt || tr('canvas.noPromptMeta');
+    currentOutputLog = log;
+    const prompt = meta?.run?.prompt || log?.prompt || '';
+    // 提示词
+    outputPromptText.textContent = prompt || '无提示词';
+    outputPromptText.classList.remove('expanded');
+    outputPromptExpandBtn.style.display = prompt.length > 100 ? 'block' : 'none';
+    outputPromptExpandBtn.textContent = '展开';
+    outputPromptExpandBtn.onclick = e => {
+        e.stopPropagation();
+        const expanded = outputPromptText.classList.toggle('expanded');
+        outputPromptExpandBtn.textContent = expanded ? '收起' : '展开';
+    };
+    // 复制提示词
     outputCopyPromptBtn.onclick = e => {
         e.stopPropagation();
         if(!prompt) return;
         copyTextToClipboard(prompt);
-        const span = outputCopyPromptBtn.querySelector('span');
-        const oldText = span?.textContent || tr('canvas.copyPrompt');
         outputCopyPromptBtn.classList.add('copied');
-        if(span) span.textContent = tr('canvas.copied');
         clearTimeout(outputCopyPromptBtn._copyTimer);
-        outputCopyPromptBtn._copyTimer = setTimeout(() => {
-            outputCopyPromptBtn.classList.remove('copied');
-            if(span) span.textContent = oldText;
-        }, 1200);
+        outputCopyPromptBtn._copyTimer = setTimeout(() => outputCopyPromptBtn.classList.remove('copied'), 1200);
     };
+    // 参考图
+    const refs = meta?.run?.refs || log?.refs || [];
+    if(refs.length){
+        outputRefsSection.style.display = '';
+        outputRefsList.innerHTML = refs.filter(r => r.url).map(r =>
+            `<img src="${escapeAttr(r.url)}" alt="${escapeAttr(r.name || 'ref')}" title="${escapeAttr(r.name || '')}">`
+        ).join('');
+    } else {
+        outputRefsSection.style.display = 'none';
+        outputRefsList.innerHTML = '';
+    }
+    // 参数配置
+    const node = meta?.run?.node || {};
+    const platform = log?.platform || runPlatformLabel(meta?.run) || '';
+    const model = log?.model || runTaskLabel(meta?.run) || '';
+    const w = node.width || node.size?.split?.('x')?.[0] || '';
+    const h = node.height || node.size?.split?.('x')?.[1] || '';
+    const sizeStr = (w && h) ? `${w}×${h}` : '';
+    const quality = node.quality || '';
+    const format = node.format || 'png';
+    const createdStr = log?.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '';
+    const runStr = meta?.runMs ? formatRunDuration(meta.runMs) : '';
+    const params = [
+        platform && {label:'平台', value:platform},
+        model && {label:'模型', value:model},
+        sizeStr && {label:'尺寸', value:sizeStr},
+        quality && {label:'质量', value:quality},
+        format && {label:'格式', value:format},
+    ].filter(Boolean);
+    outputParamsGrid.innerHTML = params.map(p =>
+        `<div class="info-param-item"><span class="info-param-label">${p.label}</span><span class="info-param-value">${escapeHtml(p.value)}</span></div>`
+    ).join('');
+    // 创建时间 + 耗时
+    if(createdStr || runStr){
+        const timeText = [createdStr && `创建于 ${createdStr}`, runStr && `耗时 ${runStr}`].filter(Boolean).join(' · ');
+        outputParamsGrid.innerHTML += `<div class="info-param-item" style="grid-column:1/-1"><span class="info-param-value" style="font-weight:400;color:var(--faint);font-size:11px">${escapeHtml(timeText)}</span></div>`;
+    }
+    // 再次运行
     outputRerunBtn.onclick = e => {
         e.stopPropagation();
         rerunFromOutputMeta(currentOutputMeta);
     };
+    // 发送到画布
+    outputSendToCanvasBtn.onclick = e => {
+        e.stopPropagation();
+        const url = currentOutputLightboxUrl;
+        if(url) sendOutputToCanvas(url);
+    };
+    // 删除记录
+    outputDeleteBtn.onclick = e => {
+        e.stopPropagation();
+        deleteOutputFromLightbox();
+    };
+}
+function sendOutputToCanvas(url){
+    if(!ensureCanvas() || !url) return;
+    const p = defaultPoint(180, 40);
+    const img = new Image();
+    img.onload = () => {
+        const node = {
+            id:uid('image'), type:'image', x:p.x, y:p.y,
+            w:Math.min(img.naturalWidth, 512), h:Math.min(img.naturalHeight, 512),
+            url, inputs:[]
+        };
+        nodes.push(node);
+        renderNodes();
+        scheduleSave();
+        closeOutputLightbox();
+    };
+    img.src = url;
+}
+function deleteOutputFromLightbox(){
+    const url = currentOutputLightboxUrl;
+    const log = currentOutputLog;
+    if(!url) return;
+    if(!confirm('确定要删除这条记录吗？')) return;
+    // 从 log 中移除
+    if(log){
+        log.outputs = (log.outputs || []).filter(u => u !== url);
+        if(!log.outputs.length){
+            canvas.logs = canvas.logs.filter(l => l.id !== log.id);
+        }
+    }
+    // 从 output 节点中移除
+    if(canvas){
+        canvas.outputs = (canvas.outputs || []).filter(o => o.url !== url);
+    }
+    scheduleSave();
+    closeOutputLightbox();
+    renderCanvasLog();
+}
+function setupOutputPromptPanel(meta, log){
+    setupLightboxInfoPanel(meta, log);
 }
 function rerunFromOutputMeta(meta){
     if(!ensureCanvas() || !meta?.run?.nodeType) return;
@@ -7131,7 +7240,7 @@ function initOutputPreviewZoomEvents(){
     outputPreview.addEventListener('mousedown', e => {
         if(outputLightboxVideo.style.display === 'block') return;
         if(e.button !== 0 || outputPreviewZoom <= 1.001) return;
-        if(e.target.closest('.output-preview-actions, .output-resolution, .output-compare-slider')) return;
+        if(e.target.closest('.lightbox-topbar-actions, .output-resolution, .output-compare-slider')) return;
         outputPreviewPanDrag = {
             sx:e.clientX,
             sy:e.clientY,
@@ -7191,9 +7300,10 @@ function openOutputLightbox(url, out){
     currentOutputLightboxOutId = out?.id || '';
     currentOutputLightboxUrl = url;
     const meta = outputMetaFor(url, out);
+    const log = findLogForOutputUrl(url);
     markOutputViewed(out, url);
-    setupOutputPromptPanel(meta);
-    outputResolutionText('--', meta);
+    setupOutputPromptPanel(meta, log);
+    outputResolutionText('--', meta, log);
     currentOutputCompareUrl = outputCompareUrlFor(url, out);
     setOutputCompareMode(false);
     const videoMode = isVideoUrl(url);
@@ -7208,7 +7318,7 @@ function openOutputLightbox(url, out){
         outputLightboxVideo.onloadedmetadata = () => {
             outputResolutionText(outputLightboxVideo.videoWidth && outputLightboxVideo.videoHeight
                 ? `${outputLightboxVideo.videoWidth} x ${outputLightboxVideo.videoHeight}`
-                : 'Video', meta);
+                : 'Video', meta, log);
         };
         outputLightboxVideo.src = url;
         outputPreview.ondblclick = null;
@@ -7226,7 +7336,7 @@ function openOutputLightbox(url, out){
     outputCompareResult.draggable = false;
     outputCompareOriginal.draggable = false;
     outputLightboxImg.onload = () => {
-        outputResolutionText(`${outputLightboxImg.naturalWidth} x ${outputLightboxImg.naturalHeight}`, meta);
+        outputResolutionText(`${outputLightboxImg.naturalWidth} x ${outputLightboxImg.naturalHeight}`, meta, log);
     };
     outputLightboxImg.src = url;
     outputCompareResult.src = url;
@@ -7259,8 +7369,12 @@ function closeOutputLightbox(){
     resetOutputPreviewZoom();
     currentOutputCompareUrl = '';
     currentOutputMeta = null;
+    currentOutputLog = null;
     currentOutputLightboxOutId = '';
     currentOutputLightboxUrl = '';
+    outputPromptText.classList.remove('expanded');
+    outputRefsList.innerHTML = '';
+    outputParamsGrid.innerHTML = '';
     setupOutputPromptPanel(null);
 }
 function groupSelectedImages(){
