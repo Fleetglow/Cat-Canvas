@@ -139,8 +139,15 @@
                         <video id="outputLightboxVideo" class="output-single-video" src="" controls playsinline style="display:none"></video>
                     </div>
                     <div class="lightbox-info-panel">
-                        <!-- 关闭按钮 -->
-                        <button class="lightbox-close-btn" type="button" title="关闭" aria-label="关闭" onclick="closeOutputLightbox()" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        <!-- 顶部：操作按钮 + 关闭 -->
+                        <div class="lightbox-info-topbar">
+                            <div class="lightbox-info-actions">
+                                <button id="outputRerunBtn" class="lightbox-action-btn" type="button"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>再次运行</span></button>
+                                <button id="outputSendToCanvasBtn" class="lightbox-action-btn" type="button"><i data-lucide="send" class="w-3.5 h-3.5"></i><span>发送到画布</span></button>
+                                <button id="outputDeleteBtn" class="lightbox-action-btn danger" type="button"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>删除记录</span></button>
+                            </div>
+                            <button class="lightbox-close-btn" type="button" title="关闭" aria-label="关闭" onclick="closeOutputLightbox()" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
                         <!-- 提示词 -->
                         <div class="info-section">
                             <div class="info-section-title">
@@ -159,12 +166,6 @@
                         <div class="info-section">
                             <div class="info-section-title">参数配置</div>
                             <div id="outputParamsGrid" class="info-params-grid"></div>
-                        </div>
-                        <!-- 底部操作按钮 -->
-                        <div class="lightbox-info-actions">
-                            <button id="outputRerunBtn" class="lightbox-action-btn" type="button"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>再次运行</span></button>
-                            <button id="outputSendToCanvasBtn" class="lightbox-action-btn" type="button"><i data-lucide="send" class="w-3.5 h-3.5"></i><span>发送到画布</span></button>
-                            <button id="outputDeleteBtn" class="lightbox-action-btn danger" type="button"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>删除记录</span></button>
                         </div>
                     </div>
                 </div>

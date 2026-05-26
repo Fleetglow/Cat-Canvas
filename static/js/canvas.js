@@ -550,6 +550,13 @@ async function copyTextToClipboard(text){
         return false;
     }
 }
+function showCopyToast(msg='复制成功'){
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:8px 20px;border-radius:10px;background:rgba(15,23,42,.88);color:#fff;font-size:12px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s;opacity:1;';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 1500);
+}
 function parseRatioValue(value){
     const raw = String(value || '').trim();
     if(!raw) return null;
@@ -7063,7 +7070,9 @@ function setupLightboxInfoPanel(meta, log){
     // 提示词
     outputPromptText.textContent = prompt || '无提示词';
     outputPromptText.classList.remove('expanded');
-    outputPromptExpandBtn.style.display = prompt.length > 100 ? 'block' : 'none';
+    // 判断提示词是否超过 8 行（每行约 46 个中文字符，按实际渲染判断）
+    const lineCount = prompt ? Math.ceil(prompt.length / 46) : 0;
+    outputPromptExpandBtn.style.display = lineCount > 8 ? 'block' : 'none';
     outputPromptExpandBtn.textContent = '展开';
     outputPromptExpandBtn.onclick = e => {
         e.stopPropagation();
@@ -7078,6 +7087,8 @@ function setupLightboxInfoPanel(meta, log){
         outputCopyPromptBtn.classList.add('copied');
         clearTimeout(outputCopyPromptBtn._copyTimer);
         outputCopyPromptBtn._copyTimer = setTimeout(() => outputCopyPromptBtn.classList.remove('copied'), 1200);
+        // 显示复制成功提示
+        showCopyToast();
     };
     // 参考图
     const refs = meta?.run?.refs || log?.refs || [];

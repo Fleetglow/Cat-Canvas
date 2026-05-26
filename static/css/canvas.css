@@ -453,8 +453,10 @@
         .preview-icon-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.92); color:#111827; border:1px solid rgba(255,255,255,.5); cursor:pointer; transition:all .15s; }
         .preview-icon-btn:hover { background:#111827; color:#fff; }
         /* 右侧信息面板 */
-        .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; position:relative; }
-        .lightbox-close-btn { position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:all .15s; z-index:2; }
+        .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; }
+        .lightbox-info-topbar { display:flex; align-items:center; justify-content:space-between; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--line); gap:8px; }
+        .lightbox-info-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .lightbox-close-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:all .15s; flex-shrink:0; }
         .lightbox-close-btn:hover { background:var(--soft); color:var(--text); }
         .info-section { padding-bottom:16px; margin-bottom:4px; border-bottom:1px solid var(--line); }
         .info-section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
@@ -462,7 +464,7 @@
         .info-copy-btn { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--faint); border:none; cursor:pointer; transition:all .15s; flex-shrink:0; }
         .info-copy-btn:hover { background:var(--soft); color:var(--text); }
         .info-copy-btn.copied { color:#10b981; }
-        .info-prompt-text { font-size:12px; color:var(--muted); line-height:1.6; max-height:120px; overflow:hidden; white-space:pre-wrap; user-select:text; transition:max-height .2s; }
+        .info-prompt-text { font-size:12px; color:var(--muted); line-height:1.6; max-height:154px; overflow:hidden; white-space:pre-wrap; user-select:text; transition:max-height .2s; }
         .info-prompt-text.expanded { max-height:none; }
         .info-expand-btn { font-size:11px; color:var(--strong); background:none; border:none; cursor:pointer; padding:4px 0; font-weight:600; }
         .info-expand-btn:hover { text-decoration:underline; }
@@ -473,8 +475,6 @@
         .info-param-item { display:flex; flex-direction:column; gap:2px; }
         .info-param-label { font-size:11px; color:var(--faint); }
         .info-param-value { font-size:12px; color:var(--text); font-weight:600; }
-        /* 信息面板底部操作按钮 */
-        .lightbox-info-actions { display:flex; align-items:center; justify-content:center; gap:12px; padding-top:16px; margin-top:auto; border-top:1px solid var(--line); }
         .lightbox-action-btn { height:36px; border-radius:10px; padding:0 16px; display:flex; align-items:center; gap:6px; background:var(--soft); color:var(--text); border:1px solid var(--line); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
         .lightbox-action-btn:hover { background:#111827; color:#fff; border-color:#111827; }
         .lightbox-action-btn.danger { color:#dc2626; }
