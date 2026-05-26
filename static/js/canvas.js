@@ -8014,7 +8014,7 @@ function setKnifeMode(active){
     }
 }
 function startKnifeDrag(e){
-    if(!canvas || e.button !== 2 || !isKnifeKey(e) || isEditableTarget(e.target)) return false;
+    if(!canvas || e.button !== 0 || !isKnifeKey(e) || isEditableTarget(e.target)) return false;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
@@ -8083,16 +8083,14 @@ function startBoardPan(e){
 
 board.onmousedown = e => {
     if(!canvas) return;
-    // 切割模式下右键拖动切割，需阻止浏览器手势（在 contextmenu 之前）
-    if(e.button === 2 && isKnifeKey(e)) e.preventDefault();
     // 空格按住时，强制走平移，无视其他逻辑（含中键）
     if(spacePan){ startBoardPan(e); return; }
     if(e.button === 1){
         startBoardPan(e);
         return;
     }
-    if(startKnifeDrag(e)) return;
     if(e.button !== 0) return;
+    if(startKnifeDrag(e)) return;
     // Dismiss any open native select dropdown
     if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
@@ -8130,8 +8128,6 @@ board.oncontextmenu = e => {
     if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
     e.preventDefault();
     e.stopPropagation();
-    // 切割模式下右键不打开创建菜单，交给切割逻辑处理
-    if(isKnifeKey(e)) return;
     openCreateMenu(e.clientX, e.clientY);
 };
 board.addEventListener('mousedown', e => {
