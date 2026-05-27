@@ -8,6 +8,7 @@ import os
 import re
 import random
 import sys
+import socket  # 用于检测本地代理
 import subprocess
 import time
 import shutil
@@ -3312,7 +3313,32 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
     mask_refs = [ref for ref in refs if str(ref.get("role") or "").strip().lower() == "mask" or str(ref.get("name") or "").lower().endswith("_mask.png")]
     image_refs = [ref for ref in refs if ref not in mask_refs]
     request_timeout = httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0) if (is_gpt2 or is_apimart) else AI_REQUEST_TIMEOUT
-    async with httpx.AsyncClient(timeout=request_timeout) as client:
+
+    # 代理自动检测（与 image-tool-main 逻辑一致）
+    _proxy_url = None
+    raw_proxy = os.environ.get("INFINITE_CANVAS_OUTBOUND_PROXY")
+    if raw_proxy is not None:
+        v = raw_proxy.strip()
+        if v.lower() not in {"", "0", "false", "no", "none", "off", "direct"}:
+            _proxy_url = v
+    if _proxy_url is None:
+        try:
+            with socket.create_connection(("127.0.0.1", 7897), timeout=0.35):
+                _proxy_url = "http://127.0.0.1:7897"
+        except OSError:
+            pass
+
+    client_kwargs = {"timeout": request_timeout, "http2": False}
+    if _proxy_url:
+        import inspect
+        sig = inspect.signature(httpx.AsyncClient.__init__)
+        if "proxy" in sig.parameters:
+            client_kwargs["proxy"] = _proxy_url
+        else:
+            client_kwargs["proxies"] = {"http://": _proxy_url, "https://": _proxy_url}
+        print(f"[Proxy] Using outbound proxy: {_proxy_url}")
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
         response = None
         async def post_openai_edits(edit_files=None):
             data = {"model": model, "prompt": prompt, "size": size}
