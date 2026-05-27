@@ -16,12 +16,22 @@
             } catch(e) {}
         })();
     </script>
+<<<<<<< HEAD
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="/static/js/theme.js?v=2026.05.25.5"></script>
     <script src="/static/js/i18n.js?v=2026.05.25.5"></script>
         <link rel="stylesheet" href="/static/css/canvas.css?v=2026.05.25.5">
     </head>
+=======
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.05.24"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.05.24"></script>
+    <script src="/static/js/theme.js?v=2026.05.24"></script>
+    <script src="/static/js/i18n.js?v=2026.05.24"></script>
+    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.05.24">
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.05.24">
+</head>
+>>>>>>> upstream/main
 <body>
     <div id="shell" class="shell no-canvas">
         <div class="topbar">
@@ -35,6 +45,21 @@
             </div>
             <div id="quickToolbar" class="panel toolbar editor-only">
                 <div class="toolbar-items">
+<<<<<<< HEAD
+=======
+                    <button class="tool-btn" onclick="addImageNode()"><i data-lucide="image-plus" class="w-4 h-4"></i><span data-i18n="canvas.image">图片</span></button>
+                    <button class="tool-btn" onclick="addPromptNode()"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span data-i18n="canvas.prompt">提示词</span></button>
+                    <button class="tool-btn" onclick="addLoopNode()"><i data-lucide="repeat-2" class="w-4 h-4"></i><span data-i18n="canvas.loop">循环</span></button>
+                    <button class="tool-btn" onclick="addLLMNode()"><i data-lucide="message-square-text" class="w-4 h-4"></i>LLM</button>
+                    <button class="tool-btn" onclick="addGeneratorNode()"><i data-lucide="wand-sparkles" class="w-4 h-4"></i><span data-i18n="canvas.apiGenerate">API生成</span></button>
+                    <button class="tool-btn" onclick="addMsGenNode()"><i data-lucide="cloud-lightning" class="w-4 h-4"></i><span data-i18n="canvas.msGenerate">MS生成</span></button>
+                    <button class="tool-btn" onclick="addVideoNode()"><i data-lucide="clapperboard" class="w-4 h-4"></i><span data-i18n="canvas.videoGenerate">视频生成</span></button>
+                    <button class="tool-btn" onclick="addRhNode()"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.rhGenerate">RH生成</span></button>
+                    <button class="tool-btn" onclick="addComfyNode()"><i data-lucide="workflow" class="w-4 h-4"></i>ComfyUI</button>
+                    <button class="tool-btn" onclick="addLTXDirectorNode()"><i data-lucide="film" class="w-4 h-4"></i><span data-i18n="canvas.ltxDirector">LTX Director</span></button>
+                    <button class="tool-btn" onclick="addOutputNode()"><i data-lucide="circle-dot" class="w-4 h-4"></i>Output</button>
+                    <button class="tool-btn" onclick="groupSelectedImages()"><i data-lucide="group" class="w-4 h-4"></i><span data-i18n="canvas.group">分组</span></button>
+>>>>>>> upstream/main
                 </div>
                 <div class="toolbar-fixed">
                     <button class="tool-btn toolbar-log" onclick="openCanvasLog()" title="日志" aria-label="日志" data-i18n-title="canvas.logs"><i data-lucide="list-todo" class="w-4 h-4"></i><span data-i18n="canvas.logs">日志</span></button>
@@ -91,6 +116,7 @@
                 <button class="menu-btn" onclick="menuAdd('msgen')"><i data-lucide="cloud-lightning" class="w-4 h-4"></i><span data-i18n="canvas.modelscopeGenerate">Modelscope生成</span></button>
                 <button class="menu-btn" onclick="menuAdd('video')"><i data-lucide="clapperboard" class="w-4 h-4"></i><span data-i18n="canvas.videoGenerateNode">视频生成</span></button>
                 <button class="menu-btn" onclick="menuAdd('comfy')"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.comfyGenerate">ComfyUI 生成</span></button>
+                <button class="menu-btn" onclick="menuAdd('ltxDirector')"><i data-lucide="film" class="w-4 h-4"></i><span data-i18n="canvas.ltxDirector">LTX Director</span></button>
                 <button class="menu-btn" onclick="menuAdd('output')"><i data-lucide="circle-dot" class="w-4 h-4"></i>Output</button>
                 <button class="menu-btn" onclick="menuAdd('group')"><i data-lucide="group" class="w-4 h-4"></i><span data-i18n="canvas.group">分组</span></button>
             </div>
@@ -341,6 +367,12 @@
             </div>
         </div>
     </div>
+<<<<<<< HEAD
     <script src="/static/js/canvas.js"></script>
+=======
+
+    <script src="/static/js/ltx-director-timeline.js?v=2026.05.24"></script>
+    <script src="/static/js/canvas.js?v=2026.05.24"></script>
+>>>>>>> upstream/main
 </body>
 </html>
