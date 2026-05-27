@@ -29,6 +29,23 @@ May 25th Update:
 
 3. Supports uploading video/audio, and supports various output results from Comfyui (video/audio/text)
 
+--------
+
+已经申请著作权，禁止商业用途
+
+Commercial use is prohibited.
+
+
+* 可以自己使用和公司使用，禁止用于任何形式的修改封装成商业产品，商用须取得授权。
+
+* 根据代码二次开发的软件必须保持开源并注明来源作者
+
+* This software is for personal and company use only, but is prohibited from being modified or packaged into commercial products in any way. Commercial use requires authorization.
+
+* Software developed based on this code must remain open source and the original author must be credited.
+
+--------
+
 <img width="2079" height="665" alt="image" src="https://github.com/user-attachments/assets/8469923b-f7a2-403c-9c37-e6e789211f28" />
 
 <img width="1865" height="1503" alt="image" src="https://github.com/user-attachments/assets/f4030201-67c6-4845-b08b-b6fdf304afaa" />
