@@ -3314,30 +3314,7 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
     image_refs = [ref for ref in refs if ref not in mask_refs]
     request_timeout = httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0) if (is_gpt2 or is_apimart) else AI_REQUEST_TIMEOUT
 
-    # 代理配置（默认直连，仅当用户明确配置时才走代理）
-    # 使用方式：
-    #   setx INFINITE_CANVAS_OUTBOUND_PROXY "http://127.0.0.1:7897"
-    #   setx INFINITE_CANVAS_OUTBOUND_PROXY "direct"  # 强制直连
-    _proxy_url = None
-    raw_proxy = os.environ.get("INFINITE_CANVAS_OUTBOUND_PROXY")
-    if raw_proxy is not None:
-        v = raw_proxy.strip()
-        if v.lower() not in {"", "0", "false", "no", "none", "off", "direct"}:
-            _proxy_url = v
-    # 注意：不再自动检测 127.0.0.1:7897，因为不是所有平台都适合走代理
-    # 如果用户需要走代理，请明确配置上述环境变量
-
-    client_kwargs = {"timeout": request_timeout, "http2": False}
-    if _proxy_url:
-        import inspect
-        sig = inspect.signature(httpx.AsyncClient.__init__)
-        if "proxy" in sig.parameters:
-            client_kwargs["proxy"] = _proxy_url
-        else:
-            client_kwargs["proxies"] = {"http://": _proxy_url, "https://": _proxy_url}
-        print(f"[Proxy] Using outbound proxy: {_proxy_url}")
-
-    async with httpx.AsyncClient(**client_kwargs) as client:
+    async with httpx.AsyncClient(timeout=request_timeout) as client:
         response = None
         async def post_openai_edits(edit_files=None):
             data = {"model": model, "prompt": prompt, "size": size}
