@@ -8,7 +8,7 @@
         "api.recommendApi": { zh: "推荐API", en: "Recommended APIs" },
         "api.recommendApiDesc": { zh: "选择平台后可以一键填写请求地址和协议。", en: "Choose a provider to auto-fill the request URL and protocol." },
         "api.recommendApiNote": { zh: "提示：账户内需要至少 0.05 元余额，才能验证地址并拉取模型。", en: "Tip: Your account needs at least 0.05 balance to verify the URL and fetch models." },
-        "api.register": { zh: "注册", en: "Register" },
+        "api.register": { zh: "获取key", en: "Get key" },
         "api.autoFill": { zh: "自动填写", en: "Auto-fill" },
         "api.provider": { zh: "平台", en: "Provider" },
         "api.delete": { zh: "删除", en: "Delete" },

@@ -9,6 +9,8 @@ https://apimart.ai/register?aff=1uyAbb  （包含所有生图模型/视频模型
 
 https://www.fhl.mom/register?aff=86L574B4T2N9  （包含codex和GPT image 2模型）
 
+功能请求/功能更新/视频教程/联系我，都可以在B站评论或私信：https://space.bilibili.com/78652351
+
 ----
 
 【新增了version文件，我每次更新都会更新version的版本号，如果你下载version文件，打开项目后，导航栏的GitHub按键就会提示新版本，如果不想查看更新提示，就删除version文件】
