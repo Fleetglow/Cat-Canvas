@@ -8459,10 +8459,11 @@ function preventBrowserZoom(e){
 window.addEventListener('keydown', preventBrowserZoom, true);
 document.addEventListener('keydown', preventBrowserZoom, true);
 
-// ESC 键关闭弹窗
+// ESC 键关闭弹窗（按层级：先关闭最上层弹窗）
 document.addEventListener('keydown', e => {
     if(e.key === 'Escape'){
-        if(logModal?.classList.contains('open')) closeCanvasLog();
+        if(outputLightbox?.classList.contains('open')) closeOutputLightbox();
+        else if(logModal?.classList.contains('open')) closeCanvasLog();
         else if(settingsModal?.classList.contains('open')) closeSettingsModal();
         else if(helpModal?.classList.contains('open')) closeHelpModal();
         else if(errorModal?.classList.contains('open')) closeErrorModal();
