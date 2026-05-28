@@ -7152,7 +7152,7 @@ function setupLightboxInfoPanel(meta, log){
     const params = [
         platform && {label:'平台', value:platform},
         model && {label:'模型', value:model},
-        sizeStr && {label:'尺寸', value:sizeStr},
+        {label:'尺寸', value:sizeStr || '—'},
         quality && {label:'质量', value:quality},
         format && {label:'格式', value:format},
     ].filter(Boolean);
