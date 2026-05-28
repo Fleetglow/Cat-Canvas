@@ -7157,7 +7157,7 @@ function setupLightboxInfoPanel(meta, log){
         format && {label:'格式', value:format},
     ].filter(Boolean);
     outputParamsGrid.innerHTML = params.map(p =>
-        `<div class="info-param-item"><span class="info-param-label">${p.label}</span><span class="info-param-value">${escapeHtml(p.value)}</span></div>`
+        `<div class="info-param-item"${p.label === '尺寸' ? ' data-param="size"' : ''}><span class="info-param-label">${p.label}</span><span class="info-param-value">${escapeHtml(p.value)}</span></div>`
     ).join('');
     // 创建时间 + 耗时
     if(createdStr || runStr){
@@ -7391,9 +7391,16 @@ function openOutputLightbox(url, out){
         outputCompareResult.src = '';
         outputCompareOriginal.src = '';
         outputLightboxVideo.onloadedmetadata = () => {
-            outputResolutionText(outputLightboxVideo.videoWidth && outputLightboxVideo.videoHeight
+            const actualSize = outputLightboxVideo.videoWidth && outputLightboxVideo.videoHeight
                 ? `${outputLightboxVideo.videoWidth} x ${outputLightboxVideo.videoHeight}`
-                : 'Video', meta, log);
+                : 'Video';
+            outputResolutionText(actualSize, meta, log);
+            // 同时更新右侧参数配置区域的尺寸（如果存在）
+            const sizeItem = outputParamsGrid.querySelector('.info-param-item[data-param="size"]');
+            if(sizeItem){
+                const valueSpan = sizeItem.querySelector('.info-param-value');
+                if(valueSpan) valueSpan.textContent = actualSize;
+            }
         };
         outputLightboxVideo.src = url;
         outputPreview.ondblclick = null;
@@ -7411,7 +7418,14 @@ function openOutputLightbox(url, out){
     outputCompareResult.draggable = false;
     outputCompareOriginal.draggable = false;
     outputLightboxImg.onload = () => {
-        outputResolutionText(`${outputLightboxImg.naturalWidth} x ${outputLightboxImg.naturalHeight}`, meta, log);
+        const actualSize = `${outputLightboxImg.naturalWidth} x ${outputLightboxImg.naturalHeight}`;
+        outputResolutionText(actualSize, meta, log);
+        // 同时更新右侧参数配置区域的尺寸（如果存在）
+        const sizeItem = outputParamsGrid.querySelector('.info-param-item[data-param="size"]');
+        if(sizeItem){
+            const valueSpan = sizeItem.querySelector('.info-param-value');
+            if(valueSpan) valueSpan.textContent = actualSize;
+        }
     };
     outputLightboxImg.src = url;
     outputCompareResult.src = url;
