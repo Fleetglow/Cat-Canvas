@@ -452,6 +452,7 @@
         .output-preview-actions { display:flex; gap:8px; pointer-events:auto; }
         .preview-icon-btn { width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.92); color:#111827; border:1px solid rgba(255,255,255,.5); cursor:pointer; transition:all .15s; }
         .preview-icon-btn:hover { background:#111827; color:#fff; }
+        .preview-text-btn { width:auto; padding:0 14px; font-size:12px; font-weight:500; }
         /* 右侧信息面板 */
         .lightbox-info-panel { display:flex; flex-direction:column; padding:20px; border-left:1px solid var(--line); overflow-y:auto; position:relative; }
         .lightbox-close-btn { position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); border:none; cursor:pointer; transition:all .15s; z-index:2; }
