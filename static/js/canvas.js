@@ -8459,6 +8459,16 @@ function preventBrowserZoom(e){
 window.addEventListener('keydown', preventBrowserZoom, true);
 document.addEventListener('keydown', preventBrowserZoom, true);
 
+// ESC 键关闭弹窗
+document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){
+        if(logModal?.classList.contains('open')) closeCanvasLog();
+        else if(settingsModal?.classList.contains('open')) closeSettingsModal();
+        else if(helpModal?.classList.contains('open')) closeHelpModal();
+        else if(errorModal?.classList.contains('open')) closeErrorModal();
+    }
+}, true);
+
 function focusOnSelectedOrAll(){
     if(!canvas) return;
     const targetIds = [...selected];
