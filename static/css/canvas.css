@@ -479,6 +479,8 @@
         .lightbox-action-btn:hover { background:#111827; color:#fff; border-color:#111827; }
         .lightbox-action-btn.danger { color:#dc2626; }
         .lightbox-action-btn.danger:hover { background:#dc2626; color:#fff; border-color:#dc2626; }
+        #outputDownloadBtn { background:#fff; }
+        #outputDownloadBtn:hover { background:#111827; color:#fff; border-color:#111827; }
         /* 复制成功提示 */
         .info-copy-toast { font-size:11px; color:#10b981; font-weight:600; animation:fadeInOut 1.5s ease; }
         @keyframes fadeInOut { 0%{opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{opacity:0} }
@@ -710,6 +712,8 @@
         .theme-dark .lightbox-action-btn { background:rgba(15,23,42,.82); color:#e5e7eb; border-color:rgba(148,163,184,.28); }
         .theme-dark .preview-icon-btn:hover,
         .theme-dark .lightbox-action-btn:hover { background:#e5e7eb; color:#0f172a; }
+        .theme-dark #outputDownloadBtn { background:rgba(15,23,42,.82); }
+        .theme-dark #outputDownloadBtn:hover { background:#fff; color:#0f172a; border-color:#fff; }
         .theme-dark .lightbox-info-panel { border-color:rgba(148,163,184,.18); }
         .theme-dark .info-section { border-color:rgba(148,163,184,.12); }
         .theme-dark .lightbox-close-btn { color:#94a3b8; }

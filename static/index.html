@@ -987,12 +987,22 @@
         function updateThemeIcon(theme) {
             const moon = document.getElementById('icon-moon');
             const sun = document.getElementById('icon-sun');
+            const btnText = document.querySelector('#theme-toggle-btn .side-pill-text');
+            const i18n = window.StudioI18n;
             if (theme === 'dark') {
                 moon.style.display = 'none';
                 sun.style.display = 'block';
+                if (btnText) {
+                    btnText.setAttribute('data-i18n', 'common.lightMode');
+                    btnText.textContent = i18n ? i18n.t('common.lightMode') : '白昼模式';
+                }
             } else {
                 moon.style.display = 'block';
                 sun.style.display = 'none';
+                if (btnText) {
+                    btnText.setAttribute('data-i18n', 'common.darkMode');
+                    btnText.textContent = i18n ? i18n.t('common.darkMode') : '黑夜模式';
+                }
             }
         }
 
