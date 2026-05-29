@@ -1975,10 +1975,6 @@ function renderProviderList(){
                     <div class="provider-name">${escapeHtml(item.name || item.id)}</div>
                     <div class="provider-meta">${escapeHtml(item.base_url || '未配置地址')}</div>
                 </span>
-                <span class="provider-side-meta">
-                    <span class="provider-status-dot"></span>
-                    <span class="provider-protocol-pill">${escapeHtml(protocolLabel)}</span>
-                </span>
             </button>
         `;
     }).join('');

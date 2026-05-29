@@ -583,7 +583,6 @@ html.studio-theme-dark body .page-head .status {
 
 .sidebar {
     top:20px;
-    max-height:calc(100vh - 40px);
     gap:14px;
     padding:14px;
     border-radius:8px;
@@ -1066,7 +1065,6 @@ body {
 
 .sidebar {
     top:24px;
-    max-height:calc(100vh - 80px);
     padding:14px;
     border-radius:14px;
 }
@@ -1417,15 +1415,6 @@ html.studio-theme-dark body .provider-card:not(.active) {
 .provider-card.active .provider-mark {
     background:var(--api-panel-bg);
     color:var(--text);
-}
-
-.provider-side-meta {
-    display:flex;
-    flex-direction:column;
-    align-items:flex-end;
-    justify-content:center;
-    gap:6px;
-    min-width:44px;
 }
 
 .provider-status-dot {
@@ -2265,10 +2254,6 @@ html.studio-theme-dark body .recommend-note {
 .provider-status-dot,
 .provider-card-banner .provider-protocol-pill {
     display:none !important;
-}
-
-.provider-side-meta {
-    min-width:38px;
 }
 
 :root {
@@ -5036,13 +5021,12 @@ html.studio-theme-dark body .recommend-account-invite {
 
 /* 平台列表拖拽与 RunningHub 白天层级增强 */
 .sidebar {
-    overflow:hidden !important;
+    overflow:auto !important;
 }
 
 .provider-list {
     flex:1 1 auto !important;
     min-height:120px !important;
-    max-height:calc(100vh - 250px) !important;
     overflow-y:auto !important;
     overscroll-behavior:contain !important;
     padding-right:2px !important;
@@ -5141,7 +5125,6 @@ html:not(.studio-theme-dark) body:not(.theme-dark) .rh-card-title-field input {
 
 @media (max-height:760px) {
     .provider-list {
-        max-height:calc(100vh - 220px) !important;
     }
 }
 
@@ -5151,6 +5134,5 @@ html:not(.studio-theme-dark) body:not(.theme-dark) .rh-card-title-field input {
     }
 
     .provider-list {
-        max-height:360px !important;
     }
 }

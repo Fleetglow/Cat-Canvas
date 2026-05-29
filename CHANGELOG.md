@@ -18,29 +18,20 @@
 * **ESC 键层级逻辑**：修复按一次 ESC 关闭所有弹窗的问题，改为先关闭图片预览弹窗，再按一次才关闭其他弹窗
 * **i18n 缓存导致翻译缺失**：更新 `i18n.js` 版本号强制刷新
 
----
+\---
 
 ## \[未发布] - 2026-05-27
 
 ### ✨ 新增功能
 
 * **合并上游更新**：合入上游 main 分支的最新功能
+
   * LTX Director 节点：新增 LTX Director 节点，配套时间线编辑器
   * 视频输入支持：Loop 节点支持视频输入
   * API 新手引导：推荐 API 新手引导界面
 * **Bundled Python 升级到 3.14**：`python/` 目录更新为 Python 3.14 embed 版本，更新 `run.bat` 优先使用本地 `python/` 目录
 
-### 🎨 优化
-
-* **代理逻辑重构**：彻底移除自动代理检测，改为默认直连；仅用户明确配置 `INFINITE_CANVAS_OUTBOUND_PROXY` 环境变量时才启用代理（避免部分平台如 `image.pypy.blog` 走代理导致超时）
-* **静态资源版本号**：更新至 2026.05.27
-
-### 🐛 修复
-
-* **canvas.js 重复引用**：移除 HTML 中重复的 script 标签，修复变量重复声明错误
-* **合并后遗漏的本地修改**：恢复行尾符规范化和本地版本保留
-
----
+\---
 
 ## \[未发布] - 2026-05-26
 
@@ -57,7 +48,7 @@
 * **Lightbox 预览缺失生图耗时**：`setupLightboxInfoPanel` 中耗时只读取 `meta?.runMs`，从日志打开时 `log.runMs` 未被使用，修复为 `(meta?.runMs || log?.runMs)`
 * **日志预览键盘导航失效**：`outputLightboxItems()` 在日志模式下只返回当前日志条目的 `outputs`，导致只有一张图片时键盘导航完全失效；修复为返回所有日志记录的 `outputs`，确保可以在所有日志记录间切换
 
----
+\---
 
 ## \[未发布] - 2026-05-25
 
@@ -65,7 +56,7 @@
 
 * **日志面板网格视图**：删除列表视图，只保留网格视图；缩略图改为 16:9 比例；一行展示 5 条记录；复选框移至缩略图右上角
 * **批量下载打包**：批量下载改为调用后端接口，所有文件打包为单个 zip 一次性下载
-* **RunningHub 静态配置支持**：支持从 `static/runninghub/api_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
+* **RunningHub 静态配置支持**：支持从 `static/runninghub/api\_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
 * **LTX Director 节点**：新增 LTX Director 节点，配套时间线编辑器
 * **本地图片批量导入**：新增本地图片批量导入接口（`LocalImageImportRequest`）
 * **上传接口本地回退**：ComfyUI 不可用时，`/api/upload` 自动将文件保存到本地 `assets/input/` 目录
@@ -77,13 +68,13 @@
 * **复制保持连线设置项**：在画布设置面板添加开关，默认开启，可在设置中切换
 * **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 `hidden` 标记移除预设项
 * **日志面板选中状态**：选中状态加强（边框加粗 + box-shadow 发光效果）
-* **合并上游更新**：保留拖拽排序（`sort_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
+* **合并上游更新**：保留拖拽排序（`sort\_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
 
 ### 🐛 修复
 
 * **输出节点图片拖拽预览过大**：`setOutputDragPreview` 克隆图片未限制尺寸，ghost 图像按原图大小显示，改为 `max-width:200px; max-height:200px`
-* **输出节点图片无法拖动**：修复日志面板 CSS `[data-url] { -webkit-user-drag:none }` 选择器范围过大，影响输出节点图片拖拽，改为限定在 `.log-item` 和 `.log-thumbs` 内
-* **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort_order` 字段；修复 `normalize_provider` 返回值缺少 `sort_order`
+* **输出节点图片无法拖动**：修复日志面板 CSS `\[data-url] { -webkit-user-drag:none }` 选择器范围过大，影响输出节点图片拖拽，改为限定在 `.log-item` 和 `.log-thumbs` 内
+* **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort\_order` 字段；修复 `normalize\_provider` 返回值缺少 `sort\_order`
 * **日志网格视图缩略图消失**：修复 `.log-item` 两条 CSS 规则互相覆盖（`display:grid` 覆盖 `display:flex`），导致缩略图区域宽度为 0
 * **缩略图不显示**：修复 CSS 缺少 `display:block`，导致图片为 inline 元素，`aspect-ratio:16/9` 高度为 0
 * **Ctrl+框选逻辑错误**：修复 Ctrl+框选时会错误选中未选中项，改为 Ctrl 时只取消已选中项，不选中未选中项
@@ -101,7 +92,7 @@
 * F 键聚焦选中节点功能上线
 * Alt+滚轮新增为画布缩放触发方式（与 Ctrl+滚轮并列）
 
----
+\---
 
 ## \[1.2.0] - 2026-05-XX
 
@@ -122,7 +113,7 @@
 * 缩放后节点选中区域偏移问题
 * 收纳节点虚线边框在缩放时变形问题
 
----
+\---
 
 ## \[1.1.0] - 2026-04-XX
 
@@ -136,7 +127,7 @@
 * 节点连线样式优化
 * 画布性能优化（大画布场景）
 
----
+\---
 
 ## \[1.0.0] - 2026-03-XX
 
@@ -147,3 +138,4 @@
 * 节点连线
 * 导入/导出画布数据
 * 暗色/亮色主题切换
+
