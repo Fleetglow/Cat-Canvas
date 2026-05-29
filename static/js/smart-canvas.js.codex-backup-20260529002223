@@ -51,7 +51,6 @@ const promptTemplateClose = document.getElementById('promptTemplateClose');
 const promptTemplateSearch = document.getElementById('promptTemplateSearch');
 const promptTemplateCats = document.getElementById('promptTemplateCats');
 const promptTemplateBody = document.getElementById('promptTemplateBody');
-const composerTemplateBtn = document.getElementById('composerTemplateBtn');
 let minimapViewport = document.getElementById('minimapViewport');
 let canvas = null;
 let nodes = [];
@@ -104,7 +103,6 @@ let zoomPreviewState = null;
 let runTimerInterval = null;
 let smartCascadeRunning = false;
 let smartCascadeActiveLoopId = '';
-let smartCascadeStopRequested = false;
 let smartCascadeSilentSelection = false;
 let smartCascadeRunPath = null;
 let smartLoopContext = null;
@@ -279,24 +277,6 @@ function cloneSmartSettings(source=settings){
 function settingsForStorage(source=settings){
     const clean = cloneSmartSettings(source);
     clean.videoTempShLinks = (clean.videoTempShLinks || []).filter(item => item?.manual === true);
-    return clean;
-}
-function mediaItemForStorage(item){
-    if(!item || typeof item !== 'object') return item;
-    const clean = {...item};
-    delete clean.cloudUrl;
-    delete clean.uploadedUrl;
-    delete clean.originalRemoteUrl;
-    delete clean.tempCloudUrl;
-    return clean;
-}
-function canvasForStorage(){
-    const clean = JSON.parse(JSON.stringify(canvas || {}));
-    clean.settings = settingsForStorage(canvasDefaultSmartSettings || initialSmartSettings);
-    (clean.nodes || []).forEach(node => {
-        if(Array.isArray(node.images)) node.images = node.images.map(mediaItemForStorage);
-        if(node.runSettings) node.runSettings = settingsForStorage(node.runSettings);
-    });
     return clean;
 }
 const RECENT_SMART_SETTINGS_KEY = 'smart_canvas_recent_run_settings_v1';
@@ -1807,7 +1787,7 @@ function tempShUploadedUrlFor(url){
     return match?.url || url;
 }
 function mediaRefSourceUrl(ref){
-    return localDisplayUrlForMediaItem(ref) || ref?.sourceUrl || ref?.originalLocalUrl || ref?.url || '';
+    return ref?.sourceUrl || ref?.originalLocalUrl || ref?.url || '';
 }
 function applyUploadedUrlsToSmartRefs(refs){
     return (refs || []).map(ref => {
@@ -2454,16 +2434,6 @@ function createPromptPresetFromNode(node, {openPanel=true, openTemplatePanel=fal
     }
     return preset;
 }
-function createPromptPresetFromComposer(){
-    const text = promptPlainText();
-    if(!text){ toast(tr('smart.promptPresetEmpty')); return null; }
-    const preset = {id:uid('preset'), name:defaultPromptPresetName(text), text, category:'mine', createdAt:Date.now(), updatedAt:Date.now()};
-    promptPresets.unshift(preset);
-    savePromptPresets();
-    savePromptDraftForCurrent();
-    scheduleSave();
-    return preset;
-}
 function savePromptNodeAsPreset(node){
     createPromptPresetFromNode(node);
 }
@@ -2587,9 +2557,8 @@ function renderPromptTemplatePanel(options={}){
     const selectedPreset = selected?.builtin
         ? {id:selected.id, name:selected.name || '', text:selected.positive || '', category:selected.category || 'storyboard', builtin:true}
         : (selected ? currentPromptPreset(selected.sourceId) : null);
-    const target = promptTemplatePanel.dataset.target || 'node';
     const node = nodes.find(n => n.id === promptTemplatePanel.dataset.nodeId);
-    const nodeHasText = target === 'composer' ? Boolean(promptPlainText()) : Boolean(String(node?.text || '').trim());
+    const nodeHasText = Boolean(String(node?.text || '').trim());
     const editMode = Boolean(promptTemplateEditing && selectedPreset);
     promptTemplateBody.innerHTML = `
         <div class="prompt-template-list">
@@ -2664,53 +2633,32 @@ function renderPromptTemplatePanel(options={}){
     restorePromptTemplateScroll(scrollSnapshot);
 }
 function activePromptTemplateNodeId(){
-    return promptTemplatePanel?.classList?.contains('open') && promptTemplatePanel.dataset.target !== 'composer' ? (promptTemplatePanel.dataset.nodeId || '') : '';
+    return promptTemplatePanel?.classList?.contains('open') ? (promptTemplatePanel.dataset.nodeId || '') : '';
 }
-function syncComposerTemplateButton(){
-    if(!composerTemplateBtn || !promptTemplatePanel) return;
-    const active = promptTemplatePanel.classList.contains('open') && promptTemplatePanel.dataset.target === 'composer';
-    composerTemplateBtn.classList.toggle('active', active);
-    composerTemplateBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
-}
-function openPromptTemplatePanel(nodeId='', templateId='', options={}){
+function openPromptTemplatePanel(nodeId='', templateId=''){
     if(!promptTemplatePanel) return;
-    const target = options.target === 'composer' ? 'composer' : 'node';
-    promptTemplatePanel.dataset.target = target;
     promptTemplatePanel.dataset.nodeId = nodeId || '';
     if(promptTemplatePanel.parentElement !== shell) shell.appendChild(promptTemplatePanel);
     if(templateId) promptTemplateSelectedId = templateId;
     if(!promptTemplateSelectedId) promptTemplateSelectedId = promptTemplateItems()[0]?.id || '';
     renderPromptTemplatePanel();
     promptTemplatePanel.classList.add('open');
-    if(target === 'node' && nodeId){
+    if(nodeId){
         selectedId = nodeId;
         selectedIds = [];
         selectedImage = {nodeId:'', index:-1};
     }
     render();
-    syncComposerTemplateButton();
     promptTemplateSearch?.focus();
 }
 function closePromptTemplatePanel(){
     promptTemplatePanel?.classList.remove('open');
-    syncComposerTemplateButton();
     render();
 }
 function applyPromptTemplateToNode(mode='positive'){
-    const template = promptTemplateItems().find(item => item.id === promptTemplateSelectedId);
-    if(!template) return;
-    if(promptTemplatePanel?.dataset.target === 'composer'){
-        const text = promptTemplateText(template, mode);
-        setPromptText(text);
-        delete promptInput.dataset.preserveDraftOnce;
-        savePromptDraftForCurrent();
-        renderInputThumbsRow(selectedNode());
-        closePromptTemplatePanel();
-        scheduleSave();
-        return;
-    }
     const node = nodes.find(n => n.id === promptTemplatePanel?.dataset.nodeId);
-    if(!node) return;
+    const template = promptTemplateItems().find(item => item.id === promptTemplateSelectedId);
+    if(!node || !template) return;
     node.text = promptTemplateText(template, mode);
     node.promptPresetId = template.builtin ? '' : template.sourceId || '';
     closePromptTemplatePanel();
@@ -2718,9 +2666,8 @@ function applyPromptTemplateToNode(mode='positive'){
     scheduleSave();
 }
 function saveCurrentPromptAsTemplate(){
-    const preset = promptTemplatePanel?.dataset.target === 'composer'
-        ? createPromptPresetFromComposer()
-        : createPromptPresetFromNode(nodes.find(n => n.id === promptTemplatePanel?.dataset.nodeId), {openPanel:false});
+    const node = nodes.find(n => n.id === promptTemplatePanel?.dataset.nodeId);
+    const preset = createPromptPresetFromNode(node, {openPanel:false});
     if(!preset) return;
     promptTemplateCategory = 'mine';
     promptTemplateSelectedId = `mine:${preset.id}`;
@@ -3078,26 +3025,24 @@ async function saveCanvas(){
     if(!canvasId || !canvas) return;
     savePromptDraftForCurrent();
     nodes.forEach(node => {
-        node.images = (node.images || []).map(img => mediaItemForStorage(stripImageGenerationMeta(img)));
-        if(node.runSettings) node.runSettings = settingsForStorage(node.runSettings);
+        node.images = (node.images || []).map(img => stripImageGenerationMeta(img));
     });
     canvas.nodes = nodes;
     canvas.settings = settingsForStorage(canvasDefaultSmartSettings || initialSmartSettings);
     canvas.viewport = {...viewport};
-    const storageCanvas = canvasForStorage();
     try {
         const res = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}`, {
             method:'PUT',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-                title:storageCanvas.title || tr('smart.title'),
-                icon:storageCanvas.icon || 'sparkles',
-                nodes:storageCanvas.nodes || [],
-                connections:storageCanvas.connections || [],
-                viewport:storageCanvas.viewport || {x:0,y:0,scale:1},
-                logs:storageCanvas.logs || [],
-                settings:storageCanvas.settings,
-                base_updated_at:storageCanvas.updated_at || canvas.updated_at || 0
+                title:canvas.title || tr('smart.title'),
+                icon:canvas.icon || 'sparkles',
+                nodes,
+                connections:canvas.connections || [],
+                viewport:canvas.viewport || {x:0,y:0,scale:1},
+                logs:canvas.logs || [],
+                settings:canvas.settings,
+                base_updated_at:canvas.updated_at || 0
             })
         });
         if(res.ok){
@@ -3420,29 +3365,6 @@ function mediaKindForItem(img){
     if(isVideoMediaItem(img)) return 'video';
     return 'image';
 }
-function localDisplayUrlForMediaItem(img){
-    if(!img) return '';
-    const candidates = [
-        img.originalLocalUrl,
-        img.localUrl,
-        img.sourceUrl,
-        img.local_url,
-        img.source_url,
-        img.url
-    ];
-    const local = candidates.find(url => url && !/^https?:\/\//i.test(String(url)));
-    return local || img.url || '';
-}
-function imageForDisplay(img){
-    if(!img || typeof img !== 'object') return img;
-    const localUrl = localDisplayUrlForMediaItem(img);
-    if(!localUrl || localUrl === img.url) return img;
-    return {
-        ...img,
-        url:localUrl,
-        originalLocalUrl:img.originalLocalUrl || localUrl
-    };
-}
 function resultMediaUrls(result){
     const urls = [];
     const add = value => {
@@ -3499,7 +3421,7 @@ function thumbMediaHtml(img){
     if(isFileMediaItem(img) || isTextMediaItem(img)) return `<div class="media-thumb file-thumb" data-media-url="${escapeAttr(img.url || '')}" data-media-kind="${escapeAttr(mediaKindForItem(img))}"><i data-lucide="${isTextMediaItem(img) ? 'file-text' : 'file'}"></i><span>${escapeHtml(img.name || (isTextMediaItem(img) ? 'Text' : 'File'))}</span></div>`;
     if(isAudioMediaItem(img)) return `<div class="media-thumb audio-thumb" data-media-url="${escapeAttr(img.url || '')}" data-media-kind="audio"><i data-lucide="file-audio"></i><span>${escapeHtml(img.name || 'Audio')}</span></div>`;
     if(isVideoMediaItem(img)) return `<div class="media-thumb video-thumb"><video src="${escapeHtml(img.url)}" data-url="${escapeHtml(img.url)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"></video></div>`;
-    return `<img src="${escapeHtml(displayMediaUrl(img))}" data-original-src="${escapeAttr(img.url || '')}" draggable="false">`;
+    return `<img src="${escapeHtml(img.url)}" draggable="false">`;
 }
 function imageResolutionLabel(img){
     const w = Number(img?.natural_w || img?.width || img?.w || 0);
@@ -3544,7 +3466,7 @@ function singleMediaHtml(img, w, h){
     if(isFileMediaItem(img) || isTextMediaItem(img)) return `<div class="node-img media-card media-file-card" style="width:${w}px;height:${h}px"><div class="media-card-icon"><i data-lucide="${isTextMediaItem(img) ? 'file-text' : 'file'}"></i></div><div class="media-card-title">${escapeHtml(img.name || (isTextMediaItem(img) ? 'Text' : 'File'))}</div><div class="media-card-sub">${isTextMediaItem(img) ? 'TEXT' : 'FILE'}</div></div>`;
     if(isAudioMediaItem(img)) return `<div class="node-img media-card media-audio-card" style="width:${w}px;height:${h}px"><div class="media-card-icon"><i data-lucide="file-audio"></i></div><div class="media-card-title">${escapeHtml(img.name || 'Audio')}</div><div class="media-card-sub">AUDIO</div><audio src="${escapeAttr(img.url || '')}" data-url="${escapeAttr(img.url || '')}" controls preload="metadata"></audio></div>`;
     if(isVideoMediaItem(img)) return `<div class="node-img media-card media-video-card" style="width:${w}px;height:${h}px"><video src="${escapeHtml(img.url)}" data-url="${escapeHtml(img.url)}" controls muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"></video></div>`;
-    return `<img class="node-img" src="${escapeHtml(displayMediaUrl(img))}" data-original-src="${escapeAttr(img.url || '')}" draggable="false" style="width:${w}px;height:${h}px">`;
+    return `<img class="node-img" src="${escapeHtml(img.url)}" draggable="false" style="width:${w}px;height:${h}px">`;
 }
 function smartNodeHasLiveMedia(node){
     return Boolean(!node?.pending && (node?.images || []).some(img => isVideoMediaItem(img) || isAudioMediaItem(img)));
@@ -3555,7 +3477,7 @@ function mediaSignaturePartFromElement(itemEl){
     if(media){
         const tag = media.tagName.toLowerCase();
         const kind = tag === 'video' ? 'video' : tag === 'audio' ? 'audio' : 'image';
-        const url = media.dataset?.url || media.dataset?.originalSrc || media.getAttribute('src') || '';
+        const url = media.dataset?.url || media.getAttribute('src') || '';
         return `${kind}:${url}`;
     }
     const audioThumb = itemEl?.querySelector?.('.audio-thumb[data-media-url]');
@@ -3642,28 +3564,6 @@ function smartRunTaskLabel(run){
 }
 function outputUrlLooksVideo(url){
     return /\.(mp4|webm|mov|m4v)(\?|$)/.test(String(url || '').toLowerCase());
-}
-function proxiedMediaUrl(itemOrUrl, name=''){
-    const url = typeof itemOrUrl === 'string' ? itemOrUrl : (itemOrUrl?.url || '');
-    if(!url || String(url).startsWith('/assets/') || String(url).startsWith('/output/') || String(url).startsWith('data:') || String(url).startsWith('blob:')) return url;
-    const filename = name || (typeof itemOrUrl === 'object' ? (itemOrUrl.name || '') : '') || fileNameFromUrl(url) || 'preview';
-    return `/api/download-output?inline=1&url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`;
-}
-function displayMediaUrl(itemOrUrl, name=''){
-    const url = typeof itemOrUrl === 'string' ? itemOrUrl : (itemOrUrl?.url || '');
-    if(/^https?:\/\//i.test(String(url || ''))) return proxiedMediaUrl(itemOrUrl, name);
-    return url;
-}
-function bindImageProxyFallback(imgEl, itemOrUrl){
-    if(!imgEl || imgEl.dataset.proxyFallbackBound === '1') return;
-    imgEl.dataset.proxyFallbackBound = '1';
-    imgEl.addEventListener('error', () => {
-        if(imgEl.dataset.proxyFallbackTried === '1') return;
-        const fallback = proxiedMediaUrl(itemOrUrl);
-        if(!fallback || fallback === imgEl.getAttribute('src')) return;
-        imgEl.dataset.proxyFallbackTried = '1';
-        imgEl.src = fallback;
-    });
 }
 function safeExportFileName(name, fallback='download.zip'){
     const cleaned = String(name || fallback).replace(/[\\/:*?"<>|]+/g, '_').trim();
@@ -3998,9 +3898,6 @@ function smartLoopBodyHtml(node){
         : tr('smart.loopPromptHintVariable');
     const currentUpstreamPrompt = smartLoopSelectedInputPrompt(node, {index:node.loopStart});
     const defaultPrompt = tr('smart.loopDefaultPrompt') || '现在生成第《计数》张卖点图片';
-    const loopRunning = smartCascadeRunning && smartCascadeActiveLoopId === node.id;
-    const loopStopping = loopRunning && smartCascadeStopRequested;
-    const otherLoopRunning = smartCascadeRunning && !loopRunning;
     return `<div class="loop-smart-card ${node.imageInput ? 'has-image' : ''} ${node.showPrompt ? 'has-prompt' : ''}">
         <div class="loop-smart-row loop-smart-top">
             <div class="loop-smart-seg">
@@ -4040,14 +3937,14 @@ function smartLoopBodyHtml(node){
         <div class="loop-smart-footer">
             ${loopNumberControlHtml({label:tr('canvas.loopImageStart'), value:node.loopStart, key:'loopStart', max:9999, quick:[1,2,3,4,5,6,8,10]})}
             ${loopNumberControlHtml({label:tr('canvas.loopCount'), value:node.count, key:'count', max:100, quick:[1,2,3,4,5,6,8,10]})}
-            <button class="loop-smart-control loop-smart-run ${loopRunning ? 'is-stop' : ''}" type="button" data-loop-run="${escapeHtml(node.id)}" ${otherLoopRunning || loopStopping ? 'disabled' : ''}><i data-lucide="${loopRunning ? 'square' : 'workflow'}"></i><span>${escapeHtml(loopRunning ? smartCascadeStopText(loopStopping) : tr('smart.loopRunAll'))}</span></button>
+            <button class="loop-smart-control loop-smart-run" type="button" data-loop-run="${escapeHtml(node.id)}" ${smartCascadeRunning && smartCascadeActiveLoopId === node.id ? 'disabled' : ''}><i data-lucide="workflow"></i><span>${escapeHtml(smartCascadeRunning && smartCascadeActiveLoopId === node.id ? tr('common.running') : tr('smart.loopRunAll'))}</span></button>
         </div>
     </div>`;
 }
 function nodeBodyHtml(node, layout){
     if(node.type === 'smart-prompt') return promptNodeBodyHtml(node);
     if(node.type === 'smart-loop') return smartLoopBodyHtml(node);
-    const imgs = (node.images || []).map(imageForDisplay);
+    const imgs = node.images || [];
     if(node.queued && imgs.length === 0 && !node.pending){
         return `<div class="loading-cell single queued" style="width:${layout.width}px;height:${layout.height}px"></div>`;
     }
@@ -4220,7 +4117,6 @@ function measureSmartNodeImages(){
         const node = nodes.find(n => n.id === nodeEl?.dataset.id);
         const index = Number(itemEl?.dataset.imageIndex ?? 0);
         const image = node?.images?.[index];
-        if(imgEl.tagName?.toLowerCase() === 'img' && image?.url) bindImageProxyFallback(imgEl, image);
         if(!node || !image || image.natural_w || image.natural_h) return;
         const apply = () => {
             const w = imgEl.naturalWidth || imgEl.videoWidth || 0;
@@ -4479,10 +4375,6 @@ function bindLoopNodeControls(el, node){
         btn.onclick = e => {
             e.preventDefault();
             e.stopPropagation();
-            if(smartCascadeRunning && smartCascadeActiveLoopId === (btn.dataset.loopRun || node.id)){
-                requestSmartCascadeStop();
-                return;
-            }
             runSmartCascadeFromLoop(btn.dataset.loopRun || node.id);
         };
     });
@@ -4997,7 +4889,7 @@ function deleteImage(id, imageIndex){
 function currentEditImage(){
     const node = nodes.find(n => n.id === cropState?.nodeId);
     const index = Number(cropState?.imageIndex || 0);
-    return {node, index, image:imageForDisplay(node?.images?.[index])};
+    return {node, index, image:node?.images?.[index]};
 }
 function cropImageDisplaySize(){
     const img = document.getElementById('cropImage');
@@ -5201,18 +5093,7 @@ function refreshComparePanel(){
         updatePreviewMetaHint();
     };
     currentImg.onload = onCurrentLoaded;
-    currentImg.onerror = () => {
-        if(currentImg.dataset.proxyFallbackTried === '1') return;
-        const fallback = proxiedMediaUrl(editing.image || curUrl);
-        if(!fallback || fallback === currentImg.getAttribute('src')) return;
-        currentImg.dataset.proxyFallbackTried = '1';
-        currentImg.src = fallback;
-    };
-    const previewSrc = displayMediaUrl(editing.image || curUrl);
-    if(currentImg.getAttribute('src') !== previewSrc) {
-        currentImg.dataset.proxyFallbackTried = '';
-        currentImg.src = previewSrc;
-    }
+    if(currentImg.getAttribute('src') !== curUrl) currentImg.src = curUrl;
     if(currentImg.complete && currentImg.naturalWidth) requestAnimationFrame(onCurrentLoaded);
     const sources = previewCompareSources();
     const hasSource = sources.length > 0;
@@ -5743,7 +5624,7 @@ function navigatePreviewImage(delta){
 }
 function openImageEditor(nodeId, imageIndex=0){
     const node = nodes.find(n => n.id === nodeId);
-    const image = imageForDisplay(node?.images?.[imageIndex]);
+    const image = node?.images?.[imageIndex];
     if(!image?.url) return;
     const kind = mediaKindForItem(image);
     if(kind !== 'image' && kind !== 'video'){
@@ -5784,16 +5665,8 @@ function openImageEditor(nodeId, imageIndex=0){
         updatePreviewMetaHint();
         syncImageEditOverflow(); refreshIcons();
     };
-    img.onerror = () => {
-        if(img.dataset.proxyFallbackTried === '1') return;
-        const fallback = proxiedMediaUrl(image);
-        if(!fallback || fallback === img.getAttribute('src')) return;
-        img.dataset.proxyFallbackTried = '1';
-        img.src = fallback;
-    };
-    img.dataset.proxyFallbackTried = '';
     img.crossOrigin = 'anonymous';
-    img.src = displayMediaUrl(image);
+    img.src = image.url;
     setImageEditMode('preview');
     updatePreviewNavButtons();
     refreshIcons();
@@ -5801,7 +5674,7 @@ function openImageEditor(nodeId, imageIndex=0){
 function closeImageEditor(){
     imageEditModal.classList.remove('open');
     const img = document.getElementById('cropImage');
-    img.onload = null; img.onerror = null; img.removeAttribute('src'); delete img.dataset.proxyFallbackTried; img.style.width = ''; img.style.height = ''; img.style.maxWidth = ''; img.style.maxHeight = '';
+    img.onload = null; img.removeAttribute('src'); img.style.width = ''; img.style.height = ''; img.style.maxWidth = ''; img.style.maxHeight = '';
     img.style.position = ''; img.style.left = ''; img.style.top = '';
     clearEditDrawing(true);
     cropState = null; cropDrag = null; editDrawState = null; resetEditDrawingHistory(); gridCustomDrag = null;
@@ -6691,7 +6564,7 @@ function workflowInputNodesFor(node){
     return upstreamNodesForKinds(node, ['input', 'flow']);
 }
 function imagesForNode(node){
-    return (node?.images || []).map((img, index) => ({...imageForDisplay(img), nodeId:node.id, imageIndex:index}));
+    return (node?.images || []).map((img, index) => ({...img, nodeId:node.id, imageIndex:index}));
 }
 function nodeHasReferenceContent(node){
     return imagesForNode(node).some(img => img?.url);
@@ -7355,26 +7228,6 @@ function loopOutputSlotsForRoot(rootNode){
             return (Number(a.y) || 0) - (Number(b.y) || 0);
         });
 }
-function loopOutputSlotForRound(rootNode, loopNode, roundIndex, slotIndex){
-    if(!rootNode?.id) return null;
-    const candidates = loopOutputSlotsForRoot(rootNode)
-        .filter(node => node.sourceNodeId === rootNode.id)
-        .filter(node => !loopNode?.id || !node.loopSourceId || node.loopSourceId === loopNode.id);
-    const untagged = candidates.filter(node => !Number.isFinite(Number(node.loopRoundIndex)) && !Number.isFinite(Number(node.loopSlotIndex)));
-    return candidates.find(node => Number(node.loopRoundIndex) === Number(roundIndex))
-        || candidates.find(node => Number(node.loopSlotIndex) === Number(slotIndex))
-        || untagged[Math.max(0, Number(slotIndex) || 0)]
-        || null;
-}
-function tagLoopOutputSlot(output, rootNode, loopNode, roundIndex, slotIndex){
-    if(!output) return output;
-    output.sourceNodeId = rootNode?.id || output.sourceNodeId || '';
-    output.loopSourceId = loopNode?.id || output.loopSourceId || '';
-    output.loopRootId = rootNode?.id || output.loopRootId || '';
-    output.loopRoundIndex = Number(roundIndex) || 0;
-    output.loopSlotIndex = Math.max(0, Number(slotIndex) || 0);
-    return output;
-}
 function createLoopOutputSlot(rootNode, roundIndex, roundOffset=0, options={}){
     const rootRect = nodeRect(rootNode);
     const output = cloneSmartNode(rootNode, 0, 0);
@@ -7403,7 +7256,6 @@ function createLoopOutputSlot(rootNode, roundIndex, roundOffset=0, options={}){
     delete output.runInputRefs;
     delete output.runFinishedAt;
     delete output.runElapsedMs;
-    tagLoopOutputSlot(output, rootNode, options.loopNode || null, roundIndex, options.slotIndex ?? roundOffset);
     const slots = loopOutputSlotsForRoot(rootNode).map(nodeRect);
     let y = (Number(rootNode.y) || 0) + roundOffset * ((Number(rootRect.height) || 180) + 28);
     slots.forEach(rect => {
@@ -7493,69 +7345,6 @@ function restoreSourceVisualState(node, state){
         else node[key] = state[key];
     });
 }
-function finishLoopTargetPreviewState(node){
-    if(!node) return;
-    node.pending = 0;
-    node.running = false;
-    node.queued = false;
-    delete node.pendingTasks;
-    node.runFinishedAt = nowMs();
-    if(!node.runStartedAt) node.runStartedAt = node.runFinishedAt;
-    node.runElapsedMs = Math.max(0, node.runFinishedAt - Number(node.runStartedAt || node.runFinishedAt));
-    node.runTimerHidden = false;
-    if((node.images || []).some(img => img?.url)){
-        node.title = node.images.length > 1 ? 'Group' : 'Image';
-        node.scale = node.images.length > 1 ? MEDIA_GROUP_DEFAULT_SCALE : MEDIA_NODE_DEFAULT_SCALE;
-        node.outputKind = mediaKindForUrls(node.images || [], (node.images || []).some(isVideoMediaItem) ? 'video' : 'image');
-        delete node.w;
-        delete node.h;
-    }
-}
-function refsForDirectLoopRound(loopNode, loopIndex, total){
-    if(!loopNode?.imageInput) return [];
-    return outputImagesForNode(loopNode, true, {index:loopIndex, total, nodeId:loopNode.id})
-        .filter(ref => ref?.url)
-        .map((ref, index) => ({
-            ...ref,
-            role:ref.role || `image_${index + 1}`,
-            name:ref.name || trf('canvas.loopImageLabel', {n:loopIndex + index})
-        }));
-}
-function showDirectLoopRoundPreview(loopNode, target, refs, loopIndex, total){
-    if(!loopNode?.imageInput || !isSmartImageNode(target)) return false;
-    const cleanRefs = (refs || []).filter(ref => ref?.url);
-    if(!cleanRefs.length) return false;
-    const preview = cleanRefs.map((ref, index) => stripImageGenerationMeta({
-        url:ref.url || '',
-        name:ref.name || trf('canvas.loopImageLabel', {n:loopIndex + index}),
-        kind:ref.kind || (isVideoMediaItem(ref) ? 'video' : 'image'),
-        nodeId:ref.nodeId || '',
-        imageIndex:ref.imageIndex ?? '',
-        loopInputPreview:true
-    })).filter(ref => ref.url);
-    if(!preview.length) return false;
-    target.images = preview;
-    target.pending = 0;
-    target.running = true;
-    target.runStartedAt = nowMs();
-    delete target.runFinishedAt;
-    delete target.runElapsedMs;
-    target.runTimerHidden = false;
-    target.runInputRefs = cleanRefs.map(ref => ({
-        url:ref.url || '',
-        name:ref.name || '',
-        nodeId:ref.nodeId || '',
-        imageIndex:ref.imageIndex ?? '',
-        kind:ref.kind || ''
-    })).filter(ref => ref.url);
-    target.outputKind = mediaKindForUrls(preview, preview.some(isVideoMediaItem) ? 'video' : 'image');
-    target.scale = preview.length > 1 ? MEDIA_GROUP_DEFAULT_SCALE : MEDIA_NODE_DEFAULT_SCALE;
-    target.title = total > 1 ? `Image ${loopIndex}/${total}` : (target.title || 'Image');
-    delete target.w;
-    delete target.h;
-    render();
-    return true;
-}
 function directImageInputsFor(node){
     const upstream = smartImageUsesWorkflowInput(node) ? workflowInputNodesFor(node) : inputNodesFor(node);
     return upstream
@@ -7591,15 +7380,6 @@ function primaryImageInputFor(node, options={}){
 }
 function hasDownstreamImageNode(node){
     return downstreamNodesForId(node?.id).some(n => isSmartImageNode(n) && !isHistoryGroupNode(n));
-}
-function isGeneratedOutputForNode(sourceNode, targetNode){
-    return Boolean(sourceNode?.id && targetNode?.sourceNodeId === sourceNode.id);
-}
-function downstreamWorkflowImageTargetsFor(node){
-    return downstreamImageTargetsFor(node).filter(target => !isGeneratedOutputForNode(node, target));
-}
-function hasDownstreamWorkflowImageNode(node){
-    return downstreamWorkflowImageTargetsFor(node).length > 0;
 }
 function smartImageChainTo(nodeId, options={}){
     const tail = nodes.find(n => n.id === nodeId);
@@ -7686,11 +7466,6 @@ function downstreamCascadeTargetsFor(node){
             return (Number(a.y) || 0) - (Number(b.y) || 0);
         });
 }
-function directLoopRunTargets(loop){
-    if(!loop?.id) return [];
-    return downstreamImageTargetsFor(loop)
-        .filter(node => !hasDownstreamWorkflowImageNode(node));
-}
 function smartCascadeGraphForTail(tail){
     const path = smartImageChainTo(tail?.id, {includeFlow:true}).filter(n => isSmartImageNode(n) && !isHistoryGroupNode(n));
     if(!path.length) return {root:null, path:[], edges:[], children:new Map()};
@@ -7721,9 +7496,6 @@ function smartCascadeGraphForTail(tail){
     return {root, path, edges, children};
 }
 function cascadeTailForLoop(loopId){
-    const loop = nodes.find(n => n.id === loopId && n.type === 'smart-loop');
-    const directTargets = directLoopRunTargets(loop);
-    if(directTargets.length) return directTargets[directTargets.length - 1];
     const directImages = downstreamImageTargetsFor({id:loopId});
     const directIds = new Set(directImages.map(n => n.id));
     const candidates = downstreamNodesForId(loopId)
@@ -7741,19 +7513,10 @@ function cascadeTailForLoop(loopId){
     })[0];
 }
 function canRunSmartCascade(node){
-    if(!isSmartImageNode(node) || isHistoryGroupNode(node)) return false;
+    if(!isSmartImageNode(node) || isHistoryGroupNode(node) || hasDownstreamImageNode(node)) return false;
     const graph = smartCascadeGraphForTail(node);
-    const loop = resolveSmartCascadeLoop(node.id);
-    if(loop && isDirectLoopTargetRun(loop, node, graph)) return true;
-    if(hasDownstreamImageNode(node)) return false;
     if(graph.edges.length) return true;
-    return Boolean(loop);
-}
-function isDirectLoopTargetRun(loop, tail, graph){
-    if(!loop?.node?.id || !tail?.id) return false;
-    if(graph?.root?.id !== tail.id) return false;
-    if(hasDownstreamWorkflowImageNode(tail)) return false;
-    return downstreamImageTargetsFor(loop.node).some(node => node.id === tail.id);
+    return Boolean(resolveSmartCascadeLoop(node.id));
 }
 function cascadeConnectionKeys(){
     const keys = new Set();
@@ -7960,13 +7723,7 @@ function syncCascadeRunButton(node=selectedNode()){
     if(!cascadeRunBtn) return;
     const visible = canRunSmartCascade(node);
     cascadeRunBtn.style.display = visible ? 'inline-flex' : 'none';
-    const runningForNode = Boolean(smartCascadeRunning && smartCascadeActiveLoopId && resolveSmartCascadeLoop(node?.id)?.node?.id === smartCascadeActiveLoopId);
-    cascadeRunBtn.disabled = !visible || (!runningForNode && Boolean(node?.running)) || (smartCascadeRunning && (!runningForNode || smartCascadeStopRequested));
-    cascadeRunBtn.classList.toggle('is-stop', runningForNode);
-    cascadeRunBtn.innerHTML = runningForNode
-        ? `<i data-lucide="square"></i><span>${escapeHtml(smartCascadeStopText(smartCascadeStopRequested))}</span>`
-        : `<i data-lucide="workflow"></i><span>${escapeHtml(tr('smart.loopRunAll'))}</span>`;
-    refreshIcons();
+    cascadeRunBtn.disabled = !visible || smartCascadeRunning || Boolean(node?.running);
 }
 function loadNodePromptDraftToInput(node){
     if(node?.promptDraftHtml) {
@@ -8366,23 +8123,6 @@ function cascadeRefsFromOutputs(outputs, targetNode){
         imageIndex:targetNode ? (targetNode.images || []).length - outputs.length + index : index
     }));
 }
-function smartCascadeStopText(stopping=false){
-    return stopping ? '停止中...' : '停止运行';
-}
-function smartCascadeAbortError(){
-    const err = new Error('已停止一键运行');
-    err.smartCascadeStopped = true;
-    return err;
-}
-function throwIfSmartCascadeStopRequested(){
-    if(smartCascadeStopRequested) throw smartCascadeAbortError();
-}
-function requestSmartCascadeStop(){
-    if(!smartCascadeRunning || smartCascadeStopRequested) return;
-    smartCascadeStopRequested = true;
-    toast('已请求停止，当前任务完成后停止');
-    render();
-}
 function smartCascadeParallelLimit(chain=[]){
     const hasComfy = (chain || []).some(node => smartSettingsForNode(node)?.engine === 'comfy');
     return hasComfy ? Math.max(1, Math.min(6, Number(comfyInstanceCount) || 1)) : 6;
@@ -8392,15 +8132,9 @@ async function runSmartCascadeRoundsWithLimit(roundIndexes, limit, runner){
     const workerCount = Math.max(1, Math.min(Number(limit) || 1, roundIndexes.length));
     const workers = Array.from({length:workerCount}, async () => {
         while(next < roundIndexes.length){
-            if(smartCascadeStopRequested) break;
             const roundOffset = next++;
             const current = roundIndexes[roundOffset];
-            try {
-                await runner(current, roundOffset);
-            } catch(e) {
-                if(e?.smartCascadeStopped) break;
-                throw e;
-            }
+            await runner(current, roundOffset);
         }
     });
     await Promise.all(workers);
@@ -8408,46 +8142,37 @@ async function runSmartCascadeRoundsWithLimit(roundIndexes, limit, runner){
 async function runSmartCascade(targetNode=null){
     const tail = targetNode || selectedNode();
     if(!canRunSmartCascade(tail)){ toast('请选择链路结尾图片节点'); return; }
-    if(smartCascadeRunning){ requestSmartCascadeStop(); return; }
+    if(smartCascadeRunning) return;
     savePromptDraftForCurrent();
     const graph = smartCascadeGraphForTail(tail);
     const chain = graph.path;
     const loop = resolveSmartCascadeLoop(tail.id);
-    const directLoopTargetRun = Boolean(loop && isDirectLoopTargetRun(loop, tail, graph));
-    const singleNodeLoopRun = Boolean(loop && (chain.length === 1 || directLoopTargetRun));
+    const singleNodeLoopRun = Boolean(loop && chain.length === 1);
     if(!graph.edges.length && !singleNodeLoopRun){ toast(tr('smart.loopNoChain')); return; }
     const originalSelected = selectedId;
     const originalSettings = cloneSmartSettings(settings);
     const originalPromptHtml = promptInput.innerHTML;
     smartCascadeRunning = true;
     smartCascadeActiveLoopId = loop?.node?.id || '';
-    smartCascadeStopRequested = false;
     smartCascadeSilentSelection = true;
     runBtn.disabled = true;
-    cascadeRunBtn.disabled = false;
+    cascadeRunBtn.disabled = true;
     pushUndo();
     const totalRounds = loop?.count || 1;
     const startIndex = Math.max(1, Number(loop?.node?.loopStart) || 1);
     const batchSize = loop?.node?.imageInput ? Math.max(1, Math.min(100, Number(loop.node.imageBatchSize) || 1)) : 1;
     const endIndex = startIndex + (totalRounds - 1) * batchSize;
     const loopMode = loop?.mode === 'parallel' ? 'parallel' : 'serial';
-    const parallelLimit = loopMode === 'parallel' && totalRounds > 1 ? (directLoopTargetRun ? 1 : smartCascadeParallelLimit(chain)) : 1;
+    const parallelLimit = loopMode === 'parallel' && totalRounds > 1 ? smartCascadeParallelLimit(chain) : 1;
     const precreateSingleSlots = singleNodeLoopRun && loopMode === 'parallel' && totalRounds > 1 && parallelLimit > 1;
     let singleLoopSlots = [];
     if(singleNodeLoopRun) smartCascadeRunPath = {states:{}};
     if(singleNodeLoopRun){
-        singleLoopSlots = Array.from({length:totalRounds}, (_, round) => {
-            const loopIndex = startIndex + round * batchSize;
-            const slot = loopOutputSlotForRound(tail, loop.node, loopIndex, round);
-            return slot ? tagLoopOutputSlot(slot, tail, loop.node, loopIndex, round) : null;
-        });
-        singleLoopSlots.filter(Boolean).forEach(slot => { smartCascadeRunPath.states[`${tail.id}->${slot.id}`] = 'wait'; });
-        if(precreateSingleSlots){
-            for(let slotOffset = 0; slotOffset < totalRounds; slotOffset++){
-                if(singleLoopSlots[slotOffset]) continue;
-                const loopIndex = startIndex + slotOffset * batchSize;
-                singleLoopSlots[slotOffset] = createLoopOutputSlot(tail, loopIndex, slotOffset, {queued:true, loopNode:loop.node, slotIndex:slotOffset});
-            }
+        singleLoopSlots = loopOutputSlotsForRoot(tail).slice(0, totalRounds);
+        singleLoopSlots.forEach(slot => { smartCascadeRunPath.states[`${tail.id}->${slot.id}`] = 'wait'; });
+        while(precreateSingleSlots && singleLoopSlots.length < totalRounds){
+            const slotOffset = singleLoopSlots.length;
+            singleLoopSlots.push(createLoopOutputSlot(tail, startIndex + slotOffset * batchSize, slotOffset, {queued:true}));
         }
         render();
     }
@@ -8461,27 +8186,17 @@ async function runSmartCascade(targetNode=null){
     }
     try {
         const runRound = async (loopIndex=startIndex, options={}) => {
-            throwIfSmartCascadeStopRequested();
-            const ctx = loop ? {index:loopIndex, total:endIndex, nodeId:loop.node.id, forceWorkflow:chain.length > 1 && !singleNodeLoopRun} : null;
+            const ctx = loop ? {index:loopIndex, total:endIndex, nodeId:loop.node.id, forceWorkflow:chain.length > 1} : null;
             smartLoopContext = ctx;
             if(singleNodeLoopRun){
-                const refs = refsForDirectLoopRound(loop.node, loopIndex, endIndex);
-                if(directLoopTargetRun) showDirectLoopRoundPreview(loop.node, tail, refs, loopIndex, endIndex);
                 const slotIndex = Math.max(0, Math.floor((loopIndex - startIndex) / batchSize));
-                const outputTarget = tagLoopOutputSlot(
-                    options.outputTarget || singleLoopSlots[slotIndex] || loopOutputSlotForRound(tail, loop.node, loopIndex, slotIndex) || createLoopOutputSlot(tail, loopIndex, slotIndex, {loopNode:loop.node, slotIndex}),
-                    tail,
-                    loop.node,
-                    loopIndex,
-                    slotIndex
-                );
-                singleLoopSlots[slotIndex] = outputTarget;
+                const outputTarget = options.outputTarget || singleLoopSlots[slotIndex] || createLoopOutputSlot(tail, loopIndex, slotIndex);
+                if(!singleLoopSlots[slotIndex]) singleLoopSlots[slotIndex] = outputTarget;
                 await runLoopRoundIntoSlot(loop.node, tail, outputTarget, loopIndex, ctx);
                 return;
             }
             const producedRefs = new Map();
             const runBranch = async (source, incomingRefs=[]) => {
-                throwIfSmartCascadeStopRequested();
                 let targets = graph.children.get(source.id) || [];
                 const loopPrompts = isSmartImageNode(source) ? upstreamLoopPromptNodesFor(source) : [];
                 const sourceLoopPrompts = isSmartImageNode(source) ? relayLoopPromptNodesForTarget(source) : [];
@@ -8504,7 +8219,6 @@ async function runSmartCascade(targetNode=null){
                 }
                 let sharedRefs = incomingRefs;
                 for(let index = 0; index < targets.length; index++){
-                    throwIfSmartCascadeStopRequested();
                     const target = targets[index];
                     const edgeKey = `${source.id}->${target.id}`;
                     let outputs = [];
@@ -8550,7 +8264,6 @@ async function runSmartCascade(targetNode=null){
                     }
                     const refs = target.type === 'smart-loop' ? sharedRefs : (index === 0 ? sharedRefs : cascadeRefsFromOutputs(outputs, target));
                     producedRefs.set(target.id, refs);
-                    throwIfSmartCascadeStopRequested();
                     await runBranch(target, refs);
                 }
             };
@@ -8569,12 +8282,8 @@ async function runSmartCascade(targetNode=null){
                 return runRound(loopIndex, {outputTarget});
             });
         } else {
-            for(const loopIndex of roundIndexes){
-                throwIfSmartCascadeStopRequested();
-                await runRound(loopIndex);
-            }
+            for(const loopIndex of roundIndexes) await runRound(loopIndex);
         }
-        throwIfSmartCascadeStopRequested();
         smartLoopContext = null;
         selectedId = '';
         selectedIds = [];
@@ -8593,16 +8302,14 @@ async function runSmartCascade(targetNode=null){
         selectedId = originalSelected;
         settings = originalSettings;
         promptInput.innerHTML = originalPromptHtml;
-        toast(e?.smartCascadeStopped ? '已停止一键运行' : (e.message || tr('smart.errRunFailed')).slice(0, 160));
+        toast((e.message || tr('smart.errRunFailed')).slice(0, 160));
     } finally {
         smartCascadeRunning = false;
         smartCascadeActiveLoopId = '';
-        smartCascadeStopRequested = false;
         smartCascadeSilentSelection = false;
         smartCascadeRunPath = null;
         runBtn.disabled = false;
         cascadeRunBtn.disabled = false;
-        if(directLoopTargetRun) finishLoopTargetPreviewState(tail);
         scheduleSave();
         render();
     }
@@ -8871,42 +8578,38 @@ async function runRunningHubGeneration(prompt, refs){
 }
 async function runApiVideoGeneration(prompt, refs){
     if(!settings.videoModel) throw new Error(tr('smart.errNoVideoModel'));
-    try {
-        const uploadedRefs = applyUploadedUrlsToSmartRefs(refs);
-        const refImages = imageRefsOnly(uploadedRefs).map((ref, i) => {
-            const item = {url:ref.url, name:ref.name || `图${i + 1}`};
-            if(settings.videoUseFrameRoles){
-                if(i === 0) item.role = 'first_frame';
-                else if(i === 1) item.role = 'last_frame';
-            }
-            return item;
-        });
-        const manualVideo = manualSmartVideoLink()?.url || '';
-        const refVideos = manualVideo ? manualSmartMediaLinks().map(item => item.url).filter(Boolean) : videoRefsOnly(uploadedRefs).map(ref => ref.url);
-        const payload = {
-            prompt,
-            provider_id: settings.videoProvider || 'comfly',
-            model: settings.videoModel || 'veo3-fast',
-            duration: Math.max(1, Math.min(60, Number(settings.videoDuration) || 5)),
-            aspect_ratio: settings.videoAspect || '16:9',
-            resolution: settings.videoResolution || '',
-            images: refImages,
-            videos: refVideos,
-            enhance_prompt: Boolean(settings.videoEnhancePrompt),
-            enable_upsample: Boolean(settings.videoEnableUpsample),
-            watermark: Boolean(settings.videoWatermark),
-            camerafixed: Boolean(settings.videoCameraFixed),
-            generate_audio: Boolean(settings.videoGenerateAudio)
-        };
-        const result = await fetch('/api/canvas-video', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(payload)
-        }).then(async r => { if(!r.ok) throw new Error(await smartResponseErrorMessage(r, tr('smart.errRunFailed'))); return r.json(); });
-        return resultMediaUrls(result);
-    } finally {
-        transientSmartCloudLinks = [];
-    }
+    const uploadedRefs = applyUploadedUrlsToSmartRefs(refs);
+    const refImages = imageRefsOnly(uploadedRefs).map((ref, i) => {
+        const item = {url:ref.url, name:ref.name || `图${i + 1}`};
+        if(settings.videoUseFrameRoles){
+            if(i === 0) item.role = 'first_frame';
+            else if(i === 1) item.role = 'last_frame';
+        }
+        return item;
+    });
+    const manualVideo = manualSmartVideoLink()?.url || '';
+    let refVideos = manualVideo ? manualSmartMediaLinks().map(item => item.url).filter(Boolean) : videoRefsOnly(uploadedRefs).map(ref => ref.url);
+    const payload = {
+        prompt,
+        provider_id: settings.videoProvider || 'comfly',
+        model: settings.videoModel || 'veo3-fast',
+        duration: Math.max(1, Math.min(60, Number(settings.videoDuration) || 5)),
+        aspect_ratio: settings.videoAspect || '16:9',
+        resolution: settings.videoResolution || '',
+        images: refImages,
+        videos: refVideos,
+        enhance_prompt: Boolean(settings.videoEnhancePrompt),
+        enable_upsample: Boolean(settings.videoEnableUpsample),
+        watermark: Boolean(settings.videoWatermark),
+        camerafixed: Boolean(settings.videoCameraFixed),
+        generate_audio: Boolean(settings.videoGenerateAudio)
+    };
+    const result = await fetch('/api/canvas-video', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+    }).then(async r => { if(!r.ok) throw new Error(await smartResponseErrorMessage(r, tr('smart.errRunFailed'))); return r.json(); });
+    return resultMediaUrls(result);
 }
 async function runModelscopeGeneration(prompt, refs){
     refs = imageRefsOnly(refs);
@@ -9815,13 +9518,7 @@ if(promptResize){
     });
 }
 runBtn.onclick = runGeneration;
-cascadeRunBtn.onclick = () => {
-    if(smartCascadeRunning) {
-        requestSmartCascadeStop();
-        return;
-    }
-    runSmartCascade();
-};
+cascadeRunBtn.onclick = runSmartCascade;
 fileInput.onchange = () => {
     const groupPoint = pendingGroupUploadPoint;
     if(!fileInput.files?.length){
@@ -9896,15 +9593,6 @@ promptTemplatePanel?.addEventListener('click', e => {
 if(promptPresetClose) promptPresetClose.onclick = closePromptPresetPanel;
 if(promptTemplateClose) promptTemplateClose.onclick = closePromptTemplatePanel;
 if(promptTemplateSearch) promptTemplateSearch.oninput = () => renderPromptTemplatePanel({preserveScroll:false});
-if(composerTemplateBtn) composerTemplateBtn.onclick = event => {
-    event.preventDefault();
-    event.stopPropagation();
-    if(promptTemplatePanel?.classList?.contains('open') && promptTemplatePanel.dataset.target === 'composer'){
-        closePromptTemplatePanel();
-        return;
-    }
-    openPromptTemplatePanel(activeComposerNode()?.id || selectedNode()?.id || '', promptTemplateSelectedId, {target:'composer'});
-};
 if(promptPresetSelect) promptPresetSelect.onchange = () => renderPromptPresetPanel(promptPresetSelect.value);
 [promptPresetName, promptPresetText].forEach(input => {
     input?.addEventListener('input', () => {
@@ -10112,7 +9800,7 @@ document.addEventListener('click', event => {
     if(!event.target.closest('.smart-control')) closeAllSmartPopovers();
     if(!event.target.closest('.mention-picker') && !event.target.closest('#promptInput')) closeMentionPicker();
     if(!event.target.closest('.prompt-preset-panel') && !event.target.closest('.prompt-preset-edit') && !event.target.closest('.prompt-preset-save')) closePromptPresetPanel();
-    if(!event.target.closest('.prompt-template-panel') && !event.target.closest('.prompt-preset-edit') && !event.target.closest('#composerTemplateBtn')) closePromptTemplatePanel();
+    if(!event.target.closest('.prompt-template-panel') && !event.target.closest('.prompt-preset-edit')) closePromptTemplatePanel();
 });
 document.addEventListener('keydown', event => {
     if(event.key === 'Escape') { closeAllSmartPopovers(); closeCreateMenu(); closeSmartCanvasLog(); closeSmartCanvasShortcuts(); closePromptPresetPanel(); closePromptTemplatePanel(); }
