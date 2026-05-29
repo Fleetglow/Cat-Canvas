@@ -7145,6 +7145,14 @@ function setupLightboxInfoPanel(meta, log){
     const w = node.width || node.size?.split?.('x')?.[0] || '';
     const h = node.height || node.size?.split?.('x')?.[1] || '';
     const sizeStr = (w && h) ? `${w}×${h}` : '';
+    const ratioMap = {square:'1:1', portrait:'2:3', landscape:'3:2', portrait43:'3:4', landscape43:'4:3', story:'9:16', wide:'16:9'};
+    let ratioLabel = '';
+    if(node.ratio && node.ratio !== 'source' && node.ratio !== 'custom') {
+        ratioLabel = ratioMap[node.ratio] || node.ratio;
+    } else if(node.ratio === 'custom' && node.customRatio) {
+        ratioLabel = node.customRatio;
+    }
+    // source / 无 ratio / custom 无值 → 等图片加载后从实际尺寸推断
     const quality = node.quality || '';
     const format = node.format || 'png';
     const createdStr = log?.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : '';
@@ -7152,6 +7160,7 @@ function setupLightboxInfoPanel(meta, log){
     const params = [
         platform && {label:'平台', value:platform},
         model && {label:'模型', value:model},
+        ratioLabel && {label:'比例', value:ratioLabel},
         {label:'尺寸', value:sizeStr || '—'},
         quality && {label:'质量', value:quality},
         format && {label:'格式', value:format},
@@ -7164,8 +7173,8 @@ function setupLightboxInfoPanel(meta, log){
         const timeText = [createdStr && `创建于 ${createdStr}`, runStr && `耗时 ${runStr}`].filter(Boolean).join(' · ');
         outputParamsGrid.innerHTML += `<div class="info-param-item" style="grid-column:1/-1"><span class="info-param-value" style="font-weight:400;color:var(--faint);font-size:11px">${escapeHtml(timeText)}</span></div>`;
     }
-    // 再次运行（只在有 run 数据时显示）
-    const hasRunData = !!(meta?.run?.nodeType || log?.run?.nodeType);
+    // 再次运行（有 run 数据或日志中有 model 信息时显示）
+    const hasRunData = !!(meta?.run?.nodeType || log?.run?.nodeType || log?.model);
     outputRerunBtn.style.display = hasRunData ? '' : 'none';
     outputRerunBtn.onclick = e => {
         e.stopPropagation();
@@ -7239,6 +7248,35 @@ function setupOutputPromptPanel(meta, log){
 function rerunFromOutputMeta(meta){
     const log = currentOutputLog;
     if(!meta?.run?.nodeType && log?.run?.nodeType) meta = {run: log.run};
+    // 从日志构造最小 run 对象（兼容旧数据或 nodeType 缺失的情况）
+    if(!meta?.run?.nodeType && log?.model) {
+        const inferredType = log.nodeType || 'generator';
+        const req = log.request || {};
+        meta = {run: {
+            nodeType: inferredType,
+            node: {
+                type: inferredType,
+                model: log.model,
+                apiProvider: log.platform || '',
+                prompt: log.prompt || '',
+                ratio: req.ratio || req.aspect_ratio || '',
+                resolution: req.resolution || req.size || '',
+                width: req.width || '',
+                height: req.height || '',
+                quality: req.quality || '',
+                format: req.format || 'png',
+                customRatio: req.customRatio || '',
+                customSize: req.customSize || '',
+                customRatioWidth: req.customRatioWidth || '',
+                customRatioHeight: req.customRatioHeight || '',
+                customWidth: req.customWidth || '',
+                customHeight: req.customHeight || '',
+            },
+            prompt: log.prompt || '',
+            refs: log.refs || [],
+            taskLabel: log.model,
+        }};
+    }
     if(!ensureCanvas() || !meta?.run?.nodeType) return;
     const base = JSON.parse(JSON.stringify(meta.run.node || {}));
     const mainW = (base.w || defaultNodeSize(meta.run.nodeType).w || 200);
@@ -7418,13 +7456,32 @@ function openOutputLightbox(url, out){
     outputCompareResult.draggable = false;
     outputCompareOriginal.draggable = false;
     outputLightboxImg.onload = () => {
-        const actualSize = `${outputLightboxImg.naturalWidth} x ${outputLightboxImg.naturalHeight}`;
+        const actualW = outputLightboxImg.naturalWidth;
+        const actualH = outputLightboxImg.naturalHeight;
+        const actualSize = `${actualW} x ${actualH}`;
         outputResolutionText(actualSize, meta, log);
         // 同时更新右侧参数配置区域的尺寸（如果存在）
         const sizeItem = outputParamsGrid.querySelector('.info-param-item[data-param="size"]');
         if(sizeItem){
             const valueSpan = sizeItem.querySelector('.info-param-value');
             if(valueSpan) valueSpan.textContent = actualSize;
+        }
+        // 从实际尺寸推断比例并插入/更新比例行
+        if(actualW && actualH){
+            const parts = ratioPartsFromDimensions(actualW, actualH);
+            if(parts){
+                let ratioItem = outputParamsGrid.querySelector('.info-param-item[data-param="ratio"]');
+                if(!ratioItem){
+                    ratioItem = document.createElement('div');
+                    ratioItem.className = 'info-param-item';
+                    ratioItem.dataset.param = 'ratio';
+                    ratioItem.innerHTML = '<span class="info-param-label">比例</span><span class="info-param-value"></span>';
+                    if(sizeItem) sizeItem.before(ratioItem);
+                    else outputParamsGrid.appendChild(ratioItem);
+                }
+                const ratioValue = ratioItem.querySelector('.info-param-value');
+                if(ratioValue) ratioValue.textContent = `${parts.width}:${parts.height}`;
+            }
         }
     };
     outputLightboxImg.src = url;
