@@ -395,6 +395,10 @@
         .menu-btn span { min-width:0; overflow:hidden; text-overflow:ellipsis; }
         .menu-btn:hover { background:#f8fafc; color:#111827; }
         .menu-btn:disabled { opacity:.45; cursor:not-allowed; pointer-events:none; }
+        .menu-btn-rich { height:auto; min-height:48px; padding:6px 10px; }
+        .menu-btn-text { display:flex; flex-direction:column; line-height:1.35; }
+        .menu-btn-text small { font-size:10px; font-weight:500; color:#94a3b8; }
+        .theme-dark .menu-btn-text small { color:var(--faint); }
         .output-node-menu { width:260px; }
         .output-node-menu .menu-btn { white-space:nowrap; }
         .output-node-menu .menu-btn i { flex:0 0 auto; }
