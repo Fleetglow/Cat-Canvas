@@ -27,3 +27,9 @@ Thumbs.db
 
 # 临时图片
 说明.png
+
+# 备份目录
+data/canvas_backups/
+
+# 用户输入文件
+assets/input/
