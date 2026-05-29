@@ -21,3 +21,9 @@ history.json
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 日志文件
+*.log
+
+# 临时图片
+说明.png
