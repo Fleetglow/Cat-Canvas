@@ -1111,6 +1111,44 @@ def static_html_response(filename: str):
 STATIC_PROMPT_TEMPLATE_MD = os.path.join(STATIC_DIR, "system-prompts", "infinite-canvas-prompt-templates.md")
 LEGACY_PROMPT_TEMPLATE_MD = os.path.join(BASE_DIR, "功能点", "无限画布_预设提示词标准库_v2.0.md")
 PROMPT_TEMPLATE_PATHS = [STATIC_PROMPT_TEMPLATE_MD, LEGACY_PROMPT_TEMPLATE_MD]
+PROMPT_TEMPLATE_EN = {
+    "多机位九宫格": {
+        "name": "9-Angle Multi-Camera Grid",
+        "scene": "Show the same subject or scene from 9 camera angles for character turnarounds, product views, or space scouting.",
+    },
+    "多机位九宫格4K": {
+        "name": "9-Angle Multi-Camera Grid 4K",
+        "scene": "A high-resolution 9-angle reference sheet for print-grade output, large displays, and fine material study.",
+    },
+    "剧情推演四宫格": {
+        "name": "4-Panel Story Progression",
+        "scene": "Preview four consecutive story beats or emotional stages for storyboard planning and narrative rhythm tests.",
+    },
+    "角色脸部三视图": {
+        "name": "Character Face 3-View Sheet",
+        "scene": "Front, side, and three-quarter face references for Actor ID locking and expression consistency.",
+    },
+    "产品三视图": {
+        "name": "Product 3-View Sheet",
+        "scene": "Front, side, and top product views for industrial design, ecommerce detail pages, and technical documents.",
+    },
+    "25宫格连贯分镜": {
+        "name": "25-Panel Continuous Storyboard",
+        "scene": "A full 5x5 storyboard for continuous scene or action flow, useful for film previews and motion continuity tests.",
+    },
+    "电影级光影校正": {
+        "name": "Cinematic Lighting Comparison",
+        "scene": "Compare the same subject or scene under different lighting conditions for mood, color, and lighting choices.",
+    },
+    "角色设定参考表（胸口特写+全身三视图）": {
+        "name": "Character Reference Sheet: Portrait + Full-Body Views",
+        "scene": "A consistency reference combining a face anchor and full-body front, side, and back views for Actor ID and costume lock.",
+    },
+    "6种基础表情胸像（2×3六宫格）": {
+        "name": "6 Basic Expression Busts",
+        "scene": "Six basic expressions of the same character for expression consistency, emotion baselines, and Seedance Talk-to-Edit reference.",
+    },
+}
 
 def prompt_template_markdown_path() -> str:
     for path in PROMPT_TEMPLATE_PATHS:
@@ -1161,8 +1199,10 @@ def parse_prompt_template_markdown(text: str):
             "id": f"builtin_md_{number}",
             "number": number,
             "name": name,
+            "name_en": PROMPT_TEMPLATE_EN.get(name, {}).get("name", name),
             "category": prompt_template_category(name, scene),
             "scene": scene,
+            "scene_en": PROMPT_TEMPLATE_EN.get(name, {}).get("scene", scene),
             "positive": positive,
             "negative": negative,
             "params": params,
@@ -5891,7 +5931,10 @@ async def update_canvas(canvas_id: str, payload: CanvasSaveRequest):
     canvas["kind"] = normalize_canvas_kind(canvas.get("kind"))
     canvas["nodes"] = payload.nodes
     canvas["connections"] = payload.connections
-    canvas["viewport"] = payload.viewport
+    if canvas["kind"] == "smart":
+        canvas["viewport"] = payload.viewport
+    else:
+        canvas["viewport"] = canvas.get("viewport") or {"x": 0, "y": 0, "scale": 1}
     canvas["logs"] = payload.logs[-500:]
     canvas["settings"] = payload.settings or {}
     save_canvas(canvas)
