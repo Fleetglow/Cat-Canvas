@@ -2134,8 +2134,40 @@ def canvas_path(canvas_id):
 
 def save_canvas(canvas):
     canvas["updated_at"] = now_ms()
+    canvas_id = canvas["id"]
+    target = canvas_path(canvas_id)
+    backup_dir = os.path.join(DATA_DIR, "canvas_backups")
     with CANVAS_LOCK:
-        with open(canvas_path(canvas["id"]), 'w', encoding='utf-8') as f:
+        # 自动备份：覆盖前保留旧版本
+        if os.path.exists(target):
+            os.makedirs(backup_dir, exist_ok=True)
+            try:
+                with open(target, 'r', encoding='utf-8') as bf:
+                    old = json.load(bf)
+                old_ts = old.get("updated_at") or now_ms()
+            except Exception:
+                old_ts = now_ms()
+            backup_path = os.path.join(backup_dir, f"{canvas_id}_{old_ts}.json")
+            shutil.copy2(target, backup_path)
+            # 仅保留最近 3 个备份：按文件名中的时间戳排序
+            prefix = f"{canvas_id}_"
+            backups = []
+            for fn in os.listdir(backup_dir):
+                if fn.startswith(prefix) and fn.endswith(".json"):
+                    backups.append(fn)
+            # 从文件名解析时间戳，数值越大越新
+            def _backup_ts(fn):
+                try:
+                    return int(fn[len(prefix):-5])  # 去掉 prefix 和 .json
+                except Exception:
+                    return 0
+            backups.sort(key=_backup_ts, reverse=True)
+            for old_fn in backups[3:]:
+                try:
+                    os.remove(os.path.join(backup_dir, old_fn))
+                except OSError:
+                    pass
+        with open(target, 'w', encoding='utf-8') as f:
             json.dump(canvas, f, ensure_ascii=False, indent=2)
 
 def normalize_canvas_kind(kind="classic"):
