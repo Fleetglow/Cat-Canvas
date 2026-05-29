@@ -5914,6 +5914,70 @@ async def restore_canvas(canvas_id: str):
         save_canvas(canvas)
     return {"canvas": canvas}
 
+# --- 画布备份还原 API ---
+
+@app.get("/api/canvas-backups/{canvas_id}")
+async def list_canvas_backups(canvas_id: str):
+    """列出某个画布的所有备份"""
+    import datetime
+    backup_dir = os.path.join(DATA_DIR, "canvas_backups")
+    prefix = f"{canvas_id}_"
+    backups = []
+    if os.path.isdir(backup_dir):
+        for fn in sorted(os.listdir(backup_dir), reverse=True):
+            if fn.startswith(prefix) and fn.endswith(".json"):
+                try:
+                    ts = int(fn[len(prefix):-5])
+                    dt = datetime.datetime.fromtimestamp(ts / 1000, tz=datetime.timezone(datetime.timedelta(hours=8)))
+                    date_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    backups.append({
+                        "filename": fn,
+                        "timestamp": ts,
+                        "date": date_str,
+                    })
+                except ValueError:
+                    pass
+    return {"backups": backups}
+
+@app.post("/api/canvas-backups/{canvas_id}/restore")
+async def restore_canvas_backup(canvas_id: str, payload: dict):
+    """从备份文件还原画布，payload: { "filename": "xxx.json" } 或 { "timestamp": 1234567890 }"""
+    backup_dir = os.path.join(DATA_DIR, "canvas_backups")
+    filename = payload.get("filename", "")
+    timestamp = payload.get("timestamp")
+
+    if timestamp:
+        filename = f"{canvas_id}_{int(timestamp)}.json"
+
+    if not filename or not filename.endswith(".json") or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="无效的备份文件名")
+
+    backup_path = os.path.join(backup_dir, filename)
+    if not os.path.isfile(backup_path):
+        raise HTTPException(status_code=404, detail="备份文件不存在")
+
+    with open(backup_path, 'r', encoding='utf-8') as f:
+        backup_data = json.load(f)
+
+    # 写回画布文件
+    target = canvas_path(canvas_id)
+    with CANVAS_LOCK:
+        # 先备份当前版本（如果有的话）
+        if os.path.exists(target):
+            os.makedirs(backup_dir, exist_ok=True)
+            try:
+                with open(target, 'r', encoding='utf-8') as bf:
+                    old = json.load(bf)
+                old_ts = old.get("updated_at") or now_ms()
+            except Exception:
+                old_ts = now_ms()
+            pre_restore_path = os.path.join(backup_dir, f"{canvas_id}_{old_ts}_pre_restore.json")
+            shutil.copy2(target, pre_restore_path)
+        with open(target, 'w', encoding='utf-8') as f:
+            json.dump(backup_data, f, ensure_ascii=False, indent=2)
+
+    return {"ok": True, "restored_from": filename}
+
 @app.delete("/api/canvases/{canvas_id}/purge")
 async def purge_canvas(canvas_id: str):
     path = canvas_path(canvas_id)
