@@ -1,0 +1,118 @@
+# 更新日志
+
+## 2026-05-29
+
+### ✨ 新增功能
+
+* **自动备份**：每次画布保存时自动备份到 `data/canvas\_backups/`，保留最近 3 个版本；新增还原 API（`/api/canvas-backups/{id}`）
+* **备份还原 API**：`GET /api/canvas-backups/{id}` 列出备份，`POST /api/canvas-backups/{id}/restore` 从备份还原
+* **run.bat 窗口最小化**：启动服务器并打开浏览器后，CMD 窗口自动最小化（通过 Win32 API 实现）
+
+### 🎨 优化
+
+* **创建菜单按钮样式**：为 `.menu-btn-rich` 和 `.menu-btn-text` 添加样式定义，修复文字挤在一起的问题
+* **i18n 翻译强制刷新**：bump `i18n.js` VERSION，确保浏览器重新拉取翻译文件
+
+### 🐛 修复
+
+* **创建菜单"图片卡片"文字被 i18n 覆盖**：上游将按钮文字改为"多功能"，修复 i18n 翻译文件 `canvas.imageCard` 的值，改回"图片卡片"
+* **`.gitignore` 中文文件名不匹配**：修正为实际文件名 `说明.png`
+* **图片预览比例显示**：修复从日志打开时 `meta.run.node` 为空导致无法获取宽高的问题；增加从实际图片尺寸推断比例的功能
+* **"再次运行"按钮不显示**：修复 `hasRunData` 判断过于严格，兼容日志中有 `model` 信息但无 `nodeType` 的情况
+
+\---
+
+## 2026-05-28
+
+### ✨ 新增功能
+
+* **ESC 键关闭弹窗**：按 ESC 键可关闭日志/设置/帮助/错误弹窗，支持层级逻辑（先关闭图片预览，再关闭其他弹窗）
+
+### 🎨 优化
+
+* **下载按钮样式**：改为图标+文字按钮，与"再次运行"/"发送到画布"样式一致；默认纯白色背景，悬停深色（仅下载按钮，不影响其他按钮）
+* **主题切换按钮文字**：亮色模式显示"黑夜模式"，暗色模式显示"白昼模式"，切换时文字同步更新
+* **图片预览弹窗**：参数配置区域显示实际图片尺寸（从图片/视频元数据获取）
+
+### 🐛 修复
+
+* **图片预览弹窗尺寸参数**：即使生成参数中无尺寸信息，也始终显示实际图片尺寸
+* **ESC 键层级逻辑**：修复按一次 ESC 关闭所有弹窗的问题，改为先关闭图片预览弹窗，再按一次才关闭其他弹窗
+* **i18n 缓存导致翻译缺失**：更新 `i18n.js` 版本号强制刷新
+
+\---
+
+## 2026-05-27
+
+### ✨ 新增功能
+
+* **合并上游更新**：合入上游 main 分支的最新功能
+
+  * LTX Director 节点：新增 LTX Director 节点，配套时间线编辑器
+  * 视频输入支持：Loop 节点支持视频输入
+  * API 新手引导：推荐 API 新手引导界面
+* **Bundled Python 升级到 3.14**：`python/` 目录更新为 Python 3.14 embed 版本，更新 `run.bat` 优先使用本地 `python/` 目录
+
+\---
+
+## 2026-05-26
+
+### ✨ 新增功能
+
+* **Lightbox 预览窗口重新设计**：左右分栏布局（左侧大图 + 右侧信息面板）；信息面板包含提示词（可展开）、参考图、参数配置；底部操作栏（再次运行、发送到画布、删除记录）
+
+### 🎨 优化
+
+* **Lightbox 预览铺满全屏**：`.output-lightbox` padding 20px→0；`.output-lightbox-shell` 宽高改为 100vw/100vh，border-radius 改为 0，去掉 box-shadow
+
+### 🐛 修复
+
+* **Lightbox 预览缺失生图耗时**：`setupLightboxInfoPanel` 中耗时只读取 `meta?.runMs`，从日志打开时 `log.runMs` 未被使用，修复为 `(meta?.runMs || log?.runMs)`
+* **日志预览键盘导航失效**：`outputLightboxItems()` 在日志模式下只返回当前日志条目的 `outputs`，导致只有一张图片时键盘导航完全失效；修复为返回所有日志记录的 `outputs`，确保可以在所有日志记录间切换
+
+\---
+
+## 2026-05-25
+
+### ✨ 新增功能
+
+* **日志面板网格视图**：删除列表视图，只保留网格视图；缩略图改为 16:9 比例；一行展示 5 条记录；复选框移至缩略图右上角
+* **批量下载打包**：批量下载改为调用后端接口，所有文件打包为单个 zip 一次性下载
+* **RunningHub 静态配置支持**：支持从 `static/runninghub/api\_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
+* **LTX Director 节点**：新增 LTX Director 节点，配套时间线编辑器
+* **本地图片批量导入**：新增本地图片批量导入接口（`LocalImageImportRequest`）
+* **上传接口本地回退**：ComfyUI 不可用时，`/api/upload` 自动将文件保存到本地 `assets/input/` 目录
+
+### 🎨 优化
+
+* **API 设置页**：`.wrap` 最大宽度 1100→1200px；`.layout` gap 36→16px；侧边栏宽度 260→280px
+* **日志面板批量按钮**：从右上角图标改为左侧文字按钮；新增"删除失败记录"按钮
+* **复制保持连线设置项**：在画布设置面板添加开关，默认开启，可在设置中切换
+* **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 `hidden` 标记移除预设项
+* **日志面板选中状态**：选中状态加强（边框加粗 + box-shadow 发光效果）
+* **合并上游更新**：保留拖拽排序（`sort\_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
+
+### 🐛 修复
+
+* **输出节点图片拖拽预览过大**：`setOutputDragPreview` 克隆图片未限制尺寸，ghost 图像按原图大小显示，改为 `max-width:200px; max-height:200px`
+* **输出节点图片无法拖动**：修复日志面板 CSS `\[data-url] { -webkit-user-drag:none }` 选择器范围过大，影响输出节点图片拖拽，改为限定在 `.log-item` 和 `.log-thumbs` 内
+* **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort\_order` 字段；修复 `normalize\_provider` 返回值缺少 `sort\_order`
+* **日志网格视图缩略图消失**：修复 `.log-item` 两条 CSS 规则互相覆盖（`display:grid` 覆盖 `display:flex`），导致缩略图区域宽度为 0
+* **缩略图不显示**：修复 CSS 缺少 `display:block`，导致图片为 inline 元素，`aspect-ratio:16/9` 高度为 0
+* **Ctrl+框选逻辑错误**：修复 Ctrl+框选时会错误选中未选中项，改为 Ctrl 时只取消已选中项，不选中未选中项
+* **批量模式图片点击**：修复进入批量模式后点击图片仍打开灯箱，改为选中整行
+* **批量模式框选无法从缩略图区域开始**：修复 `onDown` 拦截了 `.log-item` 内的 mousedown，改为只排除 checkbox 和删除按钮
+* **图片默认拖拽行为**：修复批量模式下在图片上拖动会触发浏览器图片拖拽，彻底禁止图片默认拖拽行为（`-webkit-user-drag:none` + `draggable="false"`）
+* **批量模式文字选中**：修复框选时会选中文字，添加 `user-select:none`
+* **复选框位置错误**：删除重复的 `.log-select-cb` CSS 规则，确保 `position:absolute` 生效
+* **画布底部提示文字**：删除画布底部操作提示文字
+* **`.stage` 样式被上游覆盖**：恢复 `margin:0; border-radius:0`
+* **`api-settings.css` 被上游覆盖**：恢复 wrap 1200px、layout gap 16px、侧边栏 280px、拖拽样式 `.drag-over`/`.dragging`
+
+### ⚡ 性能
+
+* F 键聚焦选中节点功能上线
+* Alt+滚轮新增为画布缩放触发方式（与 Ctrl+滚轮并列）
+
+\---
+

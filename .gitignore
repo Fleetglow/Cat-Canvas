@@ -1,0 +1,31 @@
+# 保护目录（不提交，但防止 git clean 删除）
+.workbuddy/
+API/
+assets/
+data/
+
+# 本地配置（不提交）
+API/.env
+data/api_providers.json
+
+# Python 运行时（体积大，可重新安装）
+__pycache__/
+*.pyc
+*.pyo
+
+
+
+# 历史记录（运行时生成）
+history.json
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+
+
+
+# 备份目录（不备份备份文件本身）
+backup/**
