@@ -1,10 +1,41 @@
 # 更新日志
 
+## 2026-05-30
+
+### ✨ 新增功能
+
+* **记住上次画布**：每次打开画布时记录到 localStorage，切换回无限画布页面时自动恢复上次打开的画布
+* **侧边栏状态记忆**：收起/展开状态保存到 localStorage，下次访问时恢复
+
+### 🎨 优化
+
+* **侧边栏重构**：移除鼠标悬停自动展开/收起的交互，改为手动收起/展开按钮（单箭头图标），展开时显示"收起"，收起时显示"展开"
+* **侧边栏 tooltip**：所有按钮在收起状态下添加 tooltip 提示，鼠标悬停时从右侧弹出
+* **侧边栏 logo 尺寸**：从 28px 调整为 40px
+* **导航顺序调整**：将无限画布/在线生图/GPT 对话移到折叠区上方
+* **支持弹窗**：替换原来的"项目主页"按钮和原作者社交媒体区域，改为统一的"支持"弹窗，包含改作者和原作者的 GitHub 及社交媒体链接
+* **切换延迟消除**：移除所有 `transition-delay`，侧边栏切换现在即时响应
+
+### 🌐 国际化
+
+* **删除英文支持**：仅保留中文界面，简化了 i18n 系统，移除所有英文翻译和语言切换功能
+
+### 🗑️ 移除
+
+* **一键更新功能**：删除了一键更新按钮和所有相关的 JS/CSS 代码（净减 590 行）
+* **侧边栏原作者区域**：删除了底部 wuli大雄社交媒体链接区域
+
+### 🐛 修复
+
+* **画布恢复逻辑**：修复只在页面首次加载时尝试恢复画布的问题，现在从其他页面切换回无限画布时也会自动恢复
+
+---
+
 ## 2026-05-29
 
 ### ✨ 新增功能
 
-* **自动备份**：每次画布保存时自动备份到 `data/canvas\_backups/`，保留最近 3 个版本；新增还原 API（`/api/canvas-backups/{id}`）
+* **自动备份**：每次画布保存时自动备份到 `data/canvas\\\_backups/`，保留最近 3 个版本；新增还原 API（`/api/canvas-backups/{id}`）
 * **备份还原 API**：`GET /api/canvas-backups/{id}` 列出备份，`POST /api/canvas-backups/{id}/restore` 从备份还原
 * **run.bat 窗口最小化**：启动服务器并打开浏览器后，CMD 窗口自动最小化（通过 Win32 API 实现）
 
@@ -78,7 +109,7 @@
 
 * **日志面板网格视图**：删除列表视图，只保留网格视图；缩略图改为 16:9 比例；一行展示 5 条记录；复选框移至缩略图右上角
 * **批量下载打包**：批量下载改为调用后端接口，所有文件打包为单个 zip 一次性下载
-* **RunningHub 静态配置支持**：支持从 `static/runninghub/api\_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
+* **RunningHub 静态配置支持**：支持从 `static/runninghub/api\\\_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
 * **LTX Director 节点**：新增 LTX Director 节点，配套时间线编辑器
 * **本地图片批量导入**：新增本地图片批量导入接口（`LocalImageImportRequest`）
 * **上传接口本地回退**：ComfyUI 不可用时，`/api/upload` 自动将文件保存到本地 `assets/input/` 目录
@@ -90,13 +121,13 @@
 * **复制保持连线设置项**：在画布设置面板添加开关，默认开启，可在设置中切换
 * **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 `hidden` 标记移除预设项
 * **日志面板选中状态**：选中状态加强（边框加粗 + box-shadow 发光效果）
-* **合并上游更新**：保留拖拽排序（`sort\_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
+* **合并上游更新**：保留拖拽排序（`sort\\\_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
 
 ### 🐛 修复
 
 * **输出节点图片拖拽预览过大**：`setOutputDragPreview` 克隆图片未限制尺寸，ghost 图像按原图大小显示，改为 `max-width:200px; max-height:200px`
-* **输出节点图片无法拖动**：修复日志面板 CSS `\[data-url] { -webkit-user-drag:none }` 选择器范围过大，影响输出节点图片拖拽，改为限定在 `.log-item` 和 `.log-thumbs` 内
-* **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort\_order` 字段；修复 `normalize\_provider` 返回值缺少 `sort\_order`
+* **输出节点图片无法拖动**：修复日志面板 CSS `\\\[data-url] { -webkit-user-drag:none }` 选择器范围过大，影响输出节点图片拖拽，改为限定在 `.log-item` 和 `.log-thumbs` 内
+* **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort\\\_order` 字段；修复 `normalize\\\_provider` 返回值缺少 `sort\\\_order`
 * **日志网格视图缩略图消失**：修复 `.log-item` 两条 CSS 规则互相覆盖（`display:grid` 覆盖 `display:flex`），导致缩略图区域宽度为 0
 * **缩略图不显示**：修复 CSS 缺少 `display:block`，导致图片为 inline 元素，`aspect-ratio:16/9` 高度为 0
 * **Ctrl+框选逻辑错误**：修复 Ctrl+框选时会错误选中未选中项，改为 Ctrl 时只取消已选中项，不选中未选中项
