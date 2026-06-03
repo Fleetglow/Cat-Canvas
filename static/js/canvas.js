@@ -248,6 +248,7 @@ const CUSTOM_IMAGE_MODELS_KEY = 'canvas_custom_image_models';
 const MANAGED_IMAGE_MODELS_KEY = 'canvas_image_models_ordered';
 const MANAGED_CHAT_MODELS_KEY = 'canvas_chat_models_ordered';
 const CANVAS_THEME_KEY = 'canvas_theme';
+const LAST_CANVAS_ID_KEY = 'canvas_last_id';
 const QUICK_TOOLBAR_COLLAPSED_KEY = 'canvas_quick_toolbar_collapsed';
 const DEFAULT_VIDEO_MODELS = [
     // Veo
@@ -1304,6 +1305,7 @@ async function openCanvas(id){
         render();
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
+        localStorage.setItem(LAST_CANVAS_ID_KEY, id);
         setStatus('Ready');
     } catch(e) {
         setStatus(tr('canvas.openFailed'));
@@ -8795,5 +8797,12 @@ window.onload = async () => {
     await loadConfig();
     pruneMissingComfyWorkflows();
     await loadCanvasList(false);
-    setCanvasMode(false);
+    const lastId = localStorage.getItem(LAST_CANVAS_ID_KEY);
+    if(lastId && !canvas) {
+        const exists = canvases.some(c => String(c.id) === String(lastId));
+        if(exists) await openCanvas(lastId);
+        else setCanvasMode(false);
+    } else {
+        setCanvasMode(false);
+    }
 };
