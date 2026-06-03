@@ -18,6 +18,11 @@ window.addEventListener('message', event => {
             if(typeof render === 'function') render();
         });
         if(canvas) syncRemoteCanvasNow();
+        // 没有打开画布时，尝试恢复上次的画布
+        if(!canvas) {
+            const lastId = localStorage.getItem(LAST_CANVAS_ID_KEY);
+            if(lastId) openCanvas(lastId).catch(() => {});
+        }
     }
 });
 window.addEventListener('studio-lang-change', () => {
