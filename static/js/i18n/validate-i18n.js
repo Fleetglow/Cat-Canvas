@@ -37,19 +37,13 @@ for(const file of files){
     new vm.Script(fs.readFileSync(abs, 'utf8'), { filename:file }).runInNewContext(sandbox);
 }
 
-const entries = sandbox.window.StudioI18n?.entries?.() || { zh:{}, en:{} };
-const dict = {};
-for(const key of new Set([...Object.keys(entries.zh || {}), ...Object.keys(entries.en || {})])){
-    dict[key] = { zh: entries.zh?.[key], en: entries.en?.[key] };
-}
+const entries = sandbox.window.StudioI18n?.entries?.() || { zh:{} };
+const dict = entries.zh || {};
 
-const missing = [];
 const bad = [];
-for(const [key, entry] of Object.entries(dict)){
-    if(!entry || typeof entry !== 'object' || !('zh' in entry) || !('en' in entry)) missing.push(key);
-    const zh = String(entry?.zh ?? '');
-    const en = String(entry?.en ?? '');
-    if(/[�]|璁|娴|澶|鎻|鐢|鍙|杈|绋|鏂|涓/.test(zh) || /[�]/.test(en)) bad.push(key);
+for(const [key, value] of Object.entries(dict)){
+    if(typeof value !== 'string') bad.push(key);
+    if(/[�]|璁|娴|澶|鎻|鐢|鍙|杈|绋|鏂|涓/.test(value)) bad.push(key);
 }
 
 const used = new Set();
@@ -75,8 +69,7 @@ for(const file of scanFiles){
 
 const unresolved = [...used].filter(key => !(key in dict)).sort();
 
-if(missing.length || bad.length || unresolved.length){
-    if(missing.length) console.error('Missing zh/en:', missing.join(', '));
+if(bad.length || unresolved.length){
     if(bad.length) console.error('Possible mojibake:', bad.join(', '));
     if(unresolved.length) console.error('Unresolved keys:', unresolved.join(', '));
     process.exit(1);

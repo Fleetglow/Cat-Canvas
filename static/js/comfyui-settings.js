@@ -17,20 +17,19 @@ function applyLanguage(){
 function refreshIcons(){ if(window.lucide) lucide.createIcons(); }
 
 const TYPES = [
-    { v:'text', zh:'文本', en:'Text' },
-    { v:'textarea', zh:'多行文本', en:'Textarea' },
-    { v:'number', zh:'数字', en:'Number' },
-    { v:'slider', zh:'滑块', en:'Slider' },
-    { v:'dropdown', zh:'下拉框', en:'Dropdown' },
-    { v:'image', zh:'图片', en:'Image' },
-    { v:'video', zh:'视频', en:'Video' },
-    { v:'audio', zh:'音频', en:'Audio' },
-    { v:'boolean', zh:'开关', en:'Switch' },
+    { v:'text', label:'文本' },
+    { v:'textarea', label:'多行文本' },
+    { v:'number', label:'数字' },
+    { v:'slider', label:'滑块' },
+    { v:'dropdown', label:'下拉框' },
+    { v:'image', label:'图片' },
+    { v:'video', label:'视频' },
+    { v:'audio', label:'音频' },
+    { v:'boolean', label:'开关' },
 ];
-function currentLang(){ return window.StudioI18n?.lang?.() === 'en' ? 'en' : 'zh'; }
 function typeLabel(type){
     const item = TYPES.find(t => t.v === type);
-    return item ? item[currentLang()] : type;
+    return item ? item.label : type;
 }
 
 // ComfyUI 节点类型 → 中文 + 图标 + 颜色分类
@@ -156,9 +155,7 @@ function fieldKind(f){
 }
 function isMediaField(f){ return ['image','video','audio'].includes(fieldKind(f)); }
 function mediaFieldLabel(kind, count){
-    const labels = currentLang() === 'en'
-        ? {image:'Images', video:'Videos', audio:'Audio'}
-        : {image:'图片', video:'视频', audio:'音频'};
+    const labels = {image:'图片', video:'视频', audio:'音频'};
     return `${labels[kind] || kind} ${count}`;
 }
 function mediaAccept(kind){
@@ -1384,7 +1381,6 @@ async function onDelete(){
 
 window.addEventListener('message', event => {
     if(event.data?.type === 'studio-theme' && window.StudioTheme) window.StudioTheme.set(event.data.theme);
-    if(event.data?.type === 'studio-lang' && window.StudioI18n) window.StudioI18n.set(event.data.lang);
     if(event.data?.type === 'studio-page-blur') {
         panState = null;
         miniDrag = null;

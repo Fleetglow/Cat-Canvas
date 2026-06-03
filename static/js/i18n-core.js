@@ -1,40 +1,17 @@
 (function(){
-    const KEY = 'studio_lang';
-    const DEFAULT_LANG = 'zh';
-    const dict = { zh: {}, en: {} };
+    const dict = {};
 
-    function lang(){
-        return localStorage.getItem(KEY) || DEFAULT_LANG;
-    }
-
-    function normalizeEntry(key, entry){
-        if(entry && typeof entry === 'object' && !Array.isArray(entry) && ('zh' in entry || 'en' in entry)){
-            return {
-                zh: entry.zh == null ? (entry.en == null ? key : String(entry.en)) : String(entry.zh),
-                en: entry.en == null ? (entry.zh == null ? key : String(entry.zh)) : String(entry.en),
-            };
-        }
-        const value = entry == null ? key : String(entry);
-        return { zh: value, en: value };
-    }
+    function lang(){ return 'zh'; }
 
     function register(bundle){
         if(!bundle || typeof bundle !== 'object') return;
-        if(bundle.zh || bundle.en){
-            Object.assign(dict.zh, bundle.zh || {});
-            Object.assign(dict.en, bundle.en || {});
-            return;
-        }
-        Object.entries(bundle).forEach(([key, entry]) => {
-            const normalized = normalizeEntry(key, entry);
-            dict.zh[key] = normalized.zh;
-            dict.en[key] = normalized.en;
+        Object.entries(bundle).forEach(([key, value]) => {
+            dict[key] = value == null ? key : String(value);
         });
     }
 
     function t(key){
-        const current = lang();
-        return dict[current]?.[key] || dict[DEFAULT_LANG]?.[key] || key;
+        return dict[key] || key;
     }
 
     function apply(root=document){
@@ -47,23 +24,13 @@
         root.querySelectorAll('[data-i18n-title]').forEach(el => {
             el.setAttribute('title', t(el.dataset.i18nTitle));
         });
-        root.documentElement?.setAttribute('lang', lang() === 'en' ? 'en' : 'zh-CN');
-        window.dispatchEvent(new CustomEvent('studio-lang-change', { detail:{ lang:lang() } }));
-    }
-
-    function set(next){
-        localStorage.setItem(KEY, next === 'en' ? 'en' : 'zh');
-        apply();
-    }
-
-    function toggle(){
-        set(lang() === 'en' ? 'zh' : 'en');
+        window.dispatchEvent(new CustomEvent('studio-lang-change', { detail:{ lang:'zh' } }));
     }
 
     function entries(){
-        return JSON.parse(JSON.stringify(dict));
+        return JSON.parse(JSON.stringify({ zh: dict }));
     }
 
-    window.StudioI18n = { t, apply, set, toggle, lang, register, entries };
+    window.StudioI18n = { t, apply, lang, register, entries };
     document.addEventListener('DOMContentLoaded', () => apply());
 })();

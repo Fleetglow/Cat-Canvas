@@ -656,7 +656,7 @@ function smartNodeInputThumbsHtml(images, opts={}){
     if(!refs.length) return '';
     const limit = Math.min(10, refs.length);
     const items = refs.slice(0, limit).map((img, index) => {
-        const label = opts.labelPrefix ? `${opts.labelPrefix}${index + 1}` : (window.StudioI18n?.lang?.() === 'en' ? `Image ${index + 1}` : `图${index + 1}`);
+        const label = opts.labelPrefix ? `${opts.labelPrefix}${index + 1}` : `图${index + 1}`;
         const media = isAudioMediaItem(img)
             ? `<div class="media-thumb audio-thumb"><i data-lucide="file-audio"></i><span>${escapeHtml(img.name || 'Audio')}</span></div>`
             : isVideoMediaItem(img)
@@ -3830,13 +3830,13 @@ function renderSmartCanvasLog(){
             const kind = outputUrlLooksVideo(url) ? 'video' : 'image';
             return kind === 'video' ? `<video src="${safe}" data-url="${safe}" data-kind="video" muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"></video>` : `<img src="${safe}" data-url="${safe}" data-kind="image" alt="output">`;
         }).join('');
-        const date = new Date(log.createdAt || Date.now()).toLocaleString(window.StudioI18n?.lang() === 'en' ? 'en-US' : 'zh-CN');
+        const date = new Date(log.createdAt || Date.now()).toLocaleString('zh-CN');
         const req = log.request || {};
         const taskId = req.task_id || req.taskId || req.prompt_id || req.promptId || '';
         const backend = req.workflow_json || req.workflow || req.provider_id || req.providerId || req.backend || '';
         const subParts = [
             date,
-            `${window.StudioI18n?.lang() === 'en' ? 'outputs' : '输出'} ${(log.outputs || []).length}`,
+            `输出 ${(log.outputs || []).length}`,
             taskId ? `ID ${taskId}` : '',
             backend
         ].filter(Boolean);
@@ -10273,9 +10273,6 @@ window.addEventListener('focus', () => {
 window.addEventListener('message', event => {
     if(event.data?.type === 'studio-theme') applyTheme(event.data.theme || 'light');
     if(event.data?.type === 'providers-changed' || event.data?.type === 'workflows-changed' || event.data?.type === 'comfy-instances-changed') refreshSmartConfigFromSettings();
-    if(event.data?.type === 'studio-lang' && window.StudioI18n) {
-        window.StudioI18n.set(event.data.lang || 'zh');
-    }
 });
 window.addEventListener('studio-lang-change', () => {
     renderDynamicParams();

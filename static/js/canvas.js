@@ -4,24 +4,12 @@ function tr(key){ return window.StudioI18n ? StudioI18n.t(key) : key; }
 function trf(key, values={}){
     return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), tr(key));
 }
-function langIsEn(){ return window.StudioI18n?.lang?.() === 'en'; }
 function actionFailed(labelKey, detail=''){
     const label = tr(labelKey);
-    return langIsEn() ? `${label} failed${detail ? `: ${detail}` : ''}` : `${label}失败${detail ? `：${detail}` : ''}`;
+    return `${label}失败${detail ? `：${detail}` : ''}`;
 }
-function noReturnedImage(labelKey){ return langIsEn() ? `${tr(labelKey)} failed: no image returned` : `${tr(labelKey)}失败：未返回图片`; }
-function applyLanguage(lang){
-    if(lang && window.StudioI18n) StudioI18n.set(lang);
-    document.title = tr('canvas.title');
-    refreshGateViewControls();
-    if(canvas) {
-        currentCanvasTitle.textContent = canvas?.title || tr('canvas.untitled');
-    }
-    renderCanvasList();
-    render();
-}
+function noReturnedImage(labelKey){ return `${tr(labelKey)}失败：未返回图片`; }
 window.addEventListener('message', event => {
-    if(event.data?.type === 'studio-lang') applyLanguage(event.data.lang);
     if(event.data?.type === 'canvas_updated') handleCanvasUpdatedMessage(event.data);
     if(event.data?.type === 'canvas-focus'){
         // 从其他标签页切换回画布时，重新拉取工作流列表并刷新节点
@@ -666,7 +654,7 @@ function formatCanvasTime(value){
     const time = raw < 10000000000 ? raw * 1000 : raw;
     const date = new Date(time);
     if(Number.isNaN(date.getTime())) return '--';
-    return date.toLocaleString(window.StudioI18n?.lang() === 'en' ? 'en-US' : 'zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return date.toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 }
 function setStatus(text){
     document.getElementById('saveState').textContent = text;
@@ -1131,7 +1119,7 @@ async function createCanvas(){
     const customTitle = gateTitleInput?.value.trim();
     const isSmart = createCanvasKind === 'smart';
     const titleBase = isSmart ? tr('canvas.newSmartCanvas') : tr('canvas.newCanvas');
-    const title = customTitle || `${titleBase} ${new Date().toLocaleTimeString(window.StudioI18n?.lang() === 'en' ? 'en-US' : 'zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
+    const title = customTitle || `${titleBase} ${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
     trashMode = false;
     refreshGateViewControls();
     setStatus('Creating...');
@@ -3573,7 +3561,7 @@ function renderNode(node){
     if(node.type === 'image') {
         if(node.url) {
             const missing = isMissingAssetUrl(node.url);
-            body.innerHTML = `<div class="image-preview-wrap">${missing ? missingAssetHtml(node.url) : `<img src="${escapeAttr(node.url)}" draggable="false">`}</div><div class="image-caption text-[11px] text-gray-400 truncate">${escapeHtml(node.name || 'image')}${missing ? ` · ${langIsEn() ? 'missing' : '文件缺失'}` : ''}</div>`;
+            body.innerHTML = `<div class="image-preview-wrap">${missing ? missingAssetHtml(node.url) : `<img src="${escapeAttr(node.url)}" draggable="false">`}</div><div class="image-caption text-[11px] text-gray-400 truncate">${escapeHtml(node.name || 'image')}${missing ? ` · 文件缺失` : ''}</div>`;
             const previewWrap = body.querySelector('.image-preview-wrap');
             const loadedImg = body.querySelector('img');
             const openEditor = e => {
@@ -4341,7 +4329,7 @@ function renderLLMNodePane(container, node){
     const inputValue = connectedInput || node.userInput || '';
     const inputHeight = Math.max(70, node.llmInputHeight || 110);
     const outputHeight = Math.max(70, node.llmOutputHeight || 150);
-    const inputPlaceholder = langIsEn() ? 'Type input, or connect a Prompt node…' : '直接输入，或连接提示词节点…';
+    const inputPlaceholder = '直接输入，或连接提示词节点…';
     container.innerHTML = `
         <div class="llm-pane-label">Input${isReadonly ? ' <span style="font-size:9px;opacity:.5;font-weight:600;text-transform:none;letter-spacing:0">(来自连接)</span>' : ''}</div>
         <textarea class="llm-input-area llm-input-output" style="height:${inputHeight}px; flex:0 0 ${inputHeight}px;" ${isReadonly ? 'readonly' : ''} placeholder="${inputPlaceholder}">${escapeHtml(inputValue)}</textarea>
@@ -5653,25 +5641,25 @@ async function runVideoNode(nodeId, opts={}){
 }
 async function uploadCanvasUrlToComfy(url){
     const blob = await fetch(url).then(r => {
-        if(!r.ok) throw new Error(langIsEn() ? 'Image read failed' : '图片读取失败');
+        if(!r.ok) throw new Error('图片读取失败');
         return r.blob();
     });
     const filename = (url || '').split('/').pop()?.split('?')[0] || `canvas_${Date.now()}.png`;
     const form = new FormData();
     form.append('files', blob, filename);
     const data = await fetch('/api/upload', {method:'POST', body:form}).then(async r => {
-        if(!r.ok) throw new Error(await responseErrorMessage(r, langIsEn() ? 'Image upload to ComfyUI failed' : '图片上传到 ComfyUI 失败'));
+        if(!r.ok) throw new Error(await responseErrorMessage(r, '图片上传到 ComfyUI 失败'));
         return r.json();
     });
     return data.files?.[0]?.comfy_name || filename;
 }
 async function comfyNameForRef(ref){
     if(ref.comfy_name) return ref.comfy_name;
-    if(!ref.url) throw new Error(langIsEn() ? 'Missing input image' : '缺少输入图片');
+    if(!ref.url) throw new Error('缺少输入图片');
     return uploadCanvasUrlToComfy(ref.url);
 }
 async function runComfyUpscale(imageUrl, resolution){
-    if(!imageUrl) throw new Error(actionFailed('studio.superResolution', langIsEn() ? 'missing input image' : '缺少输入图片'));
+    if(!imageUrl) throw new Error(actionFailed('studio.superResolution', '缺少输入图片'));
     const nextInput = await uploadCanvasUrlToComfy(imageUrl);
     const upscale = await fetch('/api/generate', {
         method:'POST',
@@ -6392,7 +6380,7 @@ function isMissingAssetUrl(url){
     return Boolean(url && missingAssetUrls.has(url));
 }
 function missingAssetHtml(url, compact=false){
-    return `<div class="missing-asset ${compact ? 'compact' : ''}" title="${escapeAttr(url || '')}"><i data-lucide="image-off" class="${compact ? 'w-4 h-4' : 'w-6 h-6'}"></i><span>${langIsEn() ? 'Missing file' : '文件缺失'}</span></div>`;
+    return `<div class="missing-asset ${compact ? 'compact' : ''}" title="${escapeAttr(url || '')}"><i data-lucide="image-off" class="${compact ? 'w-4 h-4' : 'w-6 h-6'}"></i><span>文件缺失</span></div>`;
 }
 function outputMetaFor(url, out){
     const item = (out?.images || []).find(x => outputUrlValue(x) === url);
@@ -6492,7 +6480,7 @@ function renderCanvasLog(){
             if(isMissingAssetUrl(url)) return `<div class="missing-asset compact" data-url="${safe}"><i data-lucide="image-off" class="w-4 h-4"></i></div>`;
             return isVideoUrl(url) ? `<video src="${safe}" data-url="${safe}" muted playsinline></video>` : `<img src="${safe}" data-url="${safe}" alt="output">`;
         }).join('') || '<div class="log-thumb-placeholder"><i data-lucide="image-off" class="w-5 h-5"></i></div>';
-        const date = new Date(log.createdAt || Date.now()).toLocaleString(window.StudioI18n?.lang() === 'en' ? 'en-US' : 'zh-CN');
+        const date = new Date(log.createdAt || Date.now()).toLocaleString('zh-CN');
         const req = log.request || {};
         const taskId = req.task_id || req.taskId || req.prompt_id || req.promptId || '';
         const requestId = req.request_id || req.requestId || req.id || '';
@@ -6503,7 +6491,7 @@ function renderCanvasLog(){
         const backendText = workflow || backend || '';
         const subParts = [
             date,
-            `${langIsEn() ? 'outputs' : '输出'} ${(log.outputs || []).length}`,
+            `输出 ${(log.outputs || []).length}`,
             idText ? `ID ${idText}` : '',
             backendText,
         ].filter(Boolean);

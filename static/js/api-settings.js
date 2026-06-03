@@ -2592,11 +2592,6 @@ function escapeHtml(str){
 function escapeAttr(str){ return escapeHtml(str).replace(/`/g, '&#96;'); }
 window.addEventListener('message', event => {
     if(event.data?.type === 'studio-theme' && window.StudioTheme) window.StudioTheme.set(event.data.theme);
-    if(event.data?.type === 'studio-lang' && window.StudioI18n) {
-        window.StudioI18n.set(event.data.lang);
-        if(recommendInlineOpen) renderRecommendApi();
-        else renderEditor();
-    }
 });
 rhWorkflowEditorOverlay?.addEventListener('mousedown', event => {
     if(event.target === rhWorkflowEditorOverlay) closeRhWorkflowEditor();
