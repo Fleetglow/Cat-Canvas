@@ -1,5 +1,5 @@
 Start-Sleep -Seconds 1
-Start-Process "http://127.0.0.1:3000/"
+Start-Process "http://127.0.0.1:4796/"
 Start-Sleep -Milliseconds 800
 
 $member = '[DllImport("user32.dll")] public static extern System.IntPtr FindWindow(string lpClassName, string lpWindowName); [DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);'
