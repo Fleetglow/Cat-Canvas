@@ -16,12 +16,22 @@
             } catch(e) {}
         })();
     </script>
+    <script>
+        (function(){
+            try {
+                if(localStorage.getItem('canvas_last_id')){
+                    document.documentElement.classList.add('canvas-booting');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.06.03"></script>
     <script src="/static/vendor/js/lucide.js?v=2026.06.03"></script>
     <script src="/static/js/theme.js?v=2026.06.03"></script>
     <script src="/static/js/i18n.js?v=2026.06.03"></script>
     <link rel="stylesheet" href="/static/css/canvas.css?v=2026.06.03">
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.06.03">
+    <style>html.canvas-booting .canvas-gate{visibility:hidden!important}</style>
 </head>
 <body>
     <div id="shell" class="shell no-canvas">

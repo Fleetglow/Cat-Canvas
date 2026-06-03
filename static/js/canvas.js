@@ -8795,7 +8795,8 @@ window.onload = async () => {
         const exists = canvases.some(c => String(c.id) === String(lastId));
         if(exists) await openCanvas(lastId);
         else setCanvasMode(false);
-    } else {
+    } else if(!canvas) {
         setCanvasMode(false);
     }
+    document.documentElement.classList.remove('canvas-booting');
 };

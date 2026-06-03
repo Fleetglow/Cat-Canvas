@@ -17,7 +17,7 @@ echo Visit: http://127.0.0.1:4796/
 echo Press Ctrl+C to stop.
 echo.
 
-title Infinite Canvas Server [CMD]
+title Cat Canvas Server [CMD]
 
 start /b powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0minimize_window.ps1"
 
