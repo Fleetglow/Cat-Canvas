@@ -1,7 +1,8 @@
 :root { --bg:#f7f8fa; --panel:#fff; --soft:#f1f4f8; --line:#e8ecf2; --line-strong:#dbe1ea; --text:#0f172a; --muted:#64748b; --faint:#94a3b8; --accent:#0f172a; }
 body.studio-theme-dark, html.studio-theme-dark body { --bg:#0e1014; --panel:#1c1e26; --soft:#272a33; --line:#323540; --line-strong:#3f424d; --text:#e8e8ea; --muted:#a4adbf; --faint:#7a8497; --accent:#f5f6f8; }
 * { box-sizing:border-box; }
-body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+html { min-height:100%; overflow-y:auto; overscroll-behavior:auto; }
+body { margin:0; min-height:100vh; overflow-y:auto; background:var(--bg); color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
 button { font-family:inherit; cursor:pointer; border:0; background:transparent; color:inherit; }
 .page { min-height:100vh; padding:32px 24px 80px; }
 .wrap { max-width:1280px; margin:0 auto; }
@@ -10,7 +11,7 @@ button { font-family:inherit; cursor:pointer; border:0; background:transparent; 
 .page-head .sub { margin-top:8px; color:var(--muted); font-size:12.5px; line-height:1.55; font-weight:600; max-width:520px; }
 .page-head .status { color:var(--muted); font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; min-height:16px; }
 .layout { display:grid; grid-template-columns:340px minmax(0,1fr); gap:18px; align-items:start; }
-/* Left sidebar — workflow list + preview combined */
+/* Left sidebar - workflow list + preview combined */
 .sidebar { position:sticky; top:24px; display:flex; flex-direction:column; gap:16px; max-height:calc(100vh - 80px); overflow:auto; }
 .side-card { padding:14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; gap:10px; }
 .side-title { color:var(--faint); font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; padding:0 2px; }
@@ -67,7 +68,7 @@ body.studio-theme-dark .action-btn.danger-btn:hover { background:rgba(127,29,29,
 .gnode.has-exposed .gn-title { fill:var(--text); }
 .gbadge { font-size:8px; font-weight:900; fill:#b45309; pointer-events:none; }
 body.studio-theme-dark .gbadge { fill:#fbbf24; }
-/* 节点分类色（极淡，仅作分组提示） */
+/* Node category colors */
 .gnode.cat-prompt    rect { fill:#fef9e7; stroke:#eab308; }
 .gnode.cat-loader    rect { fill:#eff6ff; stroke:#3b82f6; }
 .gnode.cat-lora      rect { fill:#fef3c7; stroke:#f59e0b; }
@@ -84,7 +85,7 @@ body.studio-theme-dark .gnode.cat-image     rect { fill:#0f3825; stroke:#34d399;
 body.studio-theme-dark .gnode.cat-output    rect { fill:#2a2d35; stroke:#9ca3af; }
 body.studio-theme-dark .gnode.cat-latent    rect { fill:#3a1d2c; stroke:#f472b6; }
 body.studio-theme-dark .gnode.cat-controlnet rect { fill:#3a2410; stroke:#fb923c; }
-/* 浮窗参数编辑面板 */
+/* Node popup editor */
 .popup-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.35); border-radius:10px; z-index:5; }
 body.studio-theme-dark .popup-backdrop { background:rgba(0,0,0,.5); }
 .popup-panel { position:absolute; width:380px; max-height:70vh; background:var(--panel); border:1px solid var(--line-strong); border-radius:14px; box-shadow:0 24px 60px rgba(15,23,42,.22); z-index:10; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:contain; }
@@ -101,7 +102,7 @@ body.studio-theme-dark .popup-panel { box-shadow:0 24px 60px rgba(0,0,0,.5); }
 .popup-body .input-row .small-select { grid-column:1/-1; margin-top:6px; }
 .popup-body .input-row .small-select { margin-top:4px; }
 .popup-empty { padding:24px; text-align:center; color:var(--faint); font-size:11px; font-weight:700; }
-/* 节点列表切换 */
+/* Node list toggle */
 .nodes-toggle { display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; background:var(--soft); border:1px dashed var(--line-strong); border-radius:12px; color:var(--muted); font-size:11.5px; font-weight:800; cursor:pointer; transition:all .15s ease; }
 .nodes-toggle:hover { color:var(--text); border-color:var(--faint); }
 .node-list.hidden { display:none; }

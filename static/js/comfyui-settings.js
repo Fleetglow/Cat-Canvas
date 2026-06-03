@@ -1385,6 +1385,15 @@ async function onDelete(){
 window.addEventListener('message', event => {
     if(event.data?.type === 'studio-theme' && window.StudioTheme) window.StudioTheme.set(event.data.theme);
     if(event.data?.type === 'studio-lang' && window.StudioI18n) window.StudioI18n.set(event.data.lang);
+    if(event.data?.type === 'studio-page-blur') {
+        panState = null;
+        miniDrag = null;
+        document.querySelector('.graph-svg-wrap')?.classList.remove('is-panning');
+        document.getElementById('miniCanvas')?.classList.remove('is-panning');
+        if(document.activeElement && document.activeElement !== document.body) {
+            try { document.activeElement.blur(); } catch(e) {}
+        }
+    }
 });
 window.addEventListener('studio-lang-change', refreshLanguageView);
 
