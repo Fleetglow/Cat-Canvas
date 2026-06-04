@@ -1,20 +1,24 @@
 # 更新日志
 
-## 2026-05-30
+## 2026-06-03
 
 ### ✨ 新增功能
 
+* **默认打开无限画布**：打开应用时默认显示"无限画布"页面，而非"文生图"；修复画布恢复的竞态条件（canvas-focus 消息与 init 序列并发时恢复的画布被意外关闭）
 * **记住上次画布**：每次打开画布时记录到 localStorage，切换回无限画布页面时自动恢复上次打开的画布
 * **侧边栏状态记忆**：收起/展开状态保存到 localStorage，下次访问时恢复
 
 ### 🎨 优化
 
+* **画布启动体验**：恢复上次画布时隐藏"选择画布"页面，避免先闪一下再跳转；页面标题改为 Cat Canvas，CMD 窗口标题同步更新
+* **侧边栏间距**：导航图标间距从 10px 调整为 4px，侧边栏 padding 从 40px 调整为 30px（上）/ 10px（下）
 * **侧边栏重构**：移除鼠标悬停自动展开/收起的交互，改为手动收起/展开按钮（单箭头图标），展开时显示"收起"，收起时显示"展开"
 * **侧边栏 tooltip**：所有按钮在收起状态下添加 tooltip 提示，鼠标悬停时从右侧弹出
 * **侧边栏 logo 尺寸**：从 28px 调整为 40px
 * **导航顺序调整**：将无限画布/在线生图/GPT 对话移到折叠区上方
 * **支持弹窗**：替换原来的"项目主页"按钮和原作者社交媒体区域，改为统一的"支持"弹窗，包含改作者和原作者的 GitHub 及社交媒体链接
-* **切换延迟消除**：移除所有 `transition-delay`，侧边栏切换现在即时响应
+* **切换延迟消除**：移除所有 transition-delay，侧边栏切换现在即时响应
+* **项目体积瘦身**：从 git 移除 python/ 目录（715 个文件，-232,709 行），添加到 .gitignore
 
 ### 🌐 国际化
 
@@ -29,29 +33,29 @@
 
 * **画布恢复逻辑**：修复只在页面首次加载时尝试恢复画布的问题，现在从其他页面切换回无限画布时也会自动恢复
 
----
+
 
 ## 2026-05-29
 
 ### ✨ 新增功能
 
-* **自动备份**：每次画布保存时自动备份到 `data/canvas\\\_backups/`，保留最近 3 个版本；新增还原 API（`/api/canvas-backups/{id}`）
-* **备份还原 API**：`GET /api/canvas-backups/{id}` 列出备份，`POST /api/canvas-backups/{id}/restore` 从备份还原
+* **自动备份**：每次画布保存时自动备份到 data/canvas_backups/，保留最近 3 个版本；新增还原 API（/api/canvas-backups/{id}）
+* **备份还原 API**：GET /api/canvas-backups/{id} 列出备份，POST /api/canvas-backups/{id}/restore 从备份还原
 * **run.bat 窗口最小化**：启动服务器并打开浏览器后，CMD 窗口自动最小化（通过 Win32 API 实现）
 
 ### 🎨 优化
 
-* **创建菜单按钮样式**：为 `.menu-btn-rich` 和 `.menu-btn-text` 添加样式定义，修复文字挤在一起的问题
-* **i18n 翻译强制刷新**：bump `i18n.js` VERSION，确保浏览器重新拉取翻译文件
+* **创建菜单按钮样式**：为 .menu-btn-rich 和 .menu-btn-text 添加样式定义，修复文字挤在一起的问题
+* **i18n 翻译强制刷新**：bump i18n.js VERSION，确保浏览器重新拉取翻译文件
 
 ### 🐛 修复
 
-* **创建菜单"图片卡片"文字被 i18n 覆盖**：上游将按钮文字改为"多功能"，修复 i18n 翻译文件 `canvas.imageCard` 的值，改回"图片卡片"
-* **`.gitignore` 中文文件名不匹配**：修正为实际文件名 `说明.png`
-* **图片预览比例显示**：修复从日志打开时 `meta.run.node` 为空导致无法获取宽高的问题；增加从实际图片尺寸推断比例的功能
-* **"再次运行"按钮不显示**：修复 `hasRunData` 判断过于严格，兼容日志中有 `model` 信息但无 `nodeType` 的情况
+* **创建菜单"图片卡片"文字被 i18n 覆盖**：上游将按钮文字改为"多功能"，修复 i18n 翻译文件 canvas.imageCard 的值，改回"图片卡片"
+* **.gitignore 中文文件名不匹配**：修正为实际文件名 说明.png
+* **图片预览比例显示**：修复从日志打开时 meta.run.node 为空导致无法获取宽高的问题；增加从实际图片尺寸推断比例的功能
+* **"再次运行"按钮不显示**：修复 hasRunData 判断过于严格，兼容日志中有 model 信息但无 nodeType 的情况
 
-\---
+
 
 ## 2026-05-28
 
@@ -69,9 +73,9 @@
 
 * **图片预览弹窗尺寸参数**：即使生成参数中无尺寸信息，也始终显示实际图片尺寸
 * **ESC 键层级逻辑**：修复按一次 ESC 关闭所有弹窗的问题，改为先关闭图片预览弹窗，再按一次才关闭其他弹窗
-* **i18n 缓存导致翻译缺失**：更新 `i18n.js` 版本号强制刷新
+* **i18n 缓存导致翻译缺失**：更新 i18n.js 版本号强制刷新
 
-\---
+
 
 ## 2026-05-27
 
@@ -82,9 +86,9 @@
   * LTX Director 节点：新增 LTX Director 节点，配套时间线编辑器
   * 视频输入支持：Loop 节点支持视频输入
   * API 新手引导：推荐 API 新手引导界面
-* **Bundled Python 升级到 3.14**：`python/` 目录更新为 Python 3.14 embed 版本，更新 `run.bat` 优先使用本地 `python/` 目录
+* **Bundled Python 升级到 3.14**：python/ 目录更新为 Python 3.14 embed 版本，更新 run.bat 优先使用本地 python/ 目录
 
-\---
+
 
 ## 2026-05-26
 
@@ -94,14 +98,14 @@
 
 ### 🎨 优化
 
-* **Lightbox 预览铺满全屏**：`.output-lightbox` padding 20px→0；`.output-lightbox-shell` 宽高改为 100vw/100vh，border-radius 改为 0，去掉 box-shadow
+* **Lightbox 预览铺满全屏**：.output-lightbox padding 20px -> 0；.output-lightbox-shell 宽高改为 100vw/100vh，border-radius 改为 0，去掉 box-shadow
 
 ### 🐛 修复
 
-* **Lightbox 预览缺失生图耗时**：`setupLightboxInfoPanel` 中耗时只读取 `meta?.runMs`，从日志打开时 `log.runMs` 未被使用，修复为 `(meta?.runMs || log?.runMs)`
-* **日志预览键盘导航失效**：`outputLightboxItems()` 在日志模式下只返回当前日志条目的 `outputs`，导致只有一张图片时键盘导航完全失效；修复为返回所有日志记录的 `outputs`，确保可以在所有日志记录间切换
+* **Lightbox 预览缺失生图耗时**：setupLightboxInfoPanel 中耗时只读取 meta?.runMs，从日志打开时 log.runMs 未被使用，修复为 (meta?.runMs || log?.runMs)
+* **日志预览键盘导航失效**：outputLightboxItems() 在日志模式下只返回当前日志条目的 outputs，导致只有一张图片时键盘导航完全失效；修复为返回所有日志记录的 outputs，确保可以在所有日志记录间切换
 
-\---
+
 
 ## 2026-05-25
 
@@ -109,41 +113,41 @@
 
 * **日志面板网格视图**：删除列表视图，只保留网格视图；缩略图改为 16:9 比例；一行展示 5 条记录；复选框移至缩略图右上角
 * **批量下载打包**：批量下载改为调用后端接口，所有文件打包为单个 zip 一次性下载
-* **RunningHub 静态配置支持**：支持从 `static/runninghub/api\\\_providers.json` 加载系统级 RunningHub 配置，支持 `hidden` 标记隐藏预设工作流/App
+* **RunningHub 静态配置支持**：支持从 static/runninghub/api_providers.json 加载系统级 RunningHub 配置，支持 hidden 标记隐藏预设工作流/App
 * **LTX Director 节点**：新增 LTX Director 节点，配套时间线编辑器
-* **本地图片批量导入**：新增本地图片批量导入接口（`LocalImageImportRequest`）
-* **上传接口本地回退**：ComfyUI 不可用时，`/api/upload` 自动将文件保存到本地 `assets/input/` 目录
+* **本地图片批量导入**：新增本地图片批量导入接口（LocalImageImportRequest）
+* **上传接口本地回退**：ComfyUI 不可用时，/api/upload 自动将文件保存到本地 assets/input/ 目录
 
 ### 🎨 优化
 
-* **API 设置页**：`.wrap` 最大宽度 1100→1200px；`.layout` gap 36→16px；侧边栏宽度 260→280px
+* **API 设置页**：.wrap 最大宽度 1100 -> 1200px；.layout gap 36 -> 16px；侧边栏宽度 260 -> 280px
 * **日志面板批量按钮**：从右上角图标改为左侧文字按钮；新增"删除失败记录"按钮
 * **复制保持连线设置项**：在画布设置面板添加开关，默认开启，可在设置中切换
-* **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 `hidden` 标记移除预设项
+* **RunningHub 配置合并**：系统配置与用户配置智能合并，支持 hidden 标记移除预设项
 * **日志面板选中状态**：选中状态加强（边框加粗 + box-shadow 发光效果）
-* **合并上游更新**：保留拖拽排序（`sort\\\_order` 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
+* **合并上游更新**：保留拖拽排序（sort_order 字段），合入 RunningHub 静态配置、LTX Director、本地图片导入等新功能
 
 ### 🐛 修复
 
-* **输出节点图片拖拽预览过大**：`setOutputDragPreview` 克隆图片未限制尺寸，ghost 图像按原图大小显示，改为 `max-width:200px; max-height:200px`
-* **输出节点图片无法拖动**：修复日志面板 CSS `\\\[data-url] { -webkit-user-drag:none }` 选择器范围过大，影响输出节点图片拖拽，改为限定在 `.log-item` 和 `.log-thumbs` 内
-* **API 设置页拖拽排序**：修复 `toIndex` 为 `const` 导致 `TypeError`；修复 `splice` 后索引偏移；修复 `window.justDragged` 永远为 `undefined`；修复后端 `ApiProviderPayload` 缺少 `sort\\\_order` 字段；修复 `normalize\\\_provider` 返回值缺少 `sort\\\_order`
-* **日志网格视图缩略图消失**：修复 `.log-item` 两条 CSS 规则互相覆盖（`display:grid` 覆盖 `display:flex`），导致缩略图区域宽度为 0
-* **缩略图不显示**：修复 CSS 缺少 `display:block`，导致图片为 inline 元素，`aspect-ratio:16/9` 高度为 0
+* **输出节点图片拖拽预览过大**：setOutputDragPreview 克隆图片未限制尺寸，ghost 图像按原图大小显示，改为 max-width:200px; max-height:200px
+* **输出节点图片无法拖动**：修复日志面板 CSS [data-url] { -webkit-user-drag:none } 选择器范围过大，影响输出节点图片拖拽，改为限定在 .log-item 和 .log-thumbs 内
+* **API 设置页拖拽排序**：修复 toIndex 为 const 导致 TypeError；修复 splice 后索引偏移；修复 window.justDragged 永远为 undefined；修复后端 ApiProviderPayload 缺少 sort_order 字段；修复 normalize_provider 返回值缺少 sort_order
+* **日志网格视图缩略图消失**：修复 .log-item 两条 CSS 规则互相覆盖（display:grid 覆盖 display:flex），导致缩略图区域宽度为 0
+* **缩略图不显示**：修复 CSS 缺少 display:block，导致图片为 inline 元素，aspect-ratio:16/9 高度为 0
 * **Ctrl+框选逻辑错误**：修复 Ctrl+框选时会错误选中未选中项，改为 Ctrl 时只取消已选中项，不选中未选中项
 * **批量模式图片点击**：修复进入批量模式后点击图片仍打开灯箱，改为选中整行
-* **批量模式框选无法从缩略图区域开始**：修复 `onDown` 拦截了 `.log-item` 内的 mousedown，改为只排除 checkbox 和删除按钮
-* **图片默认拖拽行为**：修复批量模式下在图片上拖动会触发浏览器图片拖拽，彻底禁止图片默认拖拽行为（`-webkit-user-drag:none` + `draggable="false"`）
-* **批量模式文字选中**：修复框选时会选中文字，添加 `user-select:none`
-* **复选框位置错误**：删除重复的 `.log-select-cb` CSS 规则，确保 `position:absolute` 生效
+* **批量模式框选无法从缩略图区域开始**：修复 onDown 拦截了 .log-item 内的 mousedown，改为只排除 checkbox 和删除按钮
+* **图片默认拖拽行为**：修复批量模式下在图片上拖动会触发浏览器图片拖拽，彻底禁止图片默认拖拽行为（-webkit-user-drag:none + draggable="false"）
+* **批量模式文字选中**：修复框选时会选中文字，添加 user-select:none
+* **复选框位置错误**：删除重复的 .log-select-cb CSS 规则，确保 position:absolute 生效
 * **画布底部提示文字**：删除画布底部操作提示文字
-* **`.stage` 样式被上游覆盖**：恢复 `margin:0; border-radius:0`
-* **`api-settings.css` 被上游覆盖**：恢复 wrap 1200px、layout gap 16px、侧边栏 280px、拖拽样式 `.drag-over`/`.dragging`
+* **.stage 样式被上游覆盖**：恢复 margin:0; border-radius:0
+* **api-settings.css 被上游覆盖**：恢复 wrap 1200px、layout gap 16px、侧边栏 280px、拖拽样式 .drag-over/.dragging
 
 ### ⚡ 性能
 
 * F 键聚焦选中节点功能上线
 * Alt+滚轮新增为画布缩放触发方式（与 Ctrl+滚轮并列）
 
-\---
+
 

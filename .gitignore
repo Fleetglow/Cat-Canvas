@@ -8,8 +8,7 @@ data/
 API/.env
 data/api_providers.json
 
-# Python 运行时（体积大，可重新安装）
-python/
+# Python 缓存
 __pycache__/
 *.pyc
 *.pyo

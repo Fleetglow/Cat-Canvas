@@ -1,17 +1,18 @@
-﻿@echo off
+@echo off
 cd /d "%~dp0"
 
-set "PYEXE=%~dp0python\python.exe"
-if not exist "%PYEXE%" (
-    for %%v in (314 313 312 1) do (
-        if not defined PYEXE (
-            where python%%v >nul 2>&1 && set "PYEXE=python%%v"
-        )
-    )
-    if not defined PYEXE set "PYEXE=python"
-)
+REM Detect Python: system first, bundled fallback
+set "PYEXE="
+if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" set "PYEXE=%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
+if not defined PYEXE if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" set "PYEXE=%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+if not defined PYEXE if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set "PYEXE=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+if not defined PYEXE where python314 >nul 2>&1 && set "PYEXE=python314"
+if not defined PYEXE where python313 >nul 2>&1 && set "PYEXE=python313"
+if not defined PYEXE where python312 >nul 2>&1 && set "PYEXE=python312"
+if not defined PYEXE where python >nul 2>&1 && set "PYEXE=python"
+if not defined PYEXE if exist "%~dp0python\python.exe" set "PYEXE=%~dp0python\python.exe"
 
-echo Starting ComfyUI-API-Modelscope...
+echo Starting Cat Canvas...
 echo Using Python: %PYEXE%
 echo Visit: http://127.0.0.1:4796/
 echo Press Ctrl+C to stop.
