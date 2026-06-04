@@ -1108,68 +1108,6 @@ def static_html_response(filename: str):
         headers={"Cache-Control": "no-cache"},
     )
 
-STATIC_PROMPT_TEMPLATE_MD = os.path.join(STATIC_DIR, "system-prompts", "infinite-canvas-prompt-templates.md")
-LEGACY_PROMPT_TEMPLATE_MD = os.path.join(BASE_DIR, "功能点", "无限画布_预设提示词标准库_v2.0.md")
-PROMPT_TEMPLATE_PATHS = [STATIC_PROMPT_TEMPLATE_MD, LEGACY_PROMPT_TEMPLATE_MD]
-
-def prompt_template_markdown_path() -> str:
-    for path in PROMPT_TEMPLATE_PATHS:
-        if os.path.exists(path):
-            return path
-    return ""
-
-def prompt_template_category(name: str, scene: str) -> str:
-    text = f"{name} {scene}"
-    if any(k in text for k in ["光影", "灯光", "光效", "电影级"]):
-        return "lighting"
-    if any(k in text for k in ["角色", "脸部", "表情", "Actor", "服装"]):
-        return "character"
-    if any(k in name for k in ["产品", "电商", "工业"]):
-        return "product"
-    return "storyboard"
-
-def extract_prompt_template_section(block: str, title: str) -> str:
-    pattern = rf"###\s*{re.escape(title)}\s*\n(?P<body>.*?)(?=\n###\s+|\Z)"
-    match = re.search(pattern, block, re.S)
-    if not match:
-        return ""
-    body = match.group("body").strip()
-    fence = re.search(r"```(?:\w+)?\s*\n(?P<code>.*?)\n```", body, re.S)
-    return (fence.group("code") if fence else body).strip()
-
-def parse_prompt_template_markdown(text: str):
-    templates = []
-    matches = list(re.finditer(r"^##\s*预设\s*(\d+)\s*[：:]\s*(.+?)\s*$", text, re.M))
-    for index, match in enumerate(matches):
-        number = match.group(1).strip()
-        name = match.group(2).strip()
-        start = match.end()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        block = text[start:end]
-        scene = extract_prompt_template_section(block, "适用场景")
-        positive = extract_prompt_template_section(block, "正向提示词")
-        negative = extract_prompt_template_section(block, "负向提示词")
-        params_raw = extract_prompt_template_section(block, "平台参数建议")
-        params = {}
-        for line in params_raw.splitlines():
-            item = re.match(r"[-*]\s*\*\*(.+?)\*\*\s*[：:]\s*(.+)", line.strip())
-            if item:
-                params[item.group(1).strip()] = item.group(2).strip()
-        if not positive:
-            continue
-        templates.append({
-            "id": f"builtin_md_{number}",
-            "number": number,
-            "name": name,
-            "category": prompt_template_category(name, scene),
-            "scene": scene,
-            "positive": positive,
-            "negative": negative,
-            "params": params,
-            "builtin": True,
-        })
-    return templates
-
 @app.get("/api/app-info")
 def app_info():
     version = current_app_version()
@@ -1792,16 +1730,6 @@ class CanvasAssetDownloadRequest(BaseModel):
     items: List[Dict[str, Any]] = []
     filename: str = "canvas-output-images.zip"
 
-class SmartCanvasGroupExportItem(BaseModel):
-    kind: str = ""
-    url: str = ""
-    text: str = ""
-    name: str = ""
-
-class SmartCanvasGroupExportRequest(BaseModel):
-    folder: str = ""
-    group_name: str = "group"
-    items: List[SmartCanvasGroupExportItem] = []
 
 class LocalImageImportRequest(BaseModel):
     path: str = ""
@@ -2171,15 +2099,15 @@ def save_canvas(canvas):
             json.dump(canvas, f, ensure_ascii=False, indent=2)
 
 def normalize_canvas_kind(kind="classic"):
-    return "smart" if str(kind or "").strip().lower() == "smart" else "classic"
+    return "classic"
 
-def new_canvas(title="未命名画布", icon="layers", kind="classic"):
+def new_canvas(title="未命名画布", icon="🧩", kind="classic"):
     timestamp = now_ms()
     canvas_kind = normalize_canvas_kind(kind)
     canvas = {
         "id": uuid.uuid4().hex,
-        "title": (title or ("智能画布" if canvas_kind == "smart" else "未命名画布"))[:80],
-        "icon": (icon or ("sparkles" if canvas_kind == "smart" else "🧩"))[:32],
+        "title": (title or "未命名画布")[:80],
+        "icon": (icon or "🧩")[:32],
         "kind": canvas_kind,
         "created_at": timestamp,
         "updated_at": timestamp,
@@ -5641,19 +5569,6 @@ async def get_canvas_meta(canvas_id: str):
 async def get_canvas(canvas_id: str):
     return {"canvas": load_canvas(canvas_id)}
 
-@app.get("/api/smart-canvas/prompt-templates")
-async def smart_canvas_prompt_templates():
-    try:
-        template_path = prompt_template_markdown_path()
-        if not template_path:
-            return {"templates": []}
-        with open(template_path, "r", encoding="utf-8") as f:
-            text = f.read()
-        return {"templates": parse_prompt_template_markdown(text), "source": os.path.relpath(template_path, BASE_DIR).replace("\\", "/")}
-    except Exception as e:
-        print(f"读取提示词模板失败: {e}")
-        return {"templates": []}
-
 @app.post("/api/canvas-assets/check")
 async def check_canvas_assets(payload: CanvasAssetCheckRequest):
     result = {}
@@ -5728,65 +5643,6 @@ def sanitize_export_filename(name: str, fallback: str) -> str:
     base = os.path.basename(str(name or "").strip()) or fallback
     base = re.sub(r'[\\/:*?"<>|]+', "_", base)
     return base or fallback
-
-def smart_group_export_folder(folder: str, group_name: str) -> str:
-    text = str(folder or "").strip()
-    if text:
-        path = os.path.abspath(os.path.expanduser(text))
-    else:
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        safe_group = sanitize_export_filename(group_name or "group", "group")
-        path = os.path.abspath(os.path.join(OUTPUT_DIR, "smart-groups", f"{safe_group}-{stamp}"))
-    os.makedirs(path, exist_ok=True)
-    return path
-
-@app.post("/api/smart-canvas/group-export")
-async def export_smart_canvas_group(payload: SmartCanvasGroupExportRequest):
-    target_dir = smart_group_export_folder(payload.folder, payload.group_name)
-    used_names = set()
-    count = 0
-    text_index = 1
-    for item in payload.items[:2000]:
-        kind = str(item.kind or "").lower()
-        if kind == "text":
-            text = str(item.text or "")
-            if not text.strip():
-                continue
-            base = sanitize_export_filename(item.name or f"{text_index}.txt", f"{text_index}.txt")
-            if not base.lower().endswith(".txt"):
-                base += ".txt"
-            text_index += 1
-            name, ext = os.path.splitext(base)
-            out_name = base
-            suffix = 2
-            while out_name in used_names:
-                out_name = f"{name}-{suffix}{ext}"
-                suffix += 1
-            used_names.add(out_name)
-            with open(os.path.join(target_dir, out_name), "w", encoding="utf-8") as f:
-                f.write(text)
-            count += 1
-            continue
-        src = output_file_from_url(item.url)
-        if not src or not os.path.isfile(src):
-            continue
-        base = sanitize_export_filename(item.name or os.path.basename(src), os.path.basename(src) or f"asset-{count + 1}")
-        name, ext = os.path.splitext(base)
-        if not ext:
-            _, src_ext = os.path.splitext(src)
-            ext = src_ext or ".bin"
-            base = name + ext
-        out_name = base
-        suffix = 2
-        while out_name in used_names:
-            out_name = f"{name}-{suffix}{ext}"
-            suffix += 1
-        used_names.add(out_name)
-        shutil.copy2(src, os.path.join(target_dir, out_name))
-        count += 1
-    if count <= 0:
-        raise HTTPException(status_code=404, detail="没有可导出的内容")
-    return {"ok": True, "folder": target_dir, "count": count}
 
 @app.get("/api/asset-library")
 async def get_asset_library():

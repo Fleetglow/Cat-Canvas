@@ -71,7 +71,6 @@ const selectionBox = document.getElementById('selectionBox');
 const selectionHub = document.getElementById('selectionHub');
 const gateStatus = document.getElementById('gateStatus');
 const gateCreateBtn = document.getElementById('gateCreateBtn');
-const gateCreateSmartBtn = document.getElementById('gateCreateSmartBtn');
 const gateRefreshBtn = document.getElementById('gateRefreshBtn');
 const gateBackBtn = document.getElementById('gateBackBtn');
 const gateTrashBtn = document.getElementById('gateTrashBtn');
@@ -139,7 +138,6 @@ let internalDrag = false;
 let selected = new Set();
 let saveTimer = null;
 let creatingCanvas = false;
-let createCanvasKind = 'classic';
 let trashMode = false;
 let pendingDeleteCanvasId = null;
 let pendingPurgeCanvasId = null;
@@ -699,17 +697,14 @@ function ensureCanvas(){
     setStatus(tr('canvas.needCanvas'));
     return false;
 }
-function setCreateMode(active, kind='classic'){
+function setCreateMode(active){
     creatingCanvas = active;
-    createCanvasKind = active ? ((kind === 'smart') ? 'smart' : 'classic') : 'classic';
     if(active) trashMode = false;
     canvasGate.classList.toggle('creating', active);
     refreshGateViewControls();
     setStatus(active ? tr('canvas.enterCanvasName') : (canvases.length ? tr('canvas.chooseFirst') : tr('canvas.noCanvasCreateFirst')));
     if(active) {
-        gateTitleInput.placeholder = createCanvasKind === 'smart'
-            ? (tr('canvas.newSmartCanvasPlaceholder') || tr('canvas.newCanvasPlaceholder'))
-            : tr('canvas.newCanvasPlaceholder');
+        gateTitleInput.placeholder = tr('canvas.newCanvasPlaceholder');
         gateTitleInput.focus();
         gateTitleInput.select();
     } else {
@@ -1034,13 +1029,11 @@ function renderCanvasListInto(list){
     }
     items.forEach(item => {
         const row = document.createElement('div');
-        const isSmartCanvas = (item.kind || 'classic') === 'smart';
-        row.className = `canvas-item ${isSmartCanvas ? 'smart-canvas' : ''} ${canvas?.id === item.id ? 'active' : ''}`;
+        row.className = `canvas-item ${canvas?.id === item.id ? 'active' : ''}`;
         row.innerHTML = `
             <div class="canvas-open" role="button" tabindex="${trashMode ? '-1' : '0'}">
                 <div class="canvas-card-icon-row">
-                    <span class="canvas-preview-mark" role="button" tabindex="0" title="${trashMode ? tr('canvas.deletedCanvas') : tr('canvas.changeIcon')}">${renderCanvasIcon(isSmartCanvas && /[^\x00-\x7F]/.test(item.icon || '') ? 'sparkles' : item.icon, 16)}</span>
-                    ${isSmartCanvas ? `<span class="canvas-kind-chip">${tr('canvas.smartCanvasShort')}</span>` : ''}
+                    <span class="canvas-preview-mark" role="button" tabindex="0" title="${trashMode ? tr('canvas.deletedCanvas') : tr('canvas.changeIcon')}">${renderCanvasIcon(item.icon, 16)}</span>
                 </div>
                 <div class="canvas-card-title">${escapeHtml(item.title)}</div>
                 <div class="canvas-card-meta">
@@ -1122,9 +1115,7 @@ function renderCanvasListInto(list){
 }
 async function createCanvas(){
     const customTitle = gateTitleInput?.value.trim();
-    const isSmart = createCanvasKind === 'smart';
-    const titleBase = isSmart ? tr('canvas.newSmartCanvas') : tr('canvas.newCanvas');
-    const title = customTitle || `${titleBase} ${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
+    const title = customTitle || `${tr('canvas.newCanvas')} ${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
     trashMode = false;
     refreshGateViewControls();
     setStatus('Creating...');
@@ -1132,16 +1123,10 @@ async function createCanvas(){
         const res = await fetch('/api/canvases', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({title, icon:isSmart ? 'sparkles' : '🧩', kind:isSmart ? 'smart' : 'classic'})
+            body:JSON.stringify({title, icon:'🧩', kind:'classic'})
         });
         if(!res.ok) throw new Error(tr('canvas.createFailed'));
         const data = await res.json();
-        if(isSmart){
-            setCreateMode(false);
-            await loadCanvasList(false);
-            openSmartCanvasPage(data.canvas?.id);
-            return;
-        }
         canvas = data.canvas;
         canvas.logs = canvas.logs || [];
         nodes = canvas.nodes || [];
@@ -1159,13 +1144,6 @@ async function createCanvas(){
         setStatus(tr('canvas.createFailed'));
         console.error(e);
     }
-}
-async function createSmartCanvas(){
-    setCreateMode(true, 'smart');
-}
-function openSmartCanvasPage(id){
-    if(!id) return;
-    window.location.href = `/static/smart-canvas.html?id=${encodeURIComponent(id)}&v=20260521-mention-token-restore`;
 }
 function toggleEmojiPicker(id, event){
     event?.preventDefault();
@@ -1278,10 +1256,6 @@ async function openCanvas(id){
         if(!res.ok) throw new Error(tr('canvas.openFailed'));
         const data = await res.json();
         canvas = data.canvas;
-        if((canvas.kind || 'classic') === 'smart'){
-            openSmartCanvasPage(canvas.id);
-            return;
-        }
         canvas.logs = canvas.logs || [];
         nodes = canvas.nodes || [];
         connections = canvas.connections || [];
@@ -1525,13 +1499,11 @@ async function purgeCanvas(id, event){
     }
 }
 window.createCanvas = createCanvas;
-window.createSmartCanvas = createSmartCanvas;
 window.loadCanvasList = loadCanvasList;
 window.openCanvas = openCanvas;
 window.deleteCanvas = deleteCanvas;
 window.returnToCanvasManager = returnToCanvasManager;
 gateCreateBtn.addEventListener('click', () => setCreateMode(true));
-gateCreateSmartBtn?.addEventListener('click', createSmartCanvas);
 gateBackBtn.addEventListener('click', () => setTrashMode(false));
 gateTrashBtn.addEventListener('click', () => setTrashMode(true));
 gateRefreshBtn.addEventListener('click', () => trashMode ? loadTrashList() : loadCanvasList(false));

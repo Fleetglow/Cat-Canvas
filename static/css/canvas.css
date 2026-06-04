@@ -16,9 +16,7 @@
         .canvas-item:hover { border-color:#cbd5e1; box-shadow:0 1px 3px rgba(15,23,42,.06); }
         .canvas-item.active { background:#0f172a; border-color:#0f172a; box-shadow:0 1px 3px rgba(15,23,42,.15); }
         .canvas-item.active .canvas-card-title { color:#fff; }
-        .canvas-kind-chip { display:inline-flex; align-items:center; gap:4px; height:18px; padding:0 7px; border-radius:999px; background:rgba(139,92,246,.1); color:#7c3aed; border:1px solid rgba(139,92,246,.18); font-size:9px; font-weight:900; letter-spacing:.05em; }
-        .canvas-item.active .canvas-kind-chip { color:#ddd6fe; background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.16); }
-        .canvas-open { width:100%; height:100%; border-radius:14px; padding:10px 12px; text-align:left; display:flex; flex-direction:column; gap:8px; background:transparent; }
+		.canvas-open { width:100%; height:100%; border-radius:14px; padding:10px 12px; text-align:left; display:flex; flex-direction:column; gap:8px; background:transparent; }
         .canvas-card-icon-row { display:flex; align-items:center; justify-content:space-between; gap:6px; }
         .canvas-card-title { flex:1; font-size:13.5px; line-height:1.3; font-weight:750; letter-spacing:-.01em; color:#111827; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; }
         .canvas-card-title-input { flex:1; font-size:13.5px; line-height:1.3; font-weight:750; letter-spacing:-.01em; color:#111827; background:#fff; border:1px solid #cbd5e1; border-radius:6px; padding:4px 6px; outline:none; width:100%; }
@@ -798,9 +796,6 @@
         .canvas-gate.creating .gate-create-row { display:flex; }
         .gate-name-input { display:block; min-width:0; flex:1; height:36px; border:0; border-radius:10px; background:transparent; padding:0 12px; outline:none; color:#111827; font-size:13px; font-weight:600; }
         .primary-btn { height:38px; padding:0 14px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#111827; color:#fff; font-size:12px; font-weight:850; }
-        .smart-create-btn { position:relative; height:38px; padding:0 14px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(#fff,#fff) padding-box, linear-gradient(135deg,#22c55e,#06b6d4,#8b5cf6,#f97316) border-box; border:2px solid transparent; color:#111827; font-size:12px; font-weight:900; box-shadow:0 10px 24px rgba(59,130,246,.12); }
-        .smart-create-btn:hover { transform:translateY(-1px); box-shadow:0 14px 30px rgba(139,92,246,.18); }
-        .smart-create-btn:disabled { opacity:.65; cursor:wait; transform:none; }
         .secondary-btn { height:38px; padding:0 13px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#fff; color:#475569; border:1px solid #e8edf3; font-size:12px; font-weight:800; }
         .secondary-btn.active { background:#111827; color:#fff; border-color:#111827; }
         .canvas-gate.trash-mode #gateCreateBtn,
@@ -828,7 +823,6 @@
         .theme-dark .canvas-delete { background:var(--soft); border-color:var(--line); color:var(--muted); }
         .theme-dark .canvas-item { background:var(--card-solid); border-color:var(--line); }
         .theme-dark .canvas-item:hover { border-color:var(--line-2); box-shadow:0 14px 30px rgba(0,0,0,.18); }
-        .theme-dark .smart-create-btn { background:linear-gradient(var(--card-solid),var(--card-solid)) padding-box, linear-gradient(135deg,#22c55e,#06b6d4,#8b5cf6,#f97316) border-box; color:var(--text); }
         .theme-dark .canvas-card-title { color:var(--text); }
         .theme-dark .canvas-card-time,
         .theme-dark .gate-list-empty { color:var(--faint); }
