@@ -1055,7 +1055,6 @@
         <main class="stage">
             <div class="settings-tab-bar" id="settings-tab-bar">
                 <button class="settings-tab-btn active" data-tab="api-settings" onclick="switchSettingsTab('api-settings')">API 设置</button>
-                <button class="settings-tab-btn" data-tab="comfyui-settings" onclick="switchSettingsTab('comfyui-settings')">工作流设置</button>
             </div>
             <iframe id="frame-zimage" data-src="/static/zimage.html?v=2026.06.04" scrolling="yes"></iframe>
             <iframe id="frame-enhance" data-src="/static/enhance.html?v=2026.06.04" scrolling="yes"></iframe>
@@ -1065,7 +1064,6 @@
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.06.04" scrolling="yes"></iframe>
             <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.06.04" class="active" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.06.04" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.06.04" scrolling="yes"></iframe>
 
 
             <div class="nano-monitor" id="nano-monitor">
@@ -1155,10 +1153,10 @@
         const LOCAL_NAV_COLLAPSED_KEY = 'studio_local_nav_collapsed';
         const SIDEBAR_PINNED_KEY = 'studio_sidebar_pinned';
         const DEFAULT_PAGE_ID = 'canvas';
-        const PAGE_IDS = ['zimage','enhance','klein','angle','online','gpt-chat','canvas','api-settings','comfyui-settings'];
+        const PAGE_IDS = ['zimage','enhance','klein','angle','online','gpt-chat','canvas','api-settings'];
         const LOCAL_PAGE_IDS = ['zimage','enhance','klein','angle'];
         const SETTINGS_TAB_KEY = 'studio_settings_tab';
-        const SETTINGS_PAGES = ['api-settings', 'comfyui-settings'];
+        const SETTINGS_PAGES = ['api-settings'];
         function isSettingsPage(id) { return SETTINGS_PAGES.includes(id); }
         function openSettings() {
             const lastTab = localStorage.getItem(SETTINGS_TAB_KEY);
@@ -1303,7 +1301,7 @@
             } else {
                 setLocalNavCollapsed(localStorage.getItem(LOCAL_NAV_COLLAPSED_KEY) === '1', { skipRemember:true });
             }
-            // 切换到画布时通知刷新工作流列表（防止在 comfyui-settings 修改后画布未及时更新）
+            // 切换到画布时通知刷新
             if (id === 'canvas' && target.src) {
                 try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
             }
