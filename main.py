@@ -172,9 +172,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKFLOW_DIR = os.path.join(BASE_DIR, "workflows")
 WORKFLOW_PATH = os.path.join(WORKFLOW_DIR, "Z-Image.json")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-STATIC_RUNNINGHUB_DIR = os.path.join(STATIC_DIR, "runninghub")
-STATIC_RUNNINGHUB_THUMBNAIL_DIR = os.path.join(STATIC_RUNNINGHUB_DIR, "thumbnails")
-STATIC_RUNNINGHUB_API_PROVIDERS_FILE = os.path.join(STATIC_RUNNINGHUB_DIR, "api_providers.json")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
@@ -187,12 +184,10 @@ CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 CANVAS_DIR = os.path.join(DATA_DIR, "canvases")
 ASSET_LIBRARY_PATH = os.path.join(DATA_DIR, "asset_library.json")
 API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
-RUNNINGHUB_WORKFLOW_STORE_FILE = os.path.join(DATA_DIR, "runninghub_workflows.json")
 GLOBAL_CONFIG_FILE = os.path.join(BASE_DIR, "global_config.json")
 CANVAS_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 LOCAL_IMAGE_IMPORT_MAX_BYTES = int(os.getenv("LOCAL_IMAGE_IMPORT_MAX_BYTES", str(50 * 1024 * 1024)))
 LOCAL_IMAGE_IMPORT_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-RUNNINGHUB_THUMBNAIL_EXTS = (".jpg",)
 
 QUEUE = []
 QUEUE_LOCK = Lock()
@@ -200,114 +195,13 @@ HISTORY_LOCK = Lock()
 GLOBAL_CONFIG_LOCK = Lock()
 CONVERSATION_LOCK = Lock()
 CANVAS_LOCK = Lock()
-RUNNINGHUB_WORKFLOW_LOCK = Lock()
 NEXT_TASK_ID = 1
 UPDATE_LOCK = Lock()
 
 PROVIDER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{2,40}$")
-SUPPORTED_PROVIDER_PROTOCOLS = {"openai", "apimart", "gemini", "volcengine", "runninghub"}
-RUNNINGHUB_DEFAULT_BASE_URL = "https://www.runninghub.cn"
-RUNNINGHUB_DEFAULT_IMAGE_MODELS = [
-    "seedream-v5-lite/text-to-image",
-    "seedream-v5-lite/image-to-image",
-]
-RUNNINGHUB_DEFAULT_APPS = [
-    {
-        "id": "2058517022748798977",
-        "appId": "2058517022748798977",
-        "title": "2511-风格迁移",
-        "note": "",
-        "thumbnail": "",
-        "enabled": True,
-        "fields": [
-            {
-                "id": "100::image",
-                "nodeId": "100",
-                "fieldName": "image",
-                "fieldValue": "pasted/57ef7dc980b6446bca366caaf3f94eb12b22b23f78aa30e294b39cabd7d0187b.png",
-                "fieldType": "IMAGE",
-                "label": "image",
-                "enabled": True,
-                "sourceFromUpstream": True,
-                "group": "AI 应用参数",
-                "note": "image",
-                "options": [],
-                "random_enabled": False,
-                "min": "",
-                "max": "",
-                "step": "",
-                "imageOrder": 0,
-                "required": False,
-            },
-            {
-                "id": "112::image",
-                "nodeId": "112",
-                "fieldName": "image",
-                "fieldValue": "8cff63ee4b3e0285ca85ab90a52e26746df84ed0dec0be9d76c679cbb62a247d.png",
-                "fieldType": "IMAGE",
-                "label": "image",
-                "enabled": True,
-                "sourceFromUpstream": True,
-                "group": "AI 应用参数",
-                "note": "image",
-                "options": [],
-                "random_enabled": False,
-                "min": "",
-                "max": "",
-                "step": "",
-                "imageOrder": 0,
-                "required": False,
-            },
-            {
-                "id": "14::seed",
-                "nodeId": "14",
-                "fieldName": "seed",
-                "fieldValue": "554049736557817",
-                "fieldType": "INT",
-                "label": "seed",
-                "enabled": True,
-                "sourceFromUpstream": True,
-                "group": "AI 应用参数",
-                "note": "seed",
-                "options": [],
-                "random_enabled": True,
-                "min": "",
-                "max": "",
-                "step": "",
-                "imageOrder": 0,
-                "required": False,
-            },
-        ],
-    },
-    {
-        "id": "1997622492837646338",
-        "appId": "1997622492837646338",
-        "title": "2511-光线迁移",
-        "note": "",
-        "thumbnail": "",
-        "enabled": True,
-    },
-]
-RUNNINGHUB_DEFAULT_WORKFLOWS = [
-    {
-        "id": "2058554058318897153",
-        "workflowId": "2058554058318897153",
-        "title": "GPT-Image-2-图片编辑",
-        "note": "",
-        "thumbnail": "",
-        "enabled": True,
-        "optionalImageMode": "prune-workflow",
-    },
-    {
-        "id": "2058541134623891458",
-        "workflowId": "2058541134623891458",
-        "title": "NanoBanana-2-图片编辑",
-        "note": "",
-        "thumbnail": "",
-        "enabled": True,
-        "optionalImageMode": "prune-workflow",
-    },
-]
+SUPPORTED_PROVIDER_PROTOCOLS = {"openai", "apimart", "gemini", "volcengine"}
+
+
 
 def ensure_runtime_config_files():
     """首次运行时提前创建配置目录，避免第一次保存 API Key 时才创建目录/文件。"""
@@ -342,50 +236,6 @@ AI_BASE_URL = os.getenv("COMFLY_BASE_URL", "https://ai.comfly.chat").rstrip("/")
 AI_API_KEY = os.getenv("COMFLY_API_KEY", "")
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
 PUBLIC_MEDIA_BASE_URL = os.getenv("PUBLIC_MEDIA_BASE_URL", "").strip().rstrip("/")
-MODELSCOPE_API_KEY = os.getenv("MODELSCOPE_API_KEY", "")
-MODELSCOPE_CHAT_BASE_URL = "https://api-inference.modelscope.cn/v1"
-MODELSCOPE_DEFAULT_IMAGE_MODELS = [
-    "Tongyi-MAI/Z-Image-Turbo",
-    "Qwen/Qwen-Image-2512",
-    "Qwen/Qwen-Image-Edit-2511",
-    "black-forest-labs/FLUX.2-klein-9B",
-]
-MODELSCOPE_DEFAULT_CHAT_MODELS = [
-    "Qwen/Qwen3-235B-A22B",
-    "Qwen/Qwen3-VL-235B-A22B-Instruct",
-    "MiniMax/MiniMax-M2.7:MiniMax",
-]
-_MODELSCOPE_CONFIGURED_CHAT_MODELS = [m.strip() for m in os.getenv("MODELSCOPE_CHAT_MODELS", "").split(",") if m.strip()]
-MODELSCOPE_CHAT_MODELS = list(dict.fromkeys([m for m in [*MODELSCOPE_DEFAULT_CHAT_MODELS, *_MODELSCOPE_CONFIGURED_CHAT_MODELS] if m]))
-MODELSCOPE_DEFAULT_IMAGE_MODEL = MODELSCOPE_DEFAULT_IMAGE_MODELS[0]
-MODELSCOPE_DEFAULT_CHAT_MODEL = "Qwen/Qwen3-235B-A22B"
-MODELSCOPE_DEFAULT_LORAS = [
-    {
-        "id": "Daniel8152/film",
-        "name": "Z-Image Film",
-        "target_model": "Tongyi-MAI/Z-Image-Turbo",
-        "strength": 0.8,
-        "enabled": True,
-        "note": "",
-    },
-    {
-        "id": "Daniel8152/Qwen-Image-2512-Film",
-        "name": "Qwen Image 2512 Film",
-        "target_model": "Qwen/Qwen-Image-2512",
-        "strength": 0.8,
-        "enabled": True,
-        "note": "",
-    },
-    {
-        "id": "Daniel8152/Klein-enhance",
-        "name": "Klein enhance",
-        "target_model": "black-forest-labs/FLUX.2-klein-9B",
-        "strength": 0.8,
-        "enabled": True,
-        "note": "",
-    },
-]
-MODELSCOPE_DEFAULTS_VERSION = 3
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
 IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gpt-image-2")
 SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant.")
@@ -445,9 +295,8 @@ def model_list(env_name, primary, defaults):
 def reload_env_globals():
     """保存 API 设置后，将 os.environ 里最新的值同步回模块级全局变量，
     避免保存后需要重启才能生效。"""
-    global MODELSCOPE_API_KEY, AI_API_KEY, AI_BASE_URL
-    global IMAGE_MODELS, CHAT_MODELS, VIDEO_MODELS, MODELSCOPE_CHAT_MODELS
-    MODELSCOPE_API_KEY = os.getenv("MODELSCOPE_API_KEY", "")
+    global AI_API_KEY, AI_BASE_URL
+    global IMAGE_MODELS, CHAT_MODELS, VIDEO_MODELS
     AI_API_KEY = os.getenv("COMFLY_API_KEY", "")
     AI_BASE_URL = os.getenv("COMFLY_BASE_URL", "https://ai.comfly.chat").rstrip("/")
     IMAGE_MODELS = model_list("IMAGE_MODELS", os.getenv("IMAGE_MODEL", IMAGE_MODEL), ["nano-banana-pro"])
@@ -467,8 +316,6 @@ def reload_env_globals():
         "doubao-seedance-1-0-lite-t2v-250428",
         "doubao-seedance-1-0-lite-i2v-250428",
     ])
-    _configured = [m.strip() for m in os.getenv("MODELSCOPE_CHAT_MODELS", "").split(",") if m.strip()]
-    MODELSCOPE_CHAT_MODELS = list(dict.fromkeys([m for m in [*MODELSCOPE_DEFAULT_CHAT_MODELS, *_configured] if m]))
 
 CHAT_MODELS = model_list("CHAT_MODELS", CHAT_MODEL, ["gpt-4o-mini", "gemini-3.1-flash-image-preview-2k"])
 IMAGE_MODELS = model_list("IMAGE_MODELS", IMAGE_MODEL, ["nano-banana-pro"])
@@ -495,14 +342,7 @@ VIDEO_MODELS = model_list("VIDEO_MODELS", "veo3-fast", [
 def provider_key_env(provider_id):
     if provider_id == "comfly":
         return "COMFLY_API_KEY"
-    if provider_id == "modelscope":
-        return "MODELSCOPE_API_KEY"
-    if provider_id == "runninghub":
-        return "RUNNINGHUB_API_KEY"
     return f"API_PROVIDER_{re.sub(r'[^A-Za-z0-9]', '_', provider_id).upper()}_KEY"
-
-def runninghub_wallet_key_env():
-    return "RUNNINGHUB_WALLET_API_KEY"
 
 def read_api_env_value(key: str) -> str:
     key = str(key or "").strip()
@@ -525,15 +365,8 @@ def provider_env_key_value(provider_id: str) -> str:
     provider_id = str(provider_id or "").strip().lower()
     env_key = provider_key_env(provider_id)
     key = os.getenv(env_key, "") or read_api_env_value(env_key)
-    if key:
-        return key
-    if provider_id == "modelscope":
-        return MODELSCOPE_API_KEY or ""
-    return ""
+    return key or ""
 
-def runninghub_wallet_key_value() -> str:
-    env_key = runninghub_wallet_key_env()
-    return os.getenv(env_key, "") or read_api_env_value(env_key)
 
 def mask_secret(value):
     if not value:
@@ -553,76 +386,10 @@ def bearer_auth_value(value):
     return f"Bearer {token}" if token else ""
 
 def default_api_providers():
-    # 只保留 ModelScope 为强制默认平台，其他平台均可自定义增删
-    return [
-        {
-            "id": "modelscope",
-            "name": "ModelScope",
-            "base_url": MODELSCOPE_CHAT_BASE_URL,
-            "protocol": "openai",
-            "image_generation_endpoint": "",
-            "image_edit_endpoint": "",
-            "enabled": True,
-            "primary": False,
-            "image_models": MODELSCOPE_DEFAULT_IMAGE_MODELS,
-            "chat_models": MODELSCOPE_CHAT_MODELS,
-            "video_models": [],
-            "ms_loras": MODELSCOPE_DEFAULT_LORAS,
-            "ms_defaults_version": MODELSCOPE_DEFAULTS_VERSION,
-        },
-        {
-            "id": "runninghub",
-            "name": "RunningHub",
-            "base_url": RUNNINGHUB_DEFAULT_BASE_URL,
-            "protocol": "runninghub",
-            "image_generation_endpoint": "",
-            "image_edit_endpoint": "",
-            "enabled": True,
-            "primary": False,
-            "image_models": RUNNINGHUB_DEFAULT_IMAGE_MODELS,
-            "chat_models": [],
-            "video_models": [],
-            "ms_loras": [],
-            "ms_defaults_version": 0,
-            "rh_apps": RUNNINGHUB_DEFAULT_APPS,
-            "rh_workflows": RUNNINGHUB_DEFAULT_WORKFLOWS,
-        },
-    ]
+    return []
 
 def merge_default_api_providers(providers):
-    merged = [dict(item) for item in providers]
-    # 强制保留独立入口平台（不再强制 comfly）
-    ms_default = next((d for d in default_api_providers() if d["id"] == "modelscope"), None)
-    if ms_default:
-        current = next((item for item in merged if item.get("id") == "modelscope"), None)
-        if not current:
-            merged.append(ms_default)
-        else:
-            if not current.get("base_url"):
-                current["base_url"] = ms_default["base_url"]
-            seeded_version = int(current.get("ms_defaults_version") or 0)
-            if seeded_version < MODELSCOPE_DEFAULTS_VERSION:
-                image_models = model_list_from_values([*MODELSCOPE_DEFAULT_IMAGE_MODELS, *(current.get("image_models") or [])])
-                chat_models = model_list_from_values([*MODELSCOPE_DEFAULT_CHAT_MODELS, *(current.get("chat_models") or [])])
-                loras = normalize_ms_loras([*MODELSCOPE_DEFAULT_LORAS, *(current.get("ms_loras") or [])])
-                current["image_models"] = image_models
-                current["chat_models"] = chat_models
-                current["ms_loras"] = loras
-                current["ms_defaults_version"] = MODELSCOPE_DEFAULTS_VERSION
-    rh_default = load_static_runninghub_provider() or next((d for d in default_api_providers() if d["id"] == "runninghub"), None)
-    if rh_default:
-        current = next((item for item in merged if item.get("id") == "runninghub"), None)
-        if not current:
-            merged.append(rh_default)
-        else:
-            if not current.get("base_url"):
-                current["base_url"] = rh_default["base_url"]
-            if not current.get("protocol") or current.get("protocol") == "openai":
-                current["protocol"] = "runninghub"
-            current["image_models"] = model_list_from_values([*(current.get("image_models") or []), *(rh_default.get("image_models") or [])])
-            current["rh_apps"] = merge_runninghub_system_entries(rh_default.get("rh_apps") or [], current.get("rh_apps") or [], "app")
-            current["rh_workflows"] = merge_runninghub_system_entries(rh_default.get("rh_workflows") or [], current.get("rh_workflows") or [], "workflow")
-    return merged
+    return [dict(item) for item in providers]
 
 def normalize_model_list(values):
     return model_list_from_values(values)
@@ -635,210 +402,6 @@ def model_list_from_values(values):
             selected_model(item, item)
             deduped.append(item)
     return deduped
-
-def normalize_ms_loras(values):
-    normalized = []
-    seen = set()
-    for raw in values or []:
-        if not isinstance(raw, dict):
-            continue
-        lora_id = str(raw.get("id") or "").strip()
-        if not lora_id:
-            continue
-        target_model = str(raw.get("target_model") or raw.get("model") or "").strip()
-        if not target_model:
-            continue
-        key = (target_model, lora_id)
-        if key in seen:
-            continue
-        seen.add(key)
-        try:
-            strength = float(raw.get("strength", raw.get("default_strength", 0.8)))
-        except Exception:
-            strength = 0.8
-        strength = max(0.0, min(2.0, strength))
-        name = re.sub(r"\s+", " ", str(raw.get("name") or "").strip())[:80]
-        normalized.append({
-            "id": lora_id[:180],
-            "name": name or lora_id,
-            "target_model": target_model[:180],
-            "strength": strength,
-            "enabled": bool(raw.get("enabled", True)),
-            "note": str(raw.get("note") or "").strip()[:300],
-        })
-    return normalized
-
-def normalize_runninghub_entry(raw, kind):
-    if not isinstance(raw, dict):
-        return None
-    raw_id = raw.get("appId") if kind == "app" else raw.get("workflowId")
-    entry_id = str(raw_id or raw.get("id") or "").strip()
-    match = re.search(r"/run/(ai-app|workflow)/([0-9A-Za-z_-]+)", entry_id)
-    if match:
-        entry_id = match.group(2)
-    if not entry_id:
-        return None
-    title = re.sub(r"\s+", " ", str(raw.get("title") or raw.get("name") or "").strip())[:80]
-    note = str(raw.get("note") or raw.get("description") or "").strip()[:500]
-    thumb = str(raw.get("thumbnail") or "").strip()
-    if len(thumb) > 1500000:
-        thumb = ""
-    entry = {
-        "id": entry_id[:80],
-        "title": title or (f"AI 应用 {entry_id[-6:]}" if kind == "app" else f"工作流 {entry_id[-6:]}"),
-        "note": note,
-        "thumbnail": thumb,
-        "enabled": bool(raw.get("enabled", True)),
-    }
-    if raw.get("hidden") is True:
-        entry["hidden"] = True
-    fields = raw.get("fields")
-    if isinstance(fields, list):
-        entry["fields"] = [runninghub_normalize_field(field) for field in fields if isinstance(field, dict)]
-    if kind == "workflow":
-        mode = str(raw.get("optionalImageMode") or raw.get("optional_image_mode") or "prune-workflow").strip()
-        entry["optionalImageMode"] = mode or "prune-workflow"
-        workflow_json = raw.get("workflowJson") or raw.get("workflow_json")
-        if isinstance(workflow_json, dict):
-            entry["workflowJson"] = workflow_json
-    raw_payload = raw.get("raw")
-    if isinstance(raw_payload, dict):
-        entry["raw"] = raw_payload
-    try:
-        updated_at = int(raw.get("updatedAt") or raw.get("updated_at") or 0)
-        if updated_at > 0:
-            entry["updatedAt"] = updated_at
-    except Exception:
-        pass
-    if kind == "app":
-        entry["appId"] = entry["id"]
-    else:
-        entry["workflowId"] = entry["id"]
-    return entry
-
-def normalize_runninghub_entries(values, kind):
-    normalized = []
-    seen = set()
-    for raw in values or []:
-        entry = normalize_runninghub_entry(raw, kind)
-        if not entry or entry["id"] in seen:
-            continue
-        seen.add(entry["id"])
-        normalized.append(entry)
-    return normalized
-
-def runninghub_entry_id(entry, kind):
-    if not isinstance(entry, dict):
-        return ""
-    raw_id = entry.get("workflowId") if kind == "workflow" else entry.get("appId")
-    return str(raw_id or entry.get("id") or "").strip()
-
-def static_runninghub_thumbnail_url(entry_id, kind):
-    entry_id = re.sub(r"[^0-9A-Za-z_-]", "", str(entry_id or "").strip())
-    kind_prefix = "workflow" if kind == "workflow" else "app"
-    if not entry_id:
-        return ""
-    candidates = []
-    for name in (f"{kind_prefix}-{entry_id}", entry_id):
-        for ext in RUNNINGHUB_THUMBNAIL_EXTS:
-            candidates.append((STATIC_RUNNINGHUB_THUMBNAIL_DIR, f"{name}{ext}"))
-            candidates.append((STATIC_RUNNINGHUB_DIR, f"{name}{ext}"))
-    for root, filename in candidates:
-        path = os.path.abspath(os.path.join(root, filename))
-        if not path.startswith(os.path.abspath(STATIC_RUNNINGHUB_DIR) + os.sep):
-            continue
-        if os.path.exists(path) and os.path.isfile(path):
-            rel = os.path.relpath(path, STATIC_DIR).replace(os.sep, "/")
-            return f"/static/{urllib.parse.quote(rel, safe='/._-')}?v={int(os.path.getmtime(path))}"
-    return ""
-
-def apply_runninghub_system_thumbnails(entries, kind):
-    result = []
-    for entry in normalize_runninghub_entries(entries or [], kind):
-        if not entry.get("thumbnail"):
-            thumb = static_runninghub_thumbnail_url(runninghub_entry_id(entry, kind), kind)
-            if thumb:
-                entry["thumbnail"] = thumb
-        result.append(entry)
-    return result
-
-def merge_runninghub_system_entries(system_entries, user_entries, kind):
-    merged = []
-    index = {}
-    hidden_ids = set()
-    for entry in apply_runninghub_system_thumbnails(system_entries or [], kind):
-        entry_id = runninghub_entry_id(entry, kind)
-        if not entry_id:
-            continue
-        index[entry_id] = len(merged)
-        merged.append(entry)
-    for entry in apply_runninghub_system_thumbnails(user_entries or [], kind):
-        entry_id = runninghub_entry_id(entry, kind)
-        if not entry_id:
-            continue
-        if entry.get("hidden") is True:
-            hidden_ids.add(entry_id)
-            if entry_id in index:
-                merged.pop(index[entry_id])
-                index = {runninghub_entry_id(item, kind): idx for idx, item in enumerate(merged)}
-            continue
-        if entry_id in index:
-            merged[index[entry_id]] = entry
-        else:
-            index[entry_id] = len(merged)
-            merged.append(entry)
-    return [entry for entry in merged if runninghub_entry_id(entry, kind) not in hidden_ids]
-
-def load_static_runninghub_provider():
-    if not os.path.exists(STATIC_RUNNINGHUB_API_PROVIDERS_FILE):
-        return None
-    try:
-        with open(STATIC_RUNNINGHUB_API_PROVIDERS_FILE, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        candidates = raw if isinstance(raw, list) else raw.get("providers") if isinstance(raw, dict) else []
-        if isinstance(raw, dict) and raw.get("id") == "runninghub":
-            candidates = [raw]
-        for item in candidates or []:
-            if isinstance(item, dict) and str(item.get("id") or "").strip().lower() == "runninghub":
-                provider = normalize_provider(item)
-                provider["rh_apps"] = apply_runninghub_system_thumbnails(provider.get("rh_apps") or [], "app")
-                provider["rh_workflows"] = apply_runninghub_system_thumbnails(provider.get("rh_workflows") or [], "workflow")
-                return provider
-    except Exception as e:
-        print(f"加载 static RunningHub 配置失败: {e}")
-    return None
-
-def merge_runninghub_provider_with_static(provider):
-    static_provider = load_static_runninghub_provider()
-    if not static_provider:
-        return provider
-    if not isinstance(provider, dict):
-        return static_provider
-    merged = {**static_provider, **provider}
-    merged["protocol"] = "runninghub"
-    merged["image_models"] = model_list_from_values([*(provider.get("image_models") or []), *(static_provider.get("image_models") or [])])
-    merged["rh_apps"] = merge_runninghub_system_entries(static_provider.get("rh_apps") or [], provider.get("rh_apps") or [], "app")
-    merged["rh_workflows"] = merge_runninghub_system_entries(static_provider.get("rh_workflows") or [], provider.get("rh_workflows") or [], "workflow")
-    return normalize_provider(merged)
-
-def preserve_runninghub_hidden_overrides(provider):
-    if not isinstance(provider, dict) or provider.get("id") != "runninghub":
-        return provider
-    static_provider = load_static_runninghub_provider()
-    if not static_provider:
-        return provider
-    provider = dict(provider)
-    for list_key, kind in (("rh_apps", "app"), ("rh_workflows", "workflow")):
-        current = normalize_runninghub_entries(provider.get(list_key) or [], kind)
-        current_ids = {runninghub_entry_id(item, kind) for item in current}
-        for static_entry in static_provider.get(list_key) or []:
-            entry_id = runninghub_entry_id(static_entry, kind)
-            if entry_id and entry_id not in current_ids:
-                tombstone = normalize_runninghub_entry({**static_entry, "enabled": False, "hidden": True}, kind)
-                if tombstone:
-                    current.append(tombstone)
-        provider[list_key] = current
-    return provider
 
 def normalize_endpoint_override(value, label):
     endpoint = str(value or "").strip()
@@ -867,9 +430,6 @@ def provider_endpoint_url(provider, key, default_path):
             return f"{base_url}{default_path[len(prefix):]}"
     return f"{base_url}{default_path}"
 
-def runninghub_endpoint_url(provider, path):
-    base_url = str((provider or {}).get("base_url") or RUNNINGHUB_DEFAULT_BASE_URL).strip().rstrip("/")
-    return f"{base_url}{path}"
 
 def normalize_provider(item):
     provider_id = str(item.get("id") or "").strip().lower()
@@ -896,10 +456,6 @@ def normalize_provider(item):
         "image_models": model_list_from_values(item.get("image_models") or []),
         "chat_models": model_list_from_values(item.get("chat_models") or []),
         "video_models": model_list_from_values(item.get("video_models") or []),
-        "ms_loras": normalize_ms_loras(item.get("ms_loras") or []),
-        "ms_defaults_version": int(item.get("ms_defaults_version") or 0),
-        "rh_apps": normalize_runninghub_entries(item.get("rh_apps") or [], "app"),
-        "rh_workflows": normalize_runninghub_entries(item.get("rh_workflows") or [], "workflow"),
     }
 
 def load_api_providers():
@@ -922,37 +478,23 @@ def save_api_providers(providers):
             json.dump(providers, f, ensure_ascii=False, indent=2)
 
 def public_provider(provider):
-    if provider.get("id") == "runninghub":
-        try:
-            provider = runninghub_provider_with_workflow_store(provider)
-        except Exception:
-            pass
     key = provider_env_key_value(provider["id"])
-    item = {
+    return {
         **provider,
         "has_key": bool(key),
         "key_preview": mask_secret(key),
         "key_env": provider_key_env(provider["id"]),
     }
-    if provider.get("id") == "runninghub":
-        wallet_key = runninghub_wallet_key_value()
-        item.update({
-            "has_wallet_key": bool(wallet_key),
-            "wallet_key_preview": mask_secret(wallet_key),
-            "wallet_key_env": runninghub_wallet_key_env(),
-        })
-    return item
 
 def get_primary_provider_id(providers=None):
-    """返回当前首选 provider 的 id；优先 primary=True 的，否则取第一个非 modelscope 的，再次取第一个。"""
+    """返回当前首选 provider 的 id；优先 primary=True 的，否则取第一个启用的。"""
     providers = providers if providers is not None else load_api_providers()
     primary = next((p for p in providers if p.get("primary") and p.get("enabled", True)), None)
     if primary:
         return primary["id"]
-    non_ms = next((p for p in providers if p["id"] != "modelscope" and p.get("enabled", True)), None)
-    if non_ms:
-        return non_ms["id"]
-    return providers[0]["id"] if providers else "modelscope"
+    if providers:
+        return providers[0]["id"]
+    return ""
 
 def get_api_provider(provider_id="comfly"):
     providers = load_api_providers()
@@ -977,25 +519,6 @@ def get_api_provider_exact(provider_id: str):
         raise HTTPException(status_code=400, detail=f"API 平台已禁用：{provider.get('name') or target}")
     return provider
 
-def modelscope_provider_config():
-    return get_api_provider_exact("modelscope")
-
-def modelscope_api_key(explicit_key: str = ""):
-    return (
-        strip_auth_scheme(explicit_key, "Bearer")
-        or strip_auth_scheme(provider_env_key_value("modelscope"), "Bearer")
-        or strip_auth_scheme(MODELSCOPE_API_KEY, "Bearer")
-    )
-
-def modelscope_api_root(provider=None):
-    provider = provider or modelscope_provider_config()
-    base_root = str((provider or {}).get("base_url") or MODELSCOPE_CHAT_BASE_URL).strip().rstrip("/")
-    if not base_root:
-        base_root = MODELSCOPE_CHAT_BASE_URL
-    return base_root if base_root.endswith("/v1") else f"{base_root}/v1"
-
-def modelscope_image_api_root():
-    return MODELSCOPE_CHAT_BASE_URL.rstrip("/")
 
 def env_quote(value):
     text = str(value or "")
@@ -1589,50 +1112,6 @@ class CloudVideoUploadRequest(BaseModel):
     url: str = ""
     service: str = "auto"
 
-class RunningHubSubmitRequest(BaseModel):
-    webappId: str = ""
-    nodeInfoList: List[Dict[str, Any]] = []
-    instanceType: str = ""
-    useWallet: bool = False
-
-class RunningHubWorkflowSubmitRequest(BaseModel):
-    workflowId: str = ""
-    nodeInfoList: List[Dict[str, Any]] = []
-    workflow: Any = None
-    useWallet: bool = False
-
-class RunningHubUploadAssetRequest(BaseModel):
-    url: str = ""
-    useWallet: bool = False
-
-class RunningHubWorkflowConfigField(BaseModel):
-    id: str = ""
-    nodeId: str = ""
-    fieldName: str = ""
-    fieldValue: str = ""
-    fieldType: str = "TEXT"
-    label: str = ""
-    enabled: bool = True
-    sourceFromUpstream: bool = True
-    group: str = ""
-    note: str = ""
-    options: List[str] = Field(default_factory=list)
-    random_enabled: bool = False
-    min: Any = ""
-    max: Any = ""
-    step: Any = ""
-    imageOrder: int = 0
-    required: bool = False
-
-class RunningHubWorkflowConfig(BaseModel):
-    workflowId: str = ""
-    title: str = ""
-    description: str = ""
-    fields: List[RunningHubWorkflowConfigField] = Field(default_factory=list)
-    workflowJson: Dict[str, Any] = Field(default_factory=dict)
-    optionalImageMode: str = "prune-workflow"
-    raw: Dict[str, Any] = Field(default_factory=dict)
-
 class ApiProviderPayload(BaseModel):
     id: str = ""
     name: str = ""
@@ -1645,14 +1124,8 @@ class ApiProviderPayload(BaseModel):
     image_models: List[str] = []
     chat_models: List[str] = []
     video_models: List[str] = []
-    ms_loras: List[Dict[str, Any]] = []
-    ms_defaults_version: int = 0
-    rh_apps: List[Dict[str, Any]] = []
-    rh_workflows: List[Dict[str, Any]] = []
     api_key: Optional[str] = None
-    wallet_api_key: Optional[str] = None
     clear_key: bool = False
-    clear_wallet_key: bool = False
 
 class ChatRequest(BaseModel):
     conversation_id: str = ""
@@ -1664,18 +1137,6 @@ class ChatRequest(BaseModel):
     quality: str = "auto"
     reference_images: List[AIReference] = []
     provider: str = "comfly"
-    ms_model: str = ""
-
-class MsGenerateRequest(BaseModel):
-    prompt: str
-    api_key: str = ""
-    model: str = "black-forest-labs/FLUX.2-klein-9B"
-    image_urls: List[str] = []
-    width: int = 0
-    height: int = 0
-    size: str = ""
-    loras: Optional[Any] = None
-    client_id: Optional[str] = None
 
 class CanvasLLMRequest(BaseModel):
     message: str = Field(min_length=1, max_length=LLM_MESSAGE_MAX_LENGTH)
@@ -1683,7 +1144,6 @@ class CanvasLLMRequest(BaseModel):
     model: str = ""
     messages: List[Dict[str, Any]] = []
     provider: str = "comfly"
-    ms_model: str = ""
     images: List[str] = []   # 可以是 /output/*.png、/assets/*.png 本地路径 或 http(s) URL 或 data URL
     videos: List[str] = []   # 可以是 /output/*.mp4、/assets/*.mp4 本地路径 或 http(s) URL 或 data URL
 
@@ -1954,15 +1414,7 @@ def display_title(text):
     title = re.sub(r"\s+", " ", text or "").strip()
     return title[:24] or "新对话"
 
-def resolve_chat_provider(provider: str, model: str, ms_model: str):
-    if provider == "modelscope":
-        clean_token = modelscope_api_key()
-        if not clean_token:
-            raise HTTPException(status_code=400, detail="未配置 ModelScope API Key，请在 API 设置中填写。")
-        base = modelscope_api_root()
-        hdrs = {"Authorization": bearer_auth_value(clean_token), "Content-Type": "application/json"}
-        mdl = selected_model(ms_model or model, MODELSCOPE_CHAT_MODELS[0] if MODELSCOPE_CHAT_MODELS else "MiniMax/MiniMax-M2.7")
-        return base, hdrs, mdl
+def resolve_chat_provider(provider: str, model: str):
     api_provider = get_api_provider(provider or "")
     base_root = (api_provider.get("base_url") or AI_BASE_URL).rstrip("/")
     if not base_root:
@@ -2030,11 +1482,6 @@ def preferred_chat_model(provider):
             return text_like_models[0]
     return models[0]
 
-def modelscope_size(value, fallback="1024x1024"):
-    size = str(value or fallback).strip().lower().replace("*", "x")
-    if re.fullmatch(r"\d{2,5}x\d{2,5}", size):
-        return size
-    raise HTTPException(status_code=400, detail=f"ModelScope size 格式不正确：{value or fallback}，应为 WxH，例如 1024x1024")
 
 def unwrap_apimart_response(raw):
     """APIMart 将标准 OpenAI 响应包在 {"code":200,"data":{...}} 里；如果检测到就解包。"""
@@ -2154,9 +1601,6 @@ def is_gemini_provider(provider):
 
 def is_volcengine_provider(provider):
     return provider_protocol(provider) == "volcengine"
-
-def is_runninghub_provider(provider):
-    return provider_protocol(provider) == "runninghub" or str((provider or {}).get("id") or "").strip().lower() == "runninghub"
 
 async def wait_for_image_task(client, task_id, provider=None):
     base_url = (provider.get("base_url") if provider else AI_BASE_URL).rstrip("/")
@@ -2648,13 +2092,6 @@ def compress_data_url_image(value, max_size=1536, jpeg_quality=88):
     except Exception as e:
         print(f"data url image compress failed, fallback to raw: {e}")
         return value
-
-def modelscope_image_url(value, max_size=1536):
-    if not value:
-        return value
-    if isinstance(value, str) and (value.startswith("/output/") or value.startswith("/assets/")):
-        return reference_to_data_url({"url": value}, max_size=max_size)
-    return value
 
 def valid_video_image_input(value: str) -> bool:
     if not isinstance(value, str):
@@ -3290,67 +2727,6 @@ def friendly_chat_error_detail(text, model="", provider=None):
         return "请求过于频繁，已被上游限流，请稍后再试。"
     return ""
 
-async def generate_modelscope_provider_image(prompt, size, model, reference_images=None, provider=None):
-    clean_token = modelscope_api_key()
-    if not clean_token:
-        raise HTTPException(status_code=400, detail="未配置 ModelScope API Key，请在 API 设置中填写。")
-    width, height = parse_size_pair(size)
-    refs = []
-    for ref in (reference_images or [])[:4]:
-        if not ref.get("url"):
-            continue
-        # 本地参考图转为 data URL；前端已生成的 data URL 保持原样，贴近旧版稳定链路。
-        refs.append(modelscope_image_url(ref.get("url", ""), max_size=1536))
-    headers = {
-        "Authorization": f"Bearer {clean_token}",
-        "Content-Type": "application/json",
-        "X-ModelScope-Async-Mode": "true",
-    }
-    payload = {
-        "model": selected_model(model, "Tongyi-MAI/Z-Image-Turbo"),
-        "prompt": prompt.strip(),
-    }
-    if width and height:
-        payload["width"] = width
-        payload["height"] = height
-        payload["size"] = f"{width}x{height}"
-    if refs:
-        payload["image_url"] = refs
-
-    api_root = modelscope_image_api_root()
-    async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
-        submit_res = await client.post(f"{api_root}/images/generations", headers=headers, json=payload)
-        submit_res.raise_for_status()
-        raw = submit_res.json()
-        task_id = raw.get("task_id")
-        if not task_id:
-            try:
-                return extract_image(raw), raw
-            except HTTPException:
-                raise HTTPException(status_code=502, detail=f"ModelScope 未返回 task_id：{raw}")
-
-        deadline = time.monotonic() + AI_REQUEST_TIMEOUT
-        last_payload = raw
-        while time.monotonic() < deadline:
-            await asyncio.sleep(IMAGE_POLL_INTERVAL)
-            result = await client.get(
-                f"{api_root}/tasks/{task_id}",
-                headers={**headers, "X-ModelScope-Task-Type": "image_generation"},
-            )
-            result.raise_for_status()
-            data = result.json()
-            last_payload = data
-            status = str(data.get("task_status") or "").upper()
-            if status == "SUCCEED":
-                images = data.get("output_images") or []
-                if not images:
-                    raise HTTPException(status_code=502, detail=f"ModelScope 成功但没有返回图片：{data}")
-                return {"type": "url", "value": images[0]}, data
-            if status in {"FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "TIMEOUT", "REVOKED"}:
-                detail = data.get("error_info") or data.get("message") or data.get("detail") or str(data)
-                raise HTTPException(status_code=502, detail=f"ModelScope 任务失败：{detail}")
-        raise HTTPException(status_code=504, detail=f"ModelScope 生图任务超时：{last_payload}")
-
 def gemini_model_name(model):
     value = selected_model(model, "gemini-3-pro-image-preview").strip()
     return value[len("models/"):] if value.startswith("models/") else value
@@ -3432,338 +2808,8 @@ async def generate_volcengine_provider_image(prompt, size, model, reference_imag
         raw = response.json()
         return extract_image(raw), raw
 
-def runninghub_api_headers(provider):
-    api_key = runninghub_api_key(provider)
-    if not api_key:
-        raise HTTPException(status_code=400, detail="未配置 RunningHub API Key，请在 API 设置中填写。")
-    return {"Authorization": bearer_auth_value(api_key), "Accept": "application/json", "Content-Type": "application/json"}
-
-def runninghub_provider():
-    return get_api_provider_exact("runninghub")
-
-def runninghub_api_key(provider=None, use_wallet=False, prefer_wallet=False):
-    provider = provider or runninghub_provider()
-    free_key = os.getenv(provider_key_env(provider["id"]), "")
-    wallet_key = os.getenv(runninghub_wallet_key_env(), "")
-    api_key = wallet_key if (use_wallet or prefer_wallet) and wallet_key else free_key
-    if not api_key:
-        raise HTTPException(status_code=400, detail="未配置 RunningHub API Key，请在 RH 设置中填写。")
-    return api_key
-
-def runninghub_app_headers(json_body=True, use_wallet=False):
-    headers = {"Host": "www.runninghub.cn"}
-    provider = runninghub_provider()
-    if provider:
-        free_key = os.getenv(provider_key_env(provider["id"]), "")
-        wallet_key = os.getenv(runninghub_wallet_key_env(), "")
-        api_key = wallet_key if use_wallet and wallet_key else free_key
-        if api_key:
-            headers["Authorization"] = bearer_auth_value(api_key)
-    if json_body:
-        headers["Content-Type"] = "application/json"
-    return headers
-
-def runninghub_local_asset_path(url):
-    text = str(url or "").strip()
-    if not text:
-        return None
-    if text.startswith("/assets/input/") or text.startswith("/input/"):
-        clean = urllib.parse.unquote(text.split("?", 1)[0]).replace("\\", "/")
-        rel = clean[len("/assets/input/"):] if clean.startswith("/assets/input/") else clean[len("/input/"):]
-        root = OUTPUT_INPUT_DIR
-    elif text.startswith("/assets/output/"):
-        clean = urllib.parse.unquote(text.split("?", 1)[0]).replace("\\", "/")
-        rel = clean[len("/assets/output/"):]
-        root = OUTPUT_OUTPUT_DIR
-    elif text.startswith("/output/") or text.startswith("/assets/"):
-        return output_file_from_url(text)
-    else:
-        return None
-    rel = rel.lstrip("/")
-    if not rel:
-        return None
-    path = os.path.abspath(os.path.join(root, rel))
-    root_abs = os.path.abspath(root)
-    if os.path.commonpath([root_abs, path]) != root_abs or not os.path.exists(path):
-        return None
-    return path
-
-def runninghub_output_ext(remote, content_type=""):
-    tail = str(remote or "").split("?", 1)[0].split("#", 1)[0]
-    ext = os.path.splitext(tail)[1].lower().strip(".")
-    allowed = {"png","jpg","jpeg","webp","gif","bmp","mp4","webm","mov","m4v","mkv","mp3","wav","ogg","m4a","flac","aac"}
-    if ext in allowed:
-        return ext
-    ct = str(content_type or "").lower()
-    if "mp4" in ct:
-        return "mp4"
-    if "webm" in ct:
-        return "webm"
-    if "quicktime" in ct:
-        return "mov"
-    if "mpeg" in ct:
-        return "mp3"
-    if "wav" in ct:
-        return "wav"
-    if "ogg" in ct:
-        return "ogg"
-    if "webp" in ct:
-        return "webp"
-    if "jpeg" in ct:
-        return "jpg"
-    return "png"
-
-def runninghub_extract_outputs(data):
-    arr = []
-    if isinstance(data, list):
-        arr = data
-    elif isinstance(data, dict):
-        for key in ("outputs", "results", "files", "data"):
-            value = data.get(key)
-            if isinstance(value, list):
-                arr = value
-                break
-        if not arr and (data.get("fileUrl") or data.get("url")):
-            arr = [data]
-    outputs = []
-    for item in arr:
-        if isinstance(item, str):
-            outputs.append(item)
-        elif isinstance(item, dict):
-            url = item.get("fileUrl") or item.get("file_url") or item.get("url") or item.get("downloadUrl") or item.get("download_url")
-            if isinstance(url, list):
-                outputs.extend([str(u) for u in url if u])
-            elif url:
-                outputs.append(str(url))
-    return outputs
-
-async def runninghub_store_remote_output(client, remote):
-    if not str(remote or "").startswith(("http://", "https://")):
-        return remote
-    response = await client.get(remote, follow_redirects=True)
-    if not response.is_success:
-        return remote
-    ext = runninghub_output_ext(remote, response.headers.get("content-type", ""))
-    filename = f"rh_{uuid.uuid4().hex[:12]}.{ext}"
-    path = output_path_for(filename, "output")
-    with open(path, "wb") as f:
-        f.write(response.content)
-    return output_url_for(filename, "output")
-
-def runninghub_fail_reason(raw):
-    data = raw.get("data") if isinstance(raw, dict) else None
-    values = []
-    if isinstance(data, dict):
-        values.extend([data.get("failedReason"), data.get("failReason"), data.get("message"), data.get("error")])
-    if isinstance(raw, dict):
-        values.extend([raw.get("msg"), raw.get("message"), raw.get("error")])
-    for value in values:
-        if not value:
-            continue
-        if isinstance(value, str):
-            return value
-        if isinstance(value, dict):
-            return value.get("exception_message") or value.get("message") or json.dumps(value, ensure_ascii=False)
-        return str(value)
-    return ""
-
-def runninghub_infer_workflow_field_type(field_name, field_value):
-    key = f"{field_name or ''} {field_value or ''}".lower()
-    if re.search(r"\b(image|img|mask|photo|picture)\b", key) or re.search(r"\.(png|jpe?g|webp|gif|bmp)(\?|$)", key, re.I):
-        return "IMAGE"
-    if re.search(r"\b(video|movie|mp4)\b", key) or re.search(r"\.(mp4|webm|mov|m4v|mkv)(\?|$)", key, re.I):
-        return "VIDEO"
-    if re.search(r"\b(audio|sound|music|voice)\b", key) or re.search(r"\.(mp3|wav|ogg|m4a|flac|aac)(\?|$)", key, re.I):
-        return "AUDIO"
-    text = str(field_value or "").strip()
-    if text.lower() in {"true", "false"}:
-        return "BOOLEAN"
-    try:
-        if text:
-            float(text)
-            return "NUMBER"
-    except Exception:
-        pass
-    return "TEXT"
-
-def runninghub_is_workflow_link_value(value):
-    return (
-        isinstance(value, list)
-        and len(value) == 2
-        and isinstance(value[0], str)
-        and isinstance(value[1], int)
-    )
-
-def runninghub_workflow_node_info_list(workflow_json):
-    result = []
-    if not isinstance(workflow_json, dict):
-        return result
-    for node_id, node_content in workflow_json.items():
-        inputs = node_content.get("inputs") if isinstance(node_content, dict) else None
-        if not isinstance(inputs, dict):
-            continue
-        for field_name, raw_value in inputs.items():
-            if runninghub_is_workflow_link_value(raw_value):
-                continue
-            if isinstance(raw_value, (dict, list)):
-                field_value = json.dumps(raw_value, ensure_ascii=False)
-            elif raw_value is None:
-                field_value = ""
-            else:
-                field_value = str(raw_value)
-            result.append({
-                "nodeId": str(node_id),
-                "fieldName": str(field_name),
-                "fieldValue": field_value,
-                "fieldType": runninghub_infer_workflow_field_type(field_name, field_value),
-                "source": "workflow",
-            })
-    return result
-
-def runninghub_task_endpoint(provider, model):
-    model_path = str(model or "").strip().strip("/")
-    if not model_path:
-        model_path = RUNNINGHUB_DEFAULT_IMAGE_MODELS[0]
-    if model_path.startswith("/openapi/"):
-        return runninghub_endpoint_url(provider, model_path)
-    if model_path.startswith("openapi/"):
-        return runninghub_endpoint_url(provider, f"/{model_path}")
-    return runninghub_endpoint_url(provider, f"/openapi/v2/{model_path}")
-
-def runninghub_query_status(raw):
-    if not isinstance(raw, dict):
-        return ""
-    values = [
-        raw.get("status"),
-        raw.get("state"),
-        raw.get("taskStatus"),
-        raw.get("task_status"),
-    ]
-    data = raw.get("data")
-    if isinstance(data, dict):
-        values.extend([data.get("status"), data.get("state"), data.get("taskStatus"), data.get("task_status")])
-    for value in values:
-        if value is not None:
-            return str(value).lower()
-    return ""
-
-def runninghub_extract_task_id(raw):
-    if not isinstance(raw, dict):
-        return ""
-    for key in ("taskId", "task_id", "id"):
-        if raw.get(key):
-            return str(raw[key])
-    data = raw.get("data")
-    if isinstance(data, dict):
-        for key in ("taskId", "task_id", "id"):
-            if data.get(key):
-                return str(data[key])
-    return ""
-
-def runninghub_extract_image(raw):
-    if not isinstance(raw, dict):
-        raise HTTPException(status_code=502, detail="RunningHub 返回格式不是 JSON 对象")
-    containers = [raw]
-    data = raw.get("data")
-    if isinstance(data, dict):
-        containers.append(data)
-    for container in containers:
-        results = container.get("results") or container.get("result") or container.get("outputs") or container.get("output")
-        if isinstance(results, dict):
-            results = [results]
-        if isinstance(results, list):
-            for item in results:
-                if isinstance(item, str) and item.startswith(("http://", "https://")):
-                    return {"type": "url", "value": item}
-                if not isinstance(item, dict):
-                    continue
-                if item.get("type") == "url" and item.get("value"):
-                    return {"type": "url", "value": item["value"]}
-                if item.get("type") == "b64" and item.get("value"):
-                    return {"type": "b64", "value": item["value"], "mime_type": item.get("mime_type") or "image/png"}
-                url = item.get("url") or item.get("fileUrl") or item.get("file_url") or item.get("download_url") or item.get("imageUrl") or item.get("image_url")
-                if isinstance(url, list) and url:
-                    url = url[0]
-                if isinstance(url, str) and url:
-                    return {"type": "url", "value": url}
-    return extract_image(raw)
-
-async def runninghub_upload_reference(client, provider, ref):
-    path = output_file_from_url(ref.get("url", ""))
-    if not path:
-        value = ref.get("url", "")
-        return value if str(value).startswith(("http://", "https://")) else ""
-    upload_url = runninghub_endpoint_url(provider, "/openapi/v2/media/upload/binary")
-    api_key = os.getenv(provider_key_env(provider["id"]), "")
-    headers = {"Authorization": bearer_auth_value(api_key), "Accept": "application/json"}
-    with open(path, "rb") as fh:
-        files = {"file": (os.path.basename(path), fh, content_type_for_path(path))}
-        response = await client.post(upload_url, headers=headers, files=files, timeout=120)
-    response.raise_for_status()
-    raw = response.json()
-    data = raw.get("data") if isinstance(raw, dict) else None
-    candidates = [raw, data] if isinstance(data, dict) else [raw]
-    for item in candidates:
-        if not isinstance(item, dict):
-            continue
-        value = item.get("download_url") or item.get("downloadUrl") or item.get("url") or item.get("fileUrl") or item.get("file_url")
-        if value:
-            return str(value)
-    raise HTTPException(status_code=502, detail=f"RunningHub 上传图片未返回 download_url：{raw}")
-
-async def wait_for_runninghub_image_task(client, provider, task_id):
-    query_url = runninghub_endpoint_url(provider, "/openapi/v2/query")
-    deadline = time.monotonic() + 1800
-    last_payload = None
-    while time.monotonic() < deadline:
-        await asyncio.sleep(2)
-        response = await client.post(query_url, headers=runninghub_api_headers(provider), json={"taskId": task_id})
-        response.raise_for_status()
-        raw = response.json()
-        last_payload = raw
-        status = runninghub_query_status(raw)
-        if status in {"success", "succeeded", "completed", "complete", "finished", "finish", "done", "3"}:
-            return raw
-        if status in {"failed", "fail", "error", "canceled", "cancelled", "4"}:
-            raise HTTPException(status_code=502, detail=f"RunningHub 任务失败：{raw}")
-        try:
-            return {"data": {"results": [runninghub_extract_image(raw)]}}
-        except HTTPException:
-            pass
-    raise HTTPException(status_code=504, detail=f"RunningHub 生图任务超时：{last_payload}")
-
-async def generate_runninghub_provider_image(prompt, size, model, reference_images=None, provider=None):
-    endpoint = runninghub_task_endpoint(provider, model)
-    width, height = parse_size_pair(size)
-    body = {"prompt": prompt}
-    if width and height:
-        body.update({"width": width, "height": height})
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=1800.0, write=180.0, pool=20.0)) as client:
-        image_urls = []
-        for ref in (reference_images or [])[:10]:
-            url = await runninghub_upload_reference(client, provider, ref)
-            if url:
-                image_urls.append(url)
-        if image_urls:
-            body["imageUrls"] = image_urls
-        response = await client.post(endpoint, headers=runninghub_api_headers(provider), json=body)
-        response.raise_for_status()
-        raw = response.json()
-        try:
-            return runninghub_extract_image(raw), raw
-        except HTTPException:
-            task_id = runninghub_extract_task_id(raw)
-            if not task_id:
-                raise HTTPException(status_code=502, detail=f"RunningHub 未返回 taskId 或图片结果：{raw}")
-        result = await wait_for_runninghub_image_task(client, provider, task_id)
-        return runninghub_extract_image(result), result
-
 async def generate_ai_image(prompt, size, quality, model, reference_images=None, provider_id="comfly"):
     provider = get_api_provider(provider_id)
-    if provider["id"] == "modelscope":
-        return await generate_modelscope_provider_image(prompt, size, model, reference_images, provider)
-    if is_runninghub_provider(provider):
-        return await generate_runninghub_provider_image(prompt, size, model, reference_images, provider)
     if is_gemini_provider(provider):
         return await generate_gemini_provider_image(prompt, size, model, reference_images, provider)
     if is_volcengine_provider(provider):
@@ -4020,322 +3066,6 @@ async def import_local_ai_reference(payload: LocalImageImportRequest, request: R
         raise HTTPException(status_code=400, detail="没有可导入的本地图片")
     return {"files": [import_local_image_file(normalize_local_image_path(path)) for path in requested]}
 
-@app.get("/api/runninghub/app-info")
-async def runninghub_app_info(webappId: str = ""):
-    webapp_id = str(webappId or "").strip()
-    if not webapp_id:
-        raise HTTPException(status_code=400, detail="webappId 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider)
-    url = runninghub_endpoint_url(provider, f"/api/webapp/apiCallDemo?apiKey={urllib.parse.quote(api_key)}&webappId={urllib.parse.quote(webapp_id)}")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=20.0)) as client:
-        try:
-            response = await client.get(url, headers=runninghub_app_headers(False))
-            raw = response.json()
-        except httpx.HTTPStatusError as exc:
-            raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text[:500]) from exc
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"请求 RunningHub 应用信息失败：{exc}") from exc
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:500])
-    if isinstance(raw, dict) and raw.get("code") not in (0, "0", None):
-        raise HTTPException(status_code=400, detail=raw.get("msg") or f"RunningHub 查询失败 code={raw.get('code')}")
-    data = raw.get("data") if isinstance(raw, dict) else {}
-    return {"success": True, "data": data or {}}
-
-@app.post("/api/runninghub/submit")
-async def runninghub_submit(payload: RunningHubSubmitRequest):
-    webapp_id = str(payload.webappId or "").strip()
-    if not webapp_id:
-        raise HTTPException(status_code=400, detail="webappId 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider, use_wallet=payload.useWallet)
-    body = {
-        "apiKey": api_key,
-        "webappId": webapp_id,
-        "nodeInfoList": payload.nodeInfoList or [],
-    }
-    instance_type = str(payload.instanceType or "").strip()
-    if instance_type:
-        body["instanceType"] = instance_type
-    url = runninghub_endpoint_url(provider, "/task/openapi/ai-app/run")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=120.0, pool=20.0)) as client:
-        try:
-            response = await client.post(url, headers=runninghub_app_headers(True, payload.useWallet), json=body)
-            raw = response.json()
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"提交 RunningHub 任务失败：{exc}") from exc
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
-    if isinstance(raw, dict) and raw.get("code") in (0, "0"):
-        task_id = raw.get("data", {}).get("taskId") if isinstance(raw.get("data"), dict) else ""
-        if not task_id:
-            raise HTTPException(status_code=502, detail=f"RunningHub 未返回 taskId：{raw}")
-        return {"success": True, "data": {"taskId": task_id, "raw": raw}}
-    raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub 提交失败：{raw}")
-
-@app.post("/api/runninghub/workflow-submit")
-async def runninghub_workflow_submit(payload: RunningHubWorkflowSubmitRequest):
-    workflow_id = str(payload.workflowId or "").strip()
-    if not workflow_id:
-        raise HTTPException(status_code=400, detail="workflowId 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider, use_wallet=payload.useWallet)
-    body = {
-        "apiKey": api_key,
-        "workflowId": workflow_id,
-        "addMetadata": True,
-    }
-    if payload.nodeInfoList:
-        body["nodeInfoList"] = payload.nodeInfoList
-    workflow_payload = payload.workflow
-    if workflow_payload:
-        if isinstance(workflow_payload, (dict, list)):
-            body["workflow"] = json.dumps(workflow_payload, ensure_ascii=False)
-        else:
-            body["workflow"] = str(workflow_payload)
-    url = runninghub_endpoint_url(provider, "/task/openapi/create")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=120.0, pool=20.0)) as client:
-        try:
-            response = await client.post(url, headers=runninghub_app_headers(True, payload.useWallet), json=body)
-            raw = response.json()
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"提交 RunningHub 工作流失败：{exc}") from exc
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
-    if isinstance(raw, dict) and raw.get("code") in (0, "0"):
-        task_id = raw.get("data", {}).get("taskId") if isinstance(raw.get("data"), dict) else ""
-        if not task_id:
-            raise HTTPException(status_code=502, detail=f"RunningHub 工作流未返回 taskId：{raw}")
-        return {"success": True, "data": {"taskId": task_id, "raw": raw}}
-    raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub 工作流提交失败：{raw}")
-
-@app.get("/api/runninghub/workflow-info")
-async def runninghub_workflow_info(workflowId: str = ""):
-    workflow_id = str(workflowId or "").strip()
-    if not workflow_id:
-        raise HTTPException(status_code=400, detail="workflowId 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider)
-    url = runninghub_endpoint_url(provider, "/api/openapi/getJsonApiFormat")
-    body = {"apiKey": api_key, "workflowId": workflow_id}
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=20.0)) as client:
-        try:
-            response = await client.post(url, headers=runninghub_app_headers(True), json=body)
-            raw = response.json()
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"拉取 RunningHub 工作流参数失败：{exc}") from exc
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
-    if not isinstance(raw, dict) or raw.get("code") not in (0, "0"):
-        raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub 工作流参数拉取失败：{raw}")
-    data = raw.get("data") if isinstance(raw.get("data"), dict) else {}
-    prompt = data.get("prompt")
-    workflow_json = {}
-    if isinstance(prompt, str) and prompt.strip():
-        try:
-            workflow_json = json.loads(prompt)
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"RunningHub 工作流 JSON 解析失败：{exc}") from exc
-    elif isinstance(prompt, dict):
-        workflow_json = prompt
-    node_info_list = runninghub_workflow_node_info_list(workflow_json)
-    return {"success": True, "data": {"workflowId": workflow_id, "nodeInfoList": node_info_list, "raw": raw}}
-
-@app.get("/api/runninghub/workflows")
-def list_runninghub_workflows():
-    with RUNNINGHUB_WORKFLOW_LOCK:
-        store = load_runninghub_workflow_store()
-    merged = {workflow_id: cfg for workflow_id, cfg in store.items() if isinstance(cfg, dict)}
-    for provider in load_api_providers():
-        if provider.get("id") != "runninghub":
-            continue
-        for entry in provider.get("rh_workflows") or []:
-            workflow_id = runninghub_workflow_store_key(entry.get("workflowId") or entry.get("id"))
-            if not workflow_id:
-                continue
-            provider_cfg = runninghub_provider_workflow_config(workflow_id)
-            if provider_cfg:
-                merged[workflow_id] = runninghub_select_workflow_config(merged.get(workflow_id), provider_cfg)
-    items = []
-    for workflow_id, cfg in merged.items():
-        if not isinstance(cfg, dict):
-            continue
-        items.append({
-            "workflowId": workflow_id,
-            "title": cfg.get("title") or workflow_id,
-            "fieldCount": len(cfg.get("fields") or []),
-            "updatedAt": cfg.get("updatedAt"),
-            "description": cfg.get("description") or "",
-        })
-    items.sort(key=lambda item: item["title"])
-    return {"workflows": items}
-
-@app.get("/api/runninghub/workflows/{workflow_id:path}")
-def get_runninghub_workflow(workflow_id: str):
-    key = runninghub_workflow_store_key(workflow_id)
-    if not key:
-        raise HTTPException(status_code=400, detail="workflowId 必填")
-    with RUNNINGHUB_WORKFLOW_LOCK:
-        store = load_runninghub_workflow_store()
-    cfg = store.get(key)
-    provider_cfg = runninghub_provider_workflow_config(key)
-    cfg = runninghub_select_workflow_config(cfg, provider_cfg)
-    if not isinstance(cfg, dict):
-        raise HTTPException(status_code=404, detail="RunningHub 工作流未找到")
-    return {"workflow": cfg}
-
-@app.post("/api/runninghub/workflows/fetch")
-async def fetch_runninghub_workflow(payload: RunningHubWorkflowConfig):
-    workflow_id = runninghub_workflow_store_key(payload.workflowId)
-    if not workflow_id:
-        raise HTTPException(status_code=400, detail="workflowId 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider)
-    url = runninghub_endpoint_url(provider, "/api/openapi/getJsonApiFormat")
-    body = {"apiKey": api_key, "workflowId": workflow_id}
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=20.0)) as client:
-        try:
-            response = await client.post(url, headers=runninghub_app_headers(True), json=body)
-            raw = response.json()
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to fetch RunningHub workflow parameters: {exc}") from exc
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
-    if not isinstance(raw, dict) or raw.get("code") not in (0, "0"):
-        raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub workflow fetch failed: {raw}")
-    data = raw.get("data") if isinstance(raw.get("data"), dict) else {}
-    prompt = data.get("prompt")
-    workflow_json = {}
-    if isinstance(prompt, str) and prompt.strip():
-        try:
-            workflow_json = json.loads(prompt)
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to parse RunningHub workflow JSON: {exc}") from exc
-    elif isinstance(prompt, dict):
-        workflow_json = prompt
-    fields = runninghub_collect_workflow_fields(workflow_json)
-    return {"success": True, "data": {"workflowId": workflow_id, "title": payload.title or workflow_id, "description": payload.description or "", "fields": fields, "workflowJson": workflow_json, "raw": raw}}
-
-@app.put("/api/runninghub/workflows/{workflow_id:path}")
-def save_runninghub_workflow(workflow_id: str, payload: RunningHubWorkflowConfig):
-    key = runninghub_workflow_store_key(workflow_id)
-    if not key:
-        raise HTTPException(status_code=400, detail="workflowId 必填")
-    fields = [
-        field for field in (runninghub_normalize_field(item) for item in (payload.fields or []))
-        if not runninghub_is_saved_link_field(field)
-    ]
-    cfg = {
-        "workflowId": key,
-        "title": (payload.title or key).strip() or key,
-        "description": payload.description or "",
-        "fields": fields,
-        "workflowJson": payload.workflowJson or {},
-        "optionalImageMode": payload.optionalImageMode or "prune-workflow",
-        "raw": payload.raw or {},
-        "updatedAt": now_ms(),
-    }
-    with RUNNINGHUB_WORKFLOW_LOCK:
-        store = load_runninghub_workflow_store()
-        store[key] = cfg
-        save_runninghub_workflow_store(store)
-    sync_runninghub_workflow_to_provider(cfg)
-    return {"success": True, "workflow": cfg}
-
-@app.delete("/api/runninghub/workflows/{workflow_id:path}")
-def delete_runninghub_workflow(workflow_id: str):
-    key = runninghub_workflow_store_key(workflow_id)
-    if not key:
-        raise HTTPException(status_code=400, detail="workflowId 必填")
-    with RUNNINGHUB_WORKFLOW_LOCK:
-        store = load_runninghub_workflow_store()
-        provider_cfg = runninghub_provider_workflow_config(key)
-        if key not in store and not provider_cfg:
-            raise HTTPException(status_code=404, detail="RunningHub 工作流未找到")
-        store.pop(key, None)
-        save_runninghub_workflow_store(store)
-    remove_runninghub_workflow_from_provider(key)
-    return {"success": True}
-
-@app.get("/api/runninghub/query")
-async def runninghub_query(taskId: str = ""):
-    task_id = str(taskId or "").strip()
-    if not task_id:
-        raise HTTPException(status_code=400, detail="taskId 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider)
-    url = runninghub_endpoint_url(provider, "/task/openapi/outputs")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
-        try:
-            response = await client.post(url, headers=runninghub_app_headers(True), json={"apiKey": api_key, "taskId": task_id})
-            raw = response.json()
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"查询 RunningHub 任务失败：{exc}") from exc
-        if response.status_code >= 400:
-            raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
-        code = raw.get("code") if isinstance(raw, dict) else None
-        status = "PENDING"
-        urls = []
-        if code in (0, "0"):
-            status = "SUCCESS"
-            for remote in runninghub_extract_outputs(raw.get("data")):
-                try:
-                    urls.append(await runninghub_store_remote_output(client, remote))
-                except Exception:
-                    urls.append(remote)
-        elif code in (804, "804"):
-            status = "RUNNING"
-        elif code in (813, "813"):
-            status = "QUEUED"
-        elif code in (805, "805"):
-            status = "FAILED"
-        else:
-            status = "UNKNOWN"
-        return {"success": True, "data": {"status": status, "urls": urls, "failReason": runninghub_fail_reason(raw), "code": code, "raw": raw}}
-
-@app.post("/api/runninghub/upload-asset")
-async def runninghub_upload_asset(payload: RunningHubUploadAssetRequest):
-    source_url = str(payload.url or "").strip()
-    if not source_url:
-        raise HTTPException(status_code=400, detail="url 必填")
-    provider = runninghub_provider()
-    api_key = runninghub_api_key(provider, use_wallet=payload.useWallet)
-    filename = "asset.bin"
-    content_type = "application/octet-stream"
-    content = b""
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=240.0, pool=20.0), follow_redirects=True) as client:
-        path = runninghub_local_asset_path(source_url)
-        if path:
-            filename = os.path.basename(path)
-            content_type = content_type_for_path(path)
-            with open(path, "rb") as f:
-                content = f.read()
-        elif source_url.startswith(("http://", "https://")):
-            response = await client.get(source_url)
-            if not response.is_success:
-                raise HTTPException(status_code=400, detail=f"下载素材失败 HTTP {response.status_code}")
-            content = response.content
-            content_type = response.headers.get("content-type") or content_type
-            filename = os.path.basename(urllib.parse.urlsplit(source_url).path) or filename
-        else:
-            raise HTTPException(status_code=400, detail=f"不支持的素材地址：{source_url}")
-        if not content:
-            raise HTTPException(status_code=400, detail="素材为空，无法上传到 RunningHub")
-        upload_url = runninghub_endpoint_url(provider, "/task/openapi/upload")
-        files = {"file": (filename, content, content_type)}
-        data = {"apiKey": api_key, "fileType": "input"}
-        try:
-            response = await client.post(upload_url, headers=runninghub_app_headers(False, payload.useWallet), data=data, files=files)
-            raw = response.json()
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"上传素材到 RunningHub 失败：{exc}") from exc
-    if response.status_code >= 400:
-        raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
-    if isinstance(raw, dict) and raw.get("code") in (0, "0") and isinstance(raw.get("data"), dict) and raw["data"].get("fileName"):
-        return {"success": True, "data": {"fileName": raw["data"]["fileName"], "fileType": raw["data"].get("fileType") or content_type}}
-    raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub 上传失败：{raw}")
-
 @app.get("/api/config")
 async def ai_config():
     preferred_chat_model = next((m for m in CHAT_MODELS if m == "gpt-5.5"), CHAT_MODELS[0] if CHAT_MODELS else CHAT_MODEL)
@@ -4349,8 +3079,6 @@ async def ai_config():
         "video_models": VIDEO_MODELS,
         "api_providers": providers,
         "has_api_key": bool(AI_API_KEY),
-        "ms_chat_models": MODELSCOPE_CHAT_MODELS,
-        "has_ms_key": bool(modelscope_api_key()),
     }
 
 @app.get("/api/models")
@@ -4369,31 +3097,17 @@ async def save_providers(payload: List[ApiProviderPayload]):
     raw_primary_flags = [bool(getattr(item, "primary", False)) for item in payload]
     for item in payload:
         provider = normalize_provider(item.dict(exclude={"api_key"}))
-        if provider["id"] == "runninghub":
-            provider = preserve_runninghub_hidden_overrides(provider)
-        if any(existing["id"] == provider["id"] for existing in providers):
-            raise HTTPException(status_code=400, detail=f"API 平台 ID 重复：{provider['id']}")
         providers.append(provider)
         key_env = provider_key_env(provider["id"])
         if item.clear_key:
             env_updates[key_env] = ""
         elif item.api_key is not None and item.api_key.strip():
             env_updates[key_env] = item.api_key.strip()
-        if provider["id"] == "runninghub":
-            wallet_env = runninghub_wallet_key_env()
-            if item.clear_wallet_key:
-                env_updates[wallet_env] = ""
-            elif item.wallet_api_key is not None and item.wallet_api_key.strip():
-                env_updates[wallet_env] = item.wallet_api_key.strip()
         if provider["id"] == "comfly":
             env_updates["COMFLY_BASE_URL"] = provider["base_url"]
             env_updates["IMAGE_MODELS"] = ",".join(provider["image_models"])
             env_updates["CHAT_MODELS"] = ",".join(provider["chat_models"])
             env_updates["VIDEO_MODELS"] = ",".join(provider.get("video_models") or [])
-        if provider["id"] == "modelscope":
-            env_updates["MODELSCOPE_CHAT_MODELS"] = ",".join(provider["chat_models"])
-        if provider["id"] == "runninghub":
-            provider["protocol"] = "runninghub"
     if not providers:
         raise HTTPException(status_code=400, detail="至少保留一个 API 平台")
     # 强制最多一个 primary（取最后被标记的；都没标记则保持原样不强制）
@@ -4408,21 +3122,9 @@ async def save_providers(payload: List[ApiProviderPayload]):
         reload_env_globals()   # 立即将最新 env 值同步回模块全局变量，无需重启
     return {"providers": [public_provider(p) for p in providers]}
 
-# --- ModelScope Token (从 env 读取，不再支持通过 UI 修改) ---
 
 @app.get("/api/config/token")
 async def get_global_token():
-    # 优先读 env，回退到 global_config.json（兼容旧数据）
-    saved_token = modelscope_api_key()
-    if saved_token:
-        return {"token": saved_token}
-    if os.path.exists(GLOBAL_CONFIG_FILE):
-        try:
-            with open(GLOBAL_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-                return {"token": config.get("modelscope_token", "")}
-        except:
-            pass
     return {"token": ""}
 
 # --- 在线生图 (COMFLY) ---
@@ -4442,15 +3144,11 @@ def upstream_models_url(base_url: str, protocol: str):
         return f"{base_url}/models" if base_url.endswith("/v1beta") else f"{base_url}/v1beta/models"
     if protocol == "volcengine":
         return f"{base_url}/models" if base_url.endswith("/api/v3") else f"{base_url}/api/v3/models"
-    if protocol == "runninghub":
-        return f"{base_url}/openapi/v2/models"
     return f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
 
 def upstream_model_headers(api_key: str, protocol: str):
     if protocol == "gemini":
         return {"x-goog-api-key": api_key, "Accept": "application/json"}
-    if protocol == "runninghub":
-        return {"Authorization": strip_auth_scheme(api_key, "Bearer"), "Accept": "application/json"}
     return {"Authorization": bearer_auth_value(api_key), "Accept": "application/json"}
 
 def classify_upstream_model(mid):
@@ -4458,7 +3156,7 @@ def classify_upstream_model(mid):
     video_keys = ["veo", "sora", "wan2", "wanx", "doubao-seedance", "doubao-1", "kling", "hailuo", "video", "t2v-", "i2v-", "s2v"]
     if any(k in lc for k in video_keys):
         return "video"
-    image_keys = ["banana", "image", "dalle", "dall-e", "imagen", "flux", "stable", "sdxl", "midjourney", "nano-banana", "ideogram", "fal-ai", "z-image", "qwen-image", "klein", "seedream", "doubao-seedream", "text-to-image", "image-to-image"]
+    image_keys = ["banana", "image", "dalle", "dall-e", "imagen", "flux", "stable", "sdxl", "midjourney", "nano-banana", "ideogram", "fal-ai", "text-to-image", "image-to-image"]
     if any(k in lc for k in image_keys):
         return "image"
     return "chat"
@@ -4498,8 +3196,6 @@ async def test_provider_connection(payload: TestConnectionPayload):
         raise HTTPException(status_code=400, detail="请求地址必须以 http:// 或 https:// 开头")
     api_key = (payload.api_key or "").strip()
     if not api_key and payload.provider_id:
-        api_key = os.getenv(runninghub_wallet_key_env(), "") if payload.provider_id == "runninghub" else ""
-        if not api_key:
             api_key = os.getenv(provider_key_env(payload.provider_id), "")
     if not api_key:
         raise HTTPException(status_code=400, detail="请先填写或保存 API Key")
@@ -4525,8 +3221,6 @@ async def probe_async_endpoint(payload: TestConnectionPayload):
         raise HTTPException(status_code=400, detail="请先填写请求地址")
     api_key = (payload.api_key or "").strip()
     if not api_key and payload.provider_id:
-        api_key = os.getenv(runninghub_wallet_key_env(), "") if payload.provider_id == "runninghub" else ""
-        if not api_key:
             api_key = os.getenv(provider_key_env(payload.provider_id), "")
     if not api_key:
         raise HTTPException(status_code=400, detail="请先填写或保存 API Key")
@@ -4583,7 +3277,7 @@ async def fetch_models_from_upstream(base_url: str, api_key: str, protocol: str 
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(url, headers=upstream_model_headers(api_key, protocol))
             if resp.status_code >= 400:
-                endpoint_label = "/v1beta/models" if protocol == "gemini" else "/api/v3/models" if protocol == "volcengine" else "/openapi/v2/models" if protocol == "runninghub" else "/v1/models"
+                endpoint_label = "/v1beta/models" if protocol == "gemini" else "/api/v3/models" if protocol == "volcengine" else "/v1/models"
                 raise HTTPException(status_code=resp.status_code, detail=f"上游 {endpoint_label} 失败：{resp.text[:300]}")
             raw = resp.json()
     except httpx.HTTPError as e:
@@ -4596,8 +3290,6 @@ async def fetch_upstream_models_from_payload(payload: TestConnectionPayload):
     """按页面当前表单值拉取模型，支持新增平台未保存时直接使用临时 Base URL / Key。"""
     api_key = (payload.api_key or "").strip()
     if not api_key and payload.provider_id:
-        api_key = os.getenv(runninghub_wallet_key_env(), "") if payload.provider_id == "runninghub" else ""
-        if not api_key:
             api_key = os.getenv(provider_key_env(payload.provider_id), "")
     return await fetch_models_from_upstream(payload.base_url, api_key, protocol_from_payload(payload))
 
@@ -4605,8 +3297,6 @@ async def fetch_upstream_models_from_payload(payload: TestConnectionPayload):
 async def fetch_upstream_models(provider_id: str):
     """从已保存的上游 OpenAI 兼容接口拉取 /v1/models 列表，按名称智能分类为 image/chat/video。"""
     provider = get_api_provider_exact(provider_id)
-    api_key = os.getenv(runninghub_wallet_key_env(), "") if provider["id"] == "runninghub" else ""
-    if not api_key:
         api_key = os.getenv(provider_key_env(provider["id"]), "")
     if not api_key:
         raise HTTPException(status_code=400, detail=f"{provider.get('name') or provider_id} 未配置 API Key")
@@ -5173,9 +3863,9 @@ async def canvas_video(payload: CanvasVideoRequest):
 
 @app.post("/api/canvas-llm")
 async def canvas_llm(payload: CanvasLLMRequest):
-    chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model, payload.ms_model)
+    chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model)
     # 判断协议：APIMart 异步 vs 标准 OpenAI
-    _llm_provider = get_api_provider(payload.provider) if payload.provider not in ("modelscope",) else {}
+    _llm_provider = get_api_provider(payload.provider)
     _is_apimart = is_apimart_provider(_llm_provider)
     system_prompt = (payload.system_prompt or "").strip()
     upstream_messages = [{"role": "system", "content": system_prompt}] if system_prompt else []
@@ -5604,7 +4294,7 @@ async def chat(payload: ChatRequest, request: Request, x_user_id: str = Header(d
     save_conversation(user_id, conversation)
 
     if payload.mode == "image":
-        image_provider_id = payload.provider if payload.provider not in {"modelscope"} else "comfly"
+        image_provider_id = payload.provider
         provider = get_api_provider(image_provider_id)
         default_model = (provider.get("image_models") or [IMAGE_MODEL])[0]
         model = selected_model(payload.image_model or payload.model, default_model)
@@ -5628,8 +4318,8 @@ async def chat(payload: ChatRequest, request: Request, x_user_id: str = Header(d
             "raw_usage": raw.get("usage") if isinstance(raw, dict) else None,
         }
     else:
-        chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model, payload.ms_model)
-        _conv_provider = get_api_provider(payload.provider) if payload.provider not in ("modelscope",) else {}
+        chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model)
+        _conv_provider = get_api_provider(payload.provider)
         _conv_is_apimart = is_apimart_provider(_conv_provider)
         history = conversation["messages"][-MAX_HISTORY_MESSAGES:]
         upstream_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -5697,8 +4387,8 @@ async def chat_stream(payload: ChatRequest, request: Request, x_user_id: str = H
     conversation["updated_at"] = now_ms()
     save_conversation(user_id, conversation)
 
-    chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model, payload.ms_model)
-    _stream_provider = get_api_provider(payload.provider) if payload.provider not in ("modelscope",) else {}
+    chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model)
+    _stream_provider = get_api_provider(payload.provider)
     history = conversation["messages"][-MAX_HISTORY_MESSAGES:]
     upstream_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for item in history:
@@ -5834,369 +4524,9 @@ async def delete_history(req: DeleteHistoryRequest):
         print(f"Delete history error: {e}")
         return {"success": False, "message": str(e)}
 
-# --- ModelScope 角度控制 ---
-
-@app.post("/api/angle/poll_status")
-async def poll_angle_cloud(req: CloudPollRequest):
-    api_root = modelscope_image_api_root()
-    clean_token = modelscope_api_key(req.api_key)
-    if not clean_token:
-        raise HTTPException(status_code=400, detail="未提供 ModelScope API Key")
-
-    headers = {
-        "Authorization": f"Bearer {clean_token}",
-        "Content-Type": "application/json",
-        "X-ModelScope-Async-Mode": "true"
-    }
-    task_id = req.task_id
-    print(f"Resuming polling for Angle Task: {task_id}")
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            for i in range(300):
-                await asyncio.sleep(2)
-                result = await client.get(
-                    f"{api_root}/tasks/{task_id}",
-                    headers={**headers, "X-ModelScope-Task-Type": "image_generation"},
-                )
-                result.raise_for_status()
-                data = result.json()
-                status = str(data.get("task_status") or "").upper()
-
-                if status == "SUCCEED":
-                    img_url = data["output_images"][0]
-                    local_path = ""
-                    try:
-                        async with httpx.AsyncClient() as dl_client:
-                            img_res = await dl_client.get(img_url)
-                            if img_res.status_code == 200:
-                                filename = f"cloud_angle_{int(time.time())}.png"
-                                file_path = output_path_for(filename, "output")
-                                with open(file_path, "wb") as f:
-                                    f.write(img_res.content)
-                                local_path = output_url_for(filename, "output")
-                            else:
-                                local_path = img_url
-                    except Exception:
-                        local_path = img_url
-
-                    record = {"timestamp": time.time(), "prompt": f"Resumed {task_id}", "images": [local_path], "type": "angle"}
-                    save_to_history(record)
-                    if req.client_id:
-                        await manager.send_personal_message({"type": "cloud_status", "status": "SUCCEED", "task_id": task_id}, req.client_id)
-                    return {"url": local_path}
-
-                elif status in {"FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "TIMEOUT", "REVOKED"}:
-                    if req.client_id:
-                        await manager.send_personal_message({"type": "cloud_status", "status": "FAILED", "task_id": task_id}, req.client_id)
-                    raise HTTPException(status_code=502, detail=f"ModelScope task failed: {data}")
-
-                if i % 5 == 0 and req.client_id:
-                    await manager.send_personal_message({
-                        "type": "cloud_status", "status": f"{status} ({i}/300)",
-                        "task_id": task_id, "progress": i, "total": 300
-                    }, req.client_id)
-
-            if req.client_id:
-                await manager.send_personal_message({"type": "cloud_status", "status": "TIMEOUT", "task_id": task_id}, req.client_id)
-            return {"status": "timeout", "task_id": task_id, "message": "Task still pending"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Angle polling error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/api/angle/generate")
-async def generate_angle_cloud(req: CloudGenRequest):
-    api_root = modelscope_image_api_root()
-    clean_token = modelscope_api_key(req.api_key)
-    if not clean_token:
-        raise HTTPException(status_code=400, detail="未提供 ModelScope API Key")
-
-    headers = {
-        "Authorization": f"Bearer {clean_token}",
-        "Content-Type": "application/json",
-        "X-ModelScope-Async-Mode": "true"
-    }
-    model = selected_model(req.model, "Qwen/Qwen-Image-Edit-2511")
-    payload = {
-        "model": model,
-        "prompt": req.prompt.strip(),
-        "image_url": [modelscope_image_url(url, max_size=1536) for url in req.image_urls]
-    }
-    if req.resolution:
-        payload["size"] = modelscope_size(req.resolution)
-    if req.loras is not None:
-        payload["loras"] = req.loras
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            submit_res = await client.post(f"{api_root}/images/generations", headers=headers, json=payload)
-            if submit_res.status_code != 200:
-                try:
-                    detail = submit_res.json()
-                except:
-                    detail = submit_res.text
-                raise HTTPException(status_code=submit_res.status_code, detail=detail)
-
-            task_id = submit_res.json().get("task_id")
-            print(f"Angle Task submitted, ID: {task_id}")
-
-            for i in range(300):
-                await asyncio.sleep(2)
-                result = await client.get(
-                    f"{api_root}/tasks/{task_id}",
-                    headers={**headers, "X-ModelScope-Task-Type": "image_generation"},
-                )
-                result.raise_for_status()
-                data = result.json()
-                status = str(data.get("task_status") or "").upper()
-
-                if status == "SUCCEED":
-                    img_url = data["output_images"][0]
-                    local_path = ""
-                    try:
-                        async with httpx.AsyncClient() as dl_client:
-                            img_res = await dl_client.get(img_url)
-                            if img_res.status_code == 200:
-                                filename = f"cloud_angle_{int(time.time())}.png"
-                                file_path = output_path_for(filename, "output")
-                                with open(file_path, "wb") as f:
-                                    f.write(img_res.content)
-                                local_path = output_url_for(filename, "output")
-                            else:
-                                local_path = img_url
-                    except Exception:
-                        local_path = img_url
-
-                    record = {"timestamp": time.time(), "prompt": req.prompt, "images": [local_path], "type": "angle"}
-                    save_to_history(record)
-                    if req.client_id:
-                        await manager.send_personal_message({"type": "cloud_status", "status": "SUCCEED", "task_id": task_id}, req.client_id)
-                    if GLOBAL_LOOP:
-                        asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(record), GLOBAL_LOOP)
-                    return {"url": local_path, "task_id": task_id}
-
-                elif status in {"FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "TIMEOUT", "REVOKED"}:
-                    if req.client_id:
-                        await manager.send_personal_message({"type": "cloud_status", "status": "FAILED", "task_id": task_id}, req.client_id)
-                    raise HTTPException(status_code=502, detail=f"ModelScope task failed: {data}")
-
-                if i % 5 == 0 and req.client_id:
-                    await manager.send_personal_message({
-                        "type": "cloud_status", "status": f"{status} ({i}/300)",
-                        "task_id": task_id, "progress": i, "total": 300
-                    }, req.client_id)
-
-            if req.client_id:
-                await manager.send_personal_message({"type": "cloud_status", "status": "TIMEOUT", "task_id": task_id}, req.client_id)
-            return {"status": "timeout", "task_id": task_id, "message": "Task still pending"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Angle generation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-
-# --- ModelScope Z-Image 云端生图 ---
-
-@app.post("/generate")
-async def generate_cloud(req: CloudGenRequest):
-    api_root = modelscope_image_api_root()
-    clean_token = modelscope_api_key(req.api_key)
-    if not clean_token:
-        raise HTTPException(status_code=400, detail="未提供 ModelScope API Key")
-
-    headers = {
-        "Authorization": f"Bearer {clean_token}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "Tongyi-MAI/Z-Image-Turbo",
-        "prompt": req.prompt.strip(),
-        "size": modelscope_size(req.resolution),
-        "n": 1
-    }
-    if req.loras is not None:
-        payload["loras"] = req.loras
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            submit_res = await client.post(
-                f"{api_root}/images/generations",
-                headers={**headers, "X-ModelScope-Async-Mode": "true"},
-                json=payload
-            )
-            if submit_res.status_code != 200:
-                try:
-                    detail = submit_res.json()
-                except:
-                    detail = submit_res.text
-                raise HTTPException(status_code=submit_res.status_code, detail=detail)
-
-            task_id = submit_res.json().get("task_id")
-            print(f"Z-Image Task submitted, ID: {task_id}")
-
-            for i in range(200):
-                await asyncio.sleep(3)
-                result = await client.get(
-                    f"{api_root}/tasks/{task_id}",
-                    headers={**headers, "X-ModelScope-Task-Type": "image_generation"},
-                )
-                result.raise_for_status()
-                data = result.json()
-                status = str(data.get("task_status") or "").upper()
-
-                if i % 5 == 0:
-                    print(f"Task {task_id} status check {i}: {status}")
-
-                if status == "SUCCEED":
-                    img_url = data["output_images"][0]
-                    local_path = ""
-                    try:
-                        async with httpx.AsyncClient() as dl_client:
-                            img_res = await dl_client.get(img_url)
-                            if img_res.status_code == 200:
-                                filename = f"cloud_{int(time.time())}.png"
-                                file_path = output_path_for(filename, "output")
-                                with open(file_path, "wb") as f:
-                                    f.write(img_res.content)
-                                local_path = output_url_for(filename, "output")
-                            else:
-                                local_path = img_url
-                    except Exception as dl_e:
-                        print(f"Download error: {dl_e}")
-                        local_path = img_url
-
-                    record = {"timestamp": time.time(), "prompt": req.prompt, "images": [local_path], "type": "cloud"}
-                    save_to_history(record)
-                    try:
-                        await manager.broadcast_new_image(record)
-                    except Exception:
-                        pass
-                    return {"url": local_path}
-
-                elif status in {"FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "TIMEOUT", "REVOKED"}:
-                    raise HTTPException(status_code=502, detail=f"ModelScope task failed: {data}")
-
-            raise Exception("Cloud generation timeout")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Cloud generation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-
-# --- ModelScope 通用图片生成（支持图生图） ---
-
-@app.post("/api/ms/generate")
-async def ms_generate(req: MsGenerateRequest):
-    api_root = modelscope_image_api_root()
-    clean_token = modelscope_api_key(req.api_key)
-    if not clean_token:
-        raise HTTPException(status_code=400, detail="未配置 ModelScope API Key，请在 API 设置中填写，或重新保存 ModelScope Token。")
-
-    headers = {
-        "Authorization": f"Bearer {clean_token}",
-        "Content-Type": "application/json",
-        "X-ModelScope-Async-Mode": "true"
-    }
-    payload = {
-        "model": req.model,
-        "prompt": req.prompt.strip(),
-    }
-    if req.width and req.height:
-        payload["width"] = req.width
-        payload["height"] = req.height
-        payload["size"] = modelscope_size(req.size or f"{req.width}x{req.height}")
-    elif req.size:
-        payload["size"] = modelscope_size(req.size)
-    if req.image_urls:
-        payload["image_url"] = [modelscope_image_url(url, max_size=1536) for url in req.image_urls]
-    if req.loras is not None:
-        payload["loras"] = req.loras
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            submit_res = await client.post(
-                f"{api_root}/images/generations",
-                headers=headers,
-                json=payload
-            )
-            if submit_res.status_code != 200:
-                try:
-                    detail = submit_res.json()
-                except:
-                    detail = submit_res.text
-                raise HTTPException(status_code=submit_res.status_code, detail=detail)
-
-            task_id = submit_res.json().get("task_id")
-            print(f"MS Generate Task submitted ({req.model}), ID: {task_id}")
-
-            TERMINAL_FAILED_STATUSES = {"FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "TIMEOUT", "REVOKED"}
-
-            for i in range(300):
-                await asyncio.sleep(2)
-                try:
-                    result = await client.get(
-                        f"{api_root}/tasks/{task_id}",
-                        headers={**headers, "X-ModelScope-Task-Type": "image_generation"},
-                    )
-                    data = result.json()
-                    status = data.get("task_status")
-                    print(f"MS Task {task_id} poll {i}: status={status}")
-
-                    if status == "SUCCEED":
-                        img_url = data["output_images"][0]
-                        local_path = ""
-                        try:
-                            async with httpx.AsyncClient() as dl_client:
-                                img_res = await dl_client.get(img_url)
-                                if img_res.status_code == 200:
-                                    filename = f"ms_{req.model.replace('/', '_').replace(':', '_')}_{int(time.time())}.png"
-                                    file_path = output_path_for(filename, "output")
-                                    with open(file_path, "wb") as f:
-                                        f.write(img_res.content)
-                                    local_path = output_url_for(filename, "output")
-                                else:
-                                    local_path = img_url
-                        except Exception:
-                            local_path = img_url
-
-                        record = {
-                            "timestamp": time.time(),
-                            "prompt": req.prompt,
-                            "images": [local_path],
-                            "type": "klein",
-                            "model": req.model,
-                        }
-                        save_to_history(record)
-                        if GLOBAL_LOOP:
-                            asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(record), GLOBAL_LOOP)
-                        return {"url": local_path, "task_id": task_id}
-
-                    elif status in TERMINAL_FAILED_STATUSES:
-                        error_info = data.get("error_info") or data.get("message") or data.get("detail") or str(data)
-                        raise HTTPException(status_code=502, detail=f"MS task {status}: {error_info}")
-
-                except HTTPException:
-                    raise
-                except Exception as loop_e:
-                    print(f"MS polling error: {loop_e}")
-                    continue
-
-            raise HTTPException(status_code=504, detail="MS 生图超时")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"MS generate error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-
 # --- 工作流管理 ---
 
-BUILTIN_WORKFLOWS = {"Z-Image.json", "Z-Image-Enhance.json", "2511.json", "klein-enhance.json", "Flux2-Klein.json", "upscale.json"}
+BUILTIN_WORKFLOWS = {"2511.json", "upscale.json"}
 CUSTOM_WORKFLOW_FOLDER = "custom"
 LEGACY_CUSTOM_WORKFLOW_FOLDER = "自定义"
 WORKFLOW_NAME_RE = re.compile(rf"^(?:(?:{CUSTOM_WORKFLOW_FOLDER}|{LEGACY_CUSTOM_WORKFLOW_FOLDER})/)?[a-zA-Z0-9_一-龥\.\-]+\.json$")
@@ -6237,328 +4567,6 @@ def workflow_config_path(name: str) -> str:
 
 def is_builtin_workflow(name: str) -> bool:
     return "/" not in name and os.path.basename(name) in BUILTIN_WORKFLOWS
-
-def runninghub_workflow_store_path() -> str:
-    return RUNNINGHUB_WORKFLOW_STORE_FILE
-
-def load_runninghub_workflow_store():
-    if not os.path.exists(RUNNINGHUB_WORKFLOW_STORE_FILE):
-        return {}
-    try:
-        with open(RUNNINGHUB_WORKFLOW_STORE_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
-
-def save_runninghub_workflow_store(store):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(RUNNINGHUB_WORKFLOW_STORE_FILE, "w", encoding="utf-8") as f:
-        json.dump(store, f, ensure_ascii=False, indent=2)
-
-def runninghub_workflow_config_has_payload(cfg):
-    if not isinstance(cfg, dict):
-        return False
-    return bool(cfg.get("fields") or cfg.get("workflowJson") or cfg.get("raw"))
-
-def runninghub_workflow_entry_from_config(cfg, fallback=None):
-    fallback = fallback if isinstance(fallback, dict) else {}
-    key = runninghub_workflow_store_key((cfg or {}).get("workflowId") or fallback.get("workflowId") or fallback.get("id"))
-    if not key:
-        return None
-    return normalize_runninghub_entry({
-        "id": key,
-        "workflowId": key,
-        "title": (cfg or {}).get("title") or fallback.get("title") or fallback.get("name") or f"工作流 {key[-6:]}",
-        "note": (cfg or {}).get("description") or fallback.get("note") or fallback.get("description") or "",
-        "thumbnail": fallback.get("thumbnail") or "",
-        "enabled": fallback.get("enabled", True),
-        "fields": (cfg or {}).get("fields") or fallback.get("fields") or [],
-        "workflowJson": (cfg or {}).get("workflowJson") if isinstance((cfg or {}).get("workflowJson"), dict) else fallback.get("workflowJson") or {},
-        "optionalImageMode": (cfg or {}).get("optionalImageMode") or fallback.get("optionalImageMode") or "prune-workflow",
-        "raw": (cfg or {}).get("raw") if isinstance((cfg or {}).get("raw"), dict) else fallback.get("raw") or {},
-        "updatedAt": (cfg or {}).get("updatedAt") or fallback.get("updatedAt") or 0,
-    }, "workflow")
-
-def runninghub_provider_with_workflow_store(provider):
-    if not isinstance(provider, dict) or provider.get("id") != "runninghub":
-        return provider
-    store = load_runninghub_workflow_store()
-    if not store:
-        return provider
-    merged = dict(provider)
-    workflows = [dict(item) for item in (merged.get("rh_workflows") or []) if isinstance(item, dict)]
-    by_id = {
-        runninghub_workflow_store_key(item.get("workflowId") or item.get("id")): item
-        for item in workflows
-        if runninghub_workflow_store_key(item.get("workflowId") or item.get("id"))
-    }
-    for workflow_id, cfg in store.items():
-        if not isinstance(cfg, dict) or not runninghub_workflow_config_has_payload(cfg):
-            continue
-        existing = by_id.get(workflow_id)
-        selected = runninghub_select_workflow_config(existing, cfg)
-        entry = runninghub_workflow_entry_from_config(selected, existing)
-        if not entry:
-            continue
-        if existing is None:
-            workflows.append(entry)
-        else:
-            existing.update(entry)
-    merged["rh_workflows"] = normalize_runninghub_entries(workflows, "workflow")
-    return merged
-
-def runninghub_provider_workflow_config(workflow_id: str):
-    key = runninghub_workflow_store_key(workflow_id)
-    if not key:
-        return None
-    providers = load_api_providers()
-    provider = next((item for item in providers if item.get("id") == "runninghub"), None)
-    if not provider:
-        return None
-    for entry in provider.get("rh_workflows") or []:
-        entry_key = runninghub_workflow_store_key(entry.get("workflowId") or entry.get("id"))
-        if entry_key != key:
-            continue
-        cfg = {
-            "workflowId": key,
-            "title": entry.get("title") or key,
-            "description": entry.get("note") or entry.get("description") or "",
-            "fields": [
-                field for field in (runninghub_normalize_field(item) for item in (entry.get("fields") or []))
-                if not runninghub_is_saved_link_field(field)
-            ],
-            "workflowJson": entry.get("workflowJson") if isinstance(entry.get("workflowJson"), dict) else {},
-            "optionalImageMode": entry.get("optionalImageMode") or "prune-workflow",
-            "raw": entry.get("raw") if isinstance(entry.get("raw"), dict) else {},
-            "updatedAt": entry.get("updatedAt") or 0,
-            "source": "api_providers",
-        }
-        return cfg if runninghub_workflow_config_has_payload(cfg) else None
-    return None
-
-def runninghub_select_workflow_config(local_cfg, provider_cfg):
-    if isinstance(local_cfg, dict) and isinstance(provider_cfg, dict):
-        try:
-            local_updated = int(local_cfg.get("updatedAt") or 0)
-        except Exception:
-            local_updated = 0
-        try:
-            provider_updated = int(provider_cfg.get("updatedAt") or 0)
-        except Exception:
-            provider_updated = 0
-        return provider_cfg if provider_updated > local_updated else local_cfg
-    if isinstance(local_cfg, dict):
-        return local_cfg
-    if isinstance(provider_cfg, dict):
-        return provider_cfg
-    return None
-
-def sync_runninghub_workflow_to_provider(cfg):
-    if not isinstance(cfg, dict):
-        return
-    key = runninghub_workflow_store_key(cfg.get("workflowId"))
-    if not key:
-        return
-    providers = load_api_providers()
-    provider = next((item for item in providers if item.get("id") == "runninghub"), None)
-    if not provider:
-        provider = {
-            "id": "runninghub",
-            "name": "RunningHub",
-            "base_url": RUNNINGHUB_DEFAULT_BASE_URL,
-            "protocol": "runninghub",
-            "image_generation_endpoint": "",
-            "image_edit_endpoint": "",
-            "enabled": True,
-            "primary": False,
-            "image_models": RUNNINGHUB_DEFAULT_IMAGE_MODELS,
-            "chat_models": [],
-            "video_models": [],
-            "ms_loras": [],
-            "ms_defaults_version": 0,
-            "rh_apps": RUNNINGHUB_DEFAULT_APPS,
-            "rh_workflows": [],
-        }
-        providers.append(provider)
-    workflows = provider.setdefault("rh_workflows", [])
-    entry = None
-    for item in workflows:
-        item_key = runninghub_workflow_store_key(item.get("workflowId") or item.get("id"))
-        if item_key == key:
-            entry = item
-            break
-    if entry is None:
-        entry = {
-            "id": key,
-            "workflowId": key,
-            "title": cfg.get("title") or f"工作流 {key[-6:]}",
-            "note": cfg.get("description") or "",
-            "thumbnail": "",
-            "enabled": True,
-        }
-        workflows.append(entry)
-    entry.update({
-        "id": key,
-        "workflowId": key,
-        "title": cfg.get("title") or entry.get("title") or f"工作流 {key[-6:]}",
-        "note": cfg.get("description") or "",
-        "fields": [
-            field for field in (runninghub_normalize_field(item) for item in (cfg.get("fields") or []))
-            if not runninghub_is_saved_link_field(field)
-        ],
-        "workflowJson": cfg.get("workflowJson") if isinstance(cfg.get("workflowJson"), dict) else {},
-        "optionalImageMode": cfg.get("optionalImageMode") or "prune-workflow",
-        "raw": cfg.get("raw") if isinstance(cfg.get("raw"), dict) else {},
-        "updatedAt": cfg.get("updatedAt") or now_ms(),
-    })
-    if "enabled" not in entry:
-        entry["enabled"] = True
-    if "thumbnail" not in entry:
-        entry["thumbnail"] = ""
-    save_api_providers([normalize_provider(item) for item in providers])
-
-def remove_runninghub_workflow_from_provider(workflow_id: str):
-    key = runninghub_workflow_store_key(workflow_id)
-    if not key:
-        return
-    providers = load_api_providers()
-    changed = False
-    for provider in providers:
-        if provider.get("id") != "runninghub":
-            continue
-        workflows = provider.get("rh_workflows") or []
-        removed = next((
-            item for item in workflows
-            if runninghub_workflow_store_key(item.get("workflowId") or item.get("id")) == key
-        ), None)
-        kept = [
-            item for item in workflows
-            if runninghub_workflow_store_key(item.get("workflowId") or item.get("id")) != key
-        ]
-        static_provider = load_static_runninghub_provider()
-        static_workflow = next((
-            item for item in (static_provider or {}).get("rh_workflows", [])
-            if runninghub_workflow_store_key(item.get("workflowId") or item.get("id")) == key
-        ), None)
-        if static_workflow:
-            tombstone = normalize_runninghub_entry({**static_workflow, **(removed or {}), "enabled": False, "hidden": True}, "workflow")
-            if tombstone:
-                kept.append(tombstone)
-        if static_workflow or len(kept) != len(workflows):
-            provider["rh_workflows"] = kept
-            changed = True
-    if changed:
-        save_api_providers([normalize_provider(item) for item in providers])
-
-def runninghub_workflow_store_key(workflow_id: str) -> str:
-    return str(workflow_id or "").strip()
-
-def runninghub_normalize_field(raw, fallback=None):
-    fallback = fallback or {}
-    if hasattr(raw, "dict"):
-        raw = raw.dict()
-    if not isinstance(raw, dict):
-        raw = {}
-    options = raw.get("options", fallback.get("options", []))
-    if isinstance(options, str):
-        options = [item.strip() for item in re.split(r"[\r\n,]+", options) if item.strip()]
-    elif isinstance(options, list):
-        options = [str(item).strip() for item in options if str(item).strip()]
-    else:
-        options = []
-    field_id = str(raw.get("id") or raw.get("fieldId") or raw.get("key") or raw.get("nodeId") or fallback.get("id") or "").strip()
-    node_id = str(raw.get("nodeId") or fallback.get("nodeId") or raw.get("node_id") or "").strip()
-    field_name = str(raw.get("fieldName") or raw.get("inputName") or raw.get("name") or fallback.get("fieldName") or "").strip()
-    field_value = raw.get("fieldValue")
-    if field_value is None:
-        field_value = raw.get("defaultValue")
-    if field_value is None:
-        field_value = raw.get("value")
-    if field_value is None:
-        field_value = fallback.get("fieldValue", "")
-    if isinstance(field_value, (dict, list)):
-        field_value = json.dumps(field_value, ensure_ascii=False)
-    elif field_value is None:
-        field_value = ""
-    else:
-        field_value = str(field_value)
-    return {
-        "id": field_id or f"{node_id}::{field_name}",
-        "nodeId": node_id,
-        "fieldName": field_name,
-        "fieldValue": field_value,
-        "fieldType": str(raw.get("fieldType") or fallback.get("fieldType") or "TEXT"),
-        "label": str(raw.get("label") or raw.get("title") or field_name or fallback.get("label") or ""),
-        "enabled": bool(raw.get("enabled", fallback.get("enabled", True))),
-        "sourceFromUpstream": bool(raw.get("sourceFromUpstream", fallback.get("sourceFromUpstream", True))),
-        "group": str(raw.get("group") or fallback.get("group") or ""),
-        "note": str(raw.get("note") or fallback.get("note") or ""),
-        "options": options,
-        "random_enabled": bool(raw.get("random_enabled", fallback.get("random_enabled", False))),
-        "min": raw.get("min", fallback.get("min", "")),
-        "max": raw.get("max", fallback.get("max", "")),
-        "step": raw.get("step", fallback.get("step", "")),
-        "imageOrder": int(raw.get("imageOrder") or raw.get("image_order") or fallback.get("imageOrder") or 0),
-        "required": bool(raw.get("required", fallback.get("required", False))),
-    }
-
-def runninghub_is_saved_link_field(field):
-    if not isinstance(field, dict):
-        return False
-    value = field.get("fieldValue")
-    if not isinstance(value, str):
-        return False
-    text = value.strip()
-    if not (text.startswith("[") and text.endswith("]")):
-        return False
-    try:
-        parsed = json.loads(text)
-    except Exception:
-        return False
-    return runninghub_is_workflow_link_value(parsed)
-
-def runninghub_collect_workflow_fields(workflow_json):
-    fields = []
-    if not isinstance(workflow_json, dict):
-        return fields
-    for node_id, node_content in workflow_json.items():
-        if not isinstance(node_content, dict):
-            continue
-        inputs = node_content.get("inputs")
-        if not isinstance(inputs, dict):
-            continue
-        for field_name, raw_value in inputs.items():
-            if runninghub_is_workflow_link_value(raw_value):
-                continue
-            if isinstance(raw_value, (dict, list)):
-                field_value = json.dumps(raw_value, ensure_ascii=False)
-            elif raw_value is None:
-                field_value = ""
-            else:
-                field_value = str(raw_value)
-            field_type = runninghub_infer_workflow_field_type(field_name, field_value)
-            fields.append({
-                "id": f"{node_id}::{field_name}",
-                "nodeId": str(node_id),
-                "fieldName": str(field_name),
-                "fieldValue": field_value,
-                "fieldType": field_type,
-                "label": str(field_name),
-                "enabled": False,
-                "sourceFromUpstream": True,
-                "group": str(
-                    (node_content.get("_meta") or {}).get("title")
-                    or node_content.get("class_type")
-                    or node_content.get("_class")
-                    or node_content.get("type")
-                    or ""
-                ),
-                "note": "",
-                "imageOrder": 0,
-                "required": field_type == "IMAGE",
-            })
-    return fields
 
 @app.get("/api/workflows")
 def list_workflows():
