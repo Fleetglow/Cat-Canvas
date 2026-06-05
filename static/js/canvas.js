@@ -2192,7 +2192,7 @@ function brushColor(){
     return document.getElementById('paintBrushColor')?.value || '#ff2d55';
 }
 const MASK_BRUSH_ALPHA = 115;
-const MASK_BRUSH_COLOR = `rgba(255,255,255,${MASK_BRUSH_ALPHA / 255})`;
+const MASK_BRUSH_COLOR = `rgba(255,0,0,${MASK_BRUSH_ALPHA / 255})`;
 function setupDrawStyle(ctx){
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -2210,8 +2210,8 @@ function normalizeMaskPreviewCanvas(canvasEl=editDrawCanvas()){
     for(let i = 0; i < data.length; i += 4){
         if(data[i + 3] <= 0) continue;
         data[i] = 255;
-        data[i + 1] = 255;
-        data[i + 2] = 255;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
         if(data[i + 3] > MASK_BRUSH_ALPHA) data[i + 3] = MASK_BRUSH_ALPHA;
         changed = true;
     }
