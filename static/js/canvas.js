@@ -7518,12 +7518,19 @@ window.addEventListener('keydown', e => {
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         const tag = document.activeElement?.tagName;
         if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault(); performUndo();
+        e.preventDefault();
+        if(document.getElementById('imageEditModal')?.classList.contains('open')){
+            if(imageEditMode === 'mask' || imageEditMode === 'brush') undoEditDrawing();
+            else if(imageEditMode === 'grid') undoGridCustomLine();
+        } else { performUndo(); }
     }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
         const tag = document.activeElement?.tagName;
         if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault(); performRedo();
+        e.preventDefault();
+        if(document.getElementById('imageEditModal')?.classList.contains('open')){
+            if(imageEditMode === 'mask' || imageEditMode === 'brush') redoEditDrawing();
+        } else { performRedo(); }
     }
     if(e.key === 'Delete' || e.key === 'Backspace') {
         const tag = document.activeElement?.tagName;
