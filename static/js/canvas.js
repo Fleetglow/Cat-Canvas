@@ -5236,6 +5236,7 @@ function deleteConnection(id, event){
     if(hoveredConnectionId === id) hoveredConnectionId = '';
     syncGeneratorInputs();
     render();
+    renderLinks();
     scheduleSave();
 }
 function outputDownloadName(url){
@@ -5335,7 +5336,7 @@ function renderCanvasLog(){
             const safe = escapeAttr(url);
             if(isMissingAssetUrl(url)) return `<div class="missing-asset compact" data-url="${safe}"><i data-lucide="image-off" class="w-4 h-4"></i></div>`;
             return isVideoUrl(url) ? `<video src="${safe}" data-url="${safe}" muted playsinline></video>` : `<img src="${safe}" data-url="${safe}" alt="output">`;
-        }).join('') || '<div class="log-thumb-placeholder"><i data-lucide="image-off" class="w-5 h-5"></i></div>';
+        }).join('') || (log.status === 'failed' ? `<div class="log-thumb-placeholder log-thumb-error" title="${escapeAttr(log.error || '')}"><i data-lucide="alert-triangle" class="w-5 h-5"></i><span>${escapeHtml(log.error || tr('canvas.unknownError'))}</span></div>` : `<div class="log-thumb-placeholder"><i data-lucide="image-off" class="w-5 h-5"></i></div>`);
         const date = new Date(log.createdAt || Date.now()).toLocaleString('zh-CN');
         const req = log.request || {};
         const taskId = req.task_id || req.taskId || req.prompt_id || req.promptId || '';
@@ -6998,12 +6999,18 @@ function linkDeleteButton(connection, a, b){
     btn.style.left = `${(a.x + b.x) / 2}px`;
     btn.style.top = `${(a.y + b.y) / 2}px`;
     btn.textContent = '×';
-    btn.onclick = e => deleteConnection(connection.id, e);
+    btn.onmousedown = e => { e.stopPropagation(); };
+    btn.onclick = e => { e.stopPropagation(); deleteConnection(connection.id, e); };
     return btn;
 }
 function linkHitEl(x1,y1,x2,y2,id){
     const p = pathEl(x1, y1, x2, y2, 'link-hit');
     p.dataset.connectionId = id;
+    p.ondblclick = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteConnection(id, e);
+    };
     return p;
 }
 function setHoveredConnection(id){

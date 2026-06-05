@@ -76,10 +76,10 @@
         .link { stroke:var(--faint); stroke-width:2.5; fill:none; opacity:.82; pointer-events:none; }
         .link.temp { stroke:var(--strong); stroke-dasharray:6 6; }
         .link.knife-trail { stroke:#ef4444; stroke-width:2.4; stroke-dasharray:7 6; opacity:.88; filter:drop-shadow(0 0 6px rgba(239,68,68,.35)); }
-        .link-hit { stroke:transparent; stroke-width:18; fill:none; pointer-events:stroke; }
+        .link-hit { stroke:transparent; stroke-width:22; fill:none; pointer-events:stroke; cursor:pointer; }
         .link-controls { position:absolute; inset:0; width:6000px; height:4000px; pointer-events:none; z-index:3; }
         .link-delete { position:absolute; width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%); color:#64748b; background:rgba(255,255,255,.94); border:1px solid #e2e8f0; box-shadow:0 8px 20px rgba(15,23,42,.12); opacity:0; pointer-events:none; transition:opacity .14s var(--ease), color .14s var(--ease), border-color .14s var(--ease), background .14s var(--ease); }
-        .link-delete.visible,.link-delete.hover { opacity:1; pointer-events:auto; }
+        .link-delete.visible,.link-delete.hover { opacity:1; pointer-events:auto; cursor:pointer; }
         .link-delete.hover { color:#dc2626; border-color:#fecaca; background:#fff5f5; }
         .node { position:absolute; min-width:220px; min-height:96px; border:1px solid var(--line); border-radius:22px; background:var(--card); box-shadow:0 16px 42px var(--shadow); overflow:visible; user-select:none; z-index:2; }
         .node::before { content:""; position:absolute; inset:0; border-radius:inherit; background:var(--card); pointer-events:none; z-index:-1; overflow:hidden; }
@@ -510,6 +510,7 @@
         .log-select-cb { display:none; position:absolute; top:6px; right:6px; z-index:4; width:18px; height:18px; accent-color:var(--strong); flex-shrink:0; background:rgba(255,255,255,.85); border-radius:4px; padding:1px; }
         .log-thumb-placeholder { display:none; }
         .log-list .log-thumb-placeholder { display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:16/9; border-radius:12px; border:1px dashed var(--line); background:var(--card-solid); color:var(--faint); }
+        .log-list .log-thumb-placeholder.log-thumb-error { flex-direction:column; gap:6px; color:#dc2626; border-color:rgba(239,68,68,.3); background:rgba(239,68,68,.06); font-size:11px; line-height:1.4; text-align:center; padding:8px; word-break:break-all; }
         .log-batch-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; border-bottom:1px solid var(--line); background:var(--soft); flex-shrink:0; }
         .log-batch-btn { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card-solid); font-size:11px; font-weight:700; color:var(--text); cursor:pointer; transition:background .15s, color .15s; }
         .log-batch-btn:hover { background:var(--line); }
@@ -709,6 +710,7 @@
         .theme-dark .output-spinner { border-color:#334155; border-top-color:#cbd5e1; }
         .theme-dark .log-item.failed { background:rgba(127,29,29,.18); border-color:rgba(239,68,68,.42); }
         .theme-dark .log-error { color:#fca5a5; }
+        .theme-dark .log-thumb-placeholder.log-thumb-error { color:#fca5a5; border-color:rgba(239,68,68,.35); background:rgba(127,29,29,.2); }
         .theme-dark .image-edit-panel { background:var(--card-solid); border-color:var(--line); }
         .theme-dark .image-edit-title { color:var(--text); }
         .theme-dark .image-edit-mode { background:var(--soft); border-color:var(--line); }
