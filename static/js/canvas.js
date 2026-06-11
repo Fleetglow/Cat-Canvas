@@ -6059,7 +6059,7 @@ function setupLightboxInfoPanel(meta, log){
         format && {label:'格式', value:format},
     ].filter(Boolean);
     outputParamsGrid.innerHTML = params.map(p =>
-        `<div class="info-param-item"${p.label === '尺寸' ? ' data-param="size"' : ''}><span class="info-param-label">${p.label}</span><span class="info-param-value">${escapeHtml(p.value)}</span></div>`
+        `<div class="info-param-item"${p.label === '尺寸' ? ' data-param="size"' : p.label === '比例' ? ' data-param="ratio"' : ''}><span class="info-param-label">${p.label}</span><span class="info-param-value">${escapeHtml(p.value)}</span></div>`
     ).join('');
     // 创建时间 + 耗时
     if(createdStr || runStr){
