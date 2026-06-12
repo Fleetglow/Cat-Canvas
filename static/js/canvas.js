@@ -202,8 +202,11 @@ let gridCustomOrientation = 'h'; // 当前点击放置方向
 let gridCustomHistory = []; // 撤销栈：每次放线前快照
 let gridCustomDrag = null; // {index, pointerId}
 let imageEditZoom = 1.0;
+let lastEditPointerEvent = null;
 let imageEditBaseW = 0; // zoom=1 时图片显示宽度
 let imageEditBaseH = 0;
+let imageEditLayoutW = 0;
+let imageEditLayoutH = 0;
 let textSelectionGuard = null;
 const PROMPT_TEXT_MAX_LENGTH = 20000;
 const CLIENT_ID = 'canvas_' + Math.random().toString(36).slice(2);
@@ -1476,6 +1479,9 @@ document.querySelectorAll('[data-image-edit-mode]').forEach(btn => {
 });
 document.getElementById('editDrawCanvas').addEventListener('pointerdown', beginEditDraw);
 document.getElementById('editDrawCanvas').addEventListener('pointermove', moveEditDraw);
+document.getElementById('editDrawCanvas').addEventListener('pointermove', _updateBrushCursor);
+document.getElementById('editDrawCanvas').addEventListener('pointerenter', _updateBrushCursor);
+document.getElementById('editDrawCanvas').addEventListener('pointerleave', _hideBrushCursor);
 document.getElementById('editDrawCanvas').addEventListener('pointerup', endEditDraw);
 document.getElementById('editDrawCanvas').addEventListener('pointercancel', endEditDraw);
 document.getElementById('editDrawCanvas').addEventListener('pointerleave', endEditDraw);
@@ -1490,6 +1496,7 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
     if(!cropState) return;
     event.preventDefault();
     event.stopPropagation();
+    lastEditPointerEvent = {clientX: event.clientX, clientY: event.clientY};
     const stage = event.currentTarget;
     const oldZoom = imageEditZoom;
     const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
@@ -1504,6 +1511,8 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
     const scale = imageEditZoom / oldZoom;
     stage.scrollLeft = contentX * scale - mx;
     stage.scrollTop = contentY * scale - my;
+    syncImageEditLayout();
+    requestAnimationFrame(syncImageEditLayout);
 }, {passive: false});
 
 // 预览模式：应用平移变换
@@ -2100,6 +2109,18 @@ function setImageEditMode(mode, userTouched=false){
     cropCanvasEl.classList.toggle('brush-mode', imageEditMode === 'brush');
     cropCanvasEl.classList.toggle('grid-mode', imageEditMode === 'grid');
     _syncGridCustomCursor();
+    _syncBrushCursor();
+    // 预览 ↔ 非预览 切换时，清除缩放产生的内联样式，让 CSS max-width 重新生效
+    const isPreviewTransition = (prevImageEditMode === 'preview') !== (imageEditMode === 'preview');
+    const img = document.getElementById('cropImage');
+    if(isPreviewTransition && prevImageEditMode){
+        img.style.width = ''; img.style.height = '';
+        img.style.maxWidth = ''; img.style.maxHeight = '';
+        imageEditZoom = 1.0;
+        _previewPanX = 0; _previewPanY = 0;
+        const inner = document.querySelector('#imageEditStage > .image-edit-stage-inner');
+        if(inner) inner.style.transform = '';
+    }
     document.querySelectorAll('[data-image-edit-mode]').forEach(btn => btn.classList.toggle('active', btn.dataset.imageEditMode === imageEditMode));
     document.getElementById('imageMaskTools').classList.toggle('active', imageEditMode === 'mask');
     document.getElementById('imageBrushTools').classList.toggle('active', imageEditMode === 'brush');
@@ -2115,12 +2136,28 @@ function setImageEditMode(mode, userTouched=false){
     title.textContent = tr(titleKey);
     sub.textContent = tr(subKey);
     apply.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${tr(labelKey)}</span>`;
-    resizeEditDrawCanvas();
-    if(imageEditMode === 'grid') refreshGridSplitPreview();
-    else if(imageEditMode === 'crop') clearEditDrawing(true);
-    else if(imageEditMode === 'preview'){ clearEditDrawing(true); resetCropBox(); _previewPanX = 0; _previewPanY = 0; _applyPreviewPan(); }
-    else if(prevImageEditMode === 'grid') clearEditDrawing(true); // 离开 grid 时主动清掉画布上残留的分割线预览
-    if(prevImageEditMode === 'preview' && imageEditMode !== 'preview'){ _previewPanX = 0; _previewPanY = 0; const _si = document.querySelector('#imageEditStage > .image-edit-stage-inner'); if(_si) _si.style.transform = ''; }
+    // 延迟到下一帧确保 CSS 类切换和样式清除后的布局已稳定
+    const doResize = () => {
+        resizeEditDrawCanvas();
+        if(imageEditMode === 'grid') refreshGridSplitPreview();
+        else if(imageEditMode === 'crop') clearEditDrawing(true);
+        else if(imageEditMode === 'preview'){ clearEditDrawing(true); resetCropBox(); _applyPreviewPan(); }
+        else if(prevImageEditMode === 'grid') clearEditDrawing(true);
+        if(isPreviewTransition && prevImageEditMode){
+            imageEditBaseW = img.clientWidth; imageEditBaseH = img.clientHeight;
+            const stage = document.getElementById('imageEditStage');
+            if(stage){ stage.scrollLeft = 0; stage.scrollTop = 0; }
+            syncImageEditOverflow();
+        }
+        if(imageEditMode === 'preview' && !isPreviewTransition){
+            imageEditBaseW = img.clientWidth; imageEditBaseH = img.clientHeight;
+        }
+        syncImageEditLayout();
+        requestAnimationFrame(syncImageEditLayout);
+        _updateZoomLabel();
+    };
+    if(isPreviewTransition && prevImageEditMode){ requestAnimationFrame(doResize); }
+    else { doResize(); }
     syncEditDrawingHistoryButtons();
     syncBrushToolButtons();
     refreshIcons();
@@ -2257,6 +2294,29 @@ function normalizeMaskPreviewCanvas(canvasEl=editDrawCanvas()){
     }
     if(changed) ctx.putImageData(imageData, 0, 0);
 }
+function normalizeMaskPreviewRegion(canvasEl, x, y, w, h){
+    if(imageEditMode !== 'mask' || !canvasEl?.width || !canvasEl?.height) return;
+    const x0 = Math.max(0, Math.floor(x));
+    const y0 = Math.max(0, Math.floor(y));
+    const x1 = Math.min(canvasEl.width, Math.ceil(x + w));
+    const y1 = Math.min(canvasEl.height, Math.ceil(y + h));
+    const rw = x1 - x0;
+    const rh = y1 - y0;
+    if(rw <= 0 || rh <= 0) return;
+    const ctx = canvasEl.getContext('2d');
+    const imageData = ctx.getImageData(x0, y0, rw, rh);
+    const data = imageData.data;
+    let changed = false;
+    for(let i = 0; i < data.length; i += 4){
+        if(data[i + 3] <= 0) continue;
+        data[i] = 255;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+        if(data[i + 3] > MASK_BRUSH_ALPHA) data[i + 3] = MASK_BRUSH_ALPHA;
+        changed = true;
+    }
+    if(changed) ctx.putImageData(imageData, x0, y0);
+}
 function circledNumber(n){
     if(n >= 1 && n <= 20) return String.fromCharCode(0x2460 + n - 1);
     return String(n);
@@ -2291,6 +2351,40 @@ function drawNumberLabel(point){
     ctx.fillStyle = brushColor();
     ctx.fillText(text, point.x, point.y);
     ctx.restore();
+}
+function drawFreeBrushDot(ctx, point){
+    const radius = Math.max(0.5, editBrushSize() / 2);
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    normalizeMaskPreviewRegion(ctx.canvas, point.x - radius - 2, point.y - radius - 2, radius * 2 + 4, radius * 2 + 4);
+}
+function drawFreeBrushSegments(ctx, state, points){
+    if(!points.length) return;
+    const pad = editBrushSize() * 1.75 + 8;
+    let minX = state.lastMid?.x ?? state.x;
+    let minY = state.lastMid?.y ?? state.y;
+    let maxX = minX;
+    let maxY = minY;
+    ctx.beginPath();
+    if(state.lastMid) ctx.moveTo(state.lastMid.x, state.lastMid.y);
+    else ctx.moveTo(state.x, state.y);
+    points.forEach(point => {
+        const mid = {
+            x:(state.x + point.x) / 2,
+            y:(state.y + point.y) / 2,
+        };
+        ctx.quadraticCurveTo(state.x, state.y, mid.x, mid.y);
+        minX = Math.min(minX, state.x, point.x, mid.x);
+        minY = Math.min(minY, state.y, point.y, mid.y);
+        maxX = Math.max(maxX, state.x, point.x, mid.x);
+        maxY = Math.max(maxY, state.y, point.y, mid.y);
+        state.x = point.x;
+        state.y = point.y;
+        state.lastMid = mid;
+    });
+    ctx.stroke();
+    normalizeMaskPreviewRegion(ctx.canvas, minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2);
 }
 function beginEditDraw(event){
     if(event.button !== 0) return; // 仅左键绘图
@@ -2335,13 +2429,9 @@ function beginEditDraw(event){
         syncEditDrawingHistoryButtons();
         return;
     }
-    editDrawState = {x:p.x, y:p.y, sx:p.x, sy:p.y, pointerId:event.pointerId, snapshot:(imageEditMode === 'brush' && brushTool !== 'free') ? editDrawSnapshot() : null};
+    editDrawState = {x:p.x, y:p.y, sx:p.x, sy:p.y, lastMid:null, pointerId:event.pointerId, snapshot:(imageEditMode === 'brush' && brushTool !== 'free') ? editDrawSnapshot() : null};
     setupDrawStyle(ctx);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x + 0.01, p.y + 0.01);
-    if(imageEditMode === 'mask' || brushTool === 'free') ctx.stroke();
-    normalizeMaskPreviewCanvas(canvasEl);
+    if(imageEditMode === 'mask' || brushTool === 'free') drawFreeBrushDot(ctx, p);
 }
 function moveEditDraw(event){
     if(imageEditMode === 'grid' && gridCustomMode && gridCustomDrag){
@@ -2355,24 +2445,21 @@ function moveEditDraw(event){
     event.preventDefault();
     event.stopPropagation();
     const ctx = editDrawCanvas().getContext('2d');
-    const p = editDrawPoint(event);
     if(imageEditMode === 'brush' && brushTool !== 'free'){
+        const p = editDrawPoint(event);
         restoreEditDrawSnapshot(editDrawState.snapshot);
         drawBrushShape(ctx, {x:editDrawState.sx, y:editDrawState.sy}, p, true);
         return;
     }
     setupDrawStyle(ctx);
-    ctx.beginPath();
-    ctx.moveTo(editDrawState.x, editDrawState.y);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    editDrawState.x = p.x;
-    editDrawState.y = p.y;
-    normalizeMaskPreviewCanvas();
+    const events = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [event];
+    drawFreeBrushSegments(ctx, editDrawState, events.map(item => editDrawPoint(item)));
 }
 function endEditDraw(event){
+    const shouldNormalizeMask = !!editDrawState && imageEditMode === 'mask';
     if(editDrawState && event?.pointerId != null) editDrawCanvas().releasePointerCapture?.(event.pointerId);
     if(gridCustomDrag && event?.pointerId != null) editDrawCanvas().releasePointerCapture?.(event.pointerId);
+    if(shouldNormalizeMask) normalizeMaskPreviewCanvas();
     editDrawState = null;
     gridCustomDrag = null;
     syncEditDrawingHistoryButtons();
@@ -2532,6 +2619,8 @@ function applyImageEditZoom(){
         clampCrop();
         renderCropBox();
     }
+    imageEditLayoutW = img.clientWidth || imageEditLayoutW;
+    imageEditLayoutH = img.clientHeight || imageEditLayoutH;
     if(imageEditMode === 'grid') refreshGridSplitPreview();
     syncImageEditOverflow();
     _updateZoomLabel();
@@ -2548,12 +2637,38 @@ function syncImageEditOverflow(){
     stage.classList.toggle('overflow-x', overflowX);
     stage.classList.toggle('overflow-y', overflowY);
 }
+function syncImageEditLayout(){
+    const img = document.getElementById('cropImage');
+    const nextW = img?.clientWidth || 0;
+    const nextH = img?.clientHeight || 0;
+    if(cropState && imageEditLayoutW > 0 && imageEditLayoutH > 0 && nextW > 0 && nextH > 0 && (nextW !== imageEditLayoutW || nextH !== imageEditLayoutH)){
+        const scaleX = nextW / imageEditLayoutW;
+        const scaleY = nextH / imageEditLayoutH;
+        cropState.x = Math.round(cropState.x * scaleX);
+        cropState.y = Math.round(cropState.y * scaleY);
+        cropState.w = Math.round(cropState.w * scaleX);
+        cropState.h = Math.round(cropState.h * scaleY);
+    }
+    if(nextW > 0) imageEditLayoutW = nextW;
+    if(nextH > 0) imageEditLayoutH = nextH;
+    resizeEditDrawCanvas();
+    if(cropState && imageEditMode === 'crop'){
+        clampCrop();
+        renderCropBox();
+    }
+    if(imageEditMode === 'grid') refreshGridSplitPreview();
+    syncImageEditOverflow();
+    _refreshBrushCursorSize();
+    if(lastEditPointerEvent) _updateBrushCursor(lastEditPointerEvent);
+}
 function resetImageEditZoom(){
     const stage = document.getElementById('imageEditStage');
     imageEditZoom = 1.0;
     applyImageEditZoom();
     if(stage){ stage.scrollLeft = 0; stage.scrollTop = 0; }
     _previewPanX = 0; _previewPanY = 0; _applyPreviewPan();
+    syncImageEditLayout();
+    requestAnimationFrame(syncImageEditLayout);
 }
 function _updateZoomLabel(){
     const el = document.getElementById('imageEditZoomLabel');
@@ -2563,6 +2678,57 @@ function _syncGridCustomCursor(){
     const cropCanvasEl = document.getElementById('cropCanvas');
     cropCanvasEl.classList.toggle('grid-custom-h', imageEditMode === 'grid' && gridCustomMode && gridCustomOrientation === 'h');
     cropCanvasEl.classList.toggle('grid-custom-v', imageEditMode === 'grid' && gridCustomMode && gridCustomOrientation === 'v');
+}
+let _brushCursorEl = null;
+function _getBrushCursorEl(){
+    if(!_brushCursorEl){
+        _brushCursorEl = document.createElement('div');
+        _brushCursorEl.className = 'brush-cursor';
+        document.getElementById('cropCanvas').appendChild(_brushCursorEl);
+    }
+    return _brushCursorEl;
+}
+function _updateBrushCursor(event){
+    if(event) lastEditPointerEvent = {
+        clientX: event.clientX,
+        clientY: event.clientY
+    };
+    if(imageEditMode !== 'mask' && imageEditMode !== 'brush'){
+        _getBrushCursorEl().style.display = 'none';
+        return;
+    }
+    if(!lastEditPointerEvent) return;
+    const canvasEl = editDrawCanvas();
+    const rect = canvasEl.getBoundingClientRect();
+    const x = lastEditPointerEvent.clientX - rect.left;
+    const y = lastEditPointerEvent.clientY - rect.top;
+    const scale = rect.width / canvasEl.width;
+    const diameter = Math.max(2, editBrushSize() * scale);
+    const cursor = _getBrushCursorEl();
+    cursor.style.left = x + 'px';
+    cursor.style.top = y + 'px';
+    cursor.style.width = diameter + 'px';
+    cursor.style.height = diameter + 'px';
+    cursor.style.display = 'block';
+}
+function _hideBrushCursor(){
+    if(_brushCursorEl) _brushCursorEl.style.display = 'none';
+}
+function _refreshBrushCursorSize(){
+    if(!_brushCursorEl || _brushCursorEl.style.display === 'none') return;
+    if(imageEditMode !== 'mask' && imageEditMode !== 'brush') return;
+    const canvasEl = editDrawCanvas();
+    const scale = canvasEl.getBoundingClientRect().width / canvasEl.width;
+    const diameter = Math.max(2, editBrushSize() * scale);
+    _brushCursorEl.style.width = diameter + 'px';
+    _brushCursorEl.style.height = diameter + 'px';
+}
+function _syncBrushCursor(){
+    if(imageEditMode === 'mask' || imageEditMode === 'brush'){
+        _getBrushCursorEl();
+    } else {
+        _hideBrushCursor();
+    }
 }
 function refreshGridSplitPreview(){
     const canvasEl = editDrawCanvas();
@@ -2668,10 +2834,10 @@ function renderCropBox(){
 function resetCropBox(){
     if(!cropState) return;
     const {w, h} = cropBounds();
-    cropState.x = Math.round(w * 0.08);
-    cropState.y = Math.round(h * 0.08);
-    cropState.w = Math.round(w * 0.84);
-    cropState.h = Math.round(h * 0.84);
+    cropState.x = 0;
+    cropState.y = 0;
+    cropState.w = Math.round(w);
+    cropState.h = Math.round(h);
     renderCropBox();
 }
 function openImageEditor(nodeId){
@@ -2687,6 +2853,8 @@ function openImageEditor(nodeId){
     imageEditZoom = 1.0;
     imageEditBaseW = 0;
     imageEditBaseH = 0;
+    imageEditLayoutW = 0;
+    imageEditLayoutH = 0;
     imageEditModeTouched = false;
     const toggle = document.getElementById('gridCustomToggle');
     if(toggle){ toggle.classList.add('secondary'); toggle.classList.remove('primary'); }
@@ -2710,6 +2878,8 @@ function openImageEditor(nodeId){
         // 记录 zoom=1 时的基础显示尺寸
         imageEditBaseW = img.clientWidth;
         imageEditBaseH = img.clientHeight;
+        imageEditLayoutW = img.clientWidth;
+        imageEditLayoutH = img.clientHeight;
         _updateZoomLabel();
         resizeEditDrawCanvas();
         resetEditDrawingHistory();
@@ -2737,17 +2907,21 @@ function closeImageEditor(){
     cropState = null;
     cropDrag = null;
     editDrawState = null;
+    lastEditPointerEvent = null;
     resetEditDrawingHistory();
     gridCustomDrag = null;
     imageEditZoom = 1.0;
     imageEditBaseW = 0;
     imageEditBaseH = 0;
+    imageEditLayoutW = 0;
+    imageEditLayoutH = 0;
     imageEditModeTouched = false;
     _previewPanX = 0; _previewPanY = 0; _previewPanDrag = null;
     { const _si = document.querySelector('#imageEditStage > .image-edit-stage-inner'); if(_si) _si.style.transform = ''; }
     document.getElementById('imageEditStage')?.classList.remove('overflowing', 'overflow-x', 'overflow-y');
     const cropCanvasEl = document.getElementById('cropCanvas');
     cropCanvasEl.classList.remove('grid-custom-h', 'grid-custom-v');
+    _hideBrushCursor();
 }
 function clampCrop(){
     if(!cropState) return;
@@ -7530,6 +7704,22 @@ window.addEventListener('keydown', e => {
     }
     if(isKnifeKey(e) && !isEditableTarget(document.activeElement)) setKnifeMode(true);
     if(e.key === 'Escape' && document.getElementById('imageEditModal').classList.contains('open')) { closeImageEditor(); return; }
+    if((e.key === '[' || e.key === ']') && document.getElementById('imageEditModal').classList.contains('open') && (imageEditMode === 'mask' || imageEditMode === 'brush')){
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        const sliderId = imageEditMode === 'mask' ? 'maskBrushSize' : 'paintBrushSize';
+        const slider = document.getElementById(sliderId);
+        if(slider){
+            const min = Number(slider.min), max = Number(slider.max);
+            const step = Math.max(1, Math.round((max - min) / 30));
+            const val = Number(slider.value) + (e.key === ']' ? step : -step);
+            slider.value = Math.max(min, Math.min(max, val));
+            slider.dispatchEvent(new Event('input', {bubbles:true}));
+            _refreshBrushCursorSize();
+        }
+        return;
+    }
     if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
         if(navigateOutputLightbox(e.key === 'ArrowRight' ? 1 : -1)){
             e.preventDefault();
