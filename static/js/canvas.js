@@ -99,6 +99,7 @@ const outputPromptExpandBtn = document.getElementById('outputPromptExpandBtn');
 const outputCopyPromptBtn = document.getElementById('outputCopyPromptBtn');
 const outputRerunBtn = document.getElementById('outputRerunBtn');
 const outputSendToCanvasBtn = document.getElementById('outputSendToCanvasBtn');
+const outputI2IBtn = document.getElementById('outputI2IBtn');
 const outputDeleteBtn = document.getElementById('outputDeleteBtn');
 const outputRefsSection = document.getElementById('outputRefsSection');
 const outputRefsList = document.getElementById('outputRefsList');
@@ -1792,7 +1793,7 @@ function openImageNodeMenu(nodeId, clientX, clientY){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || node.type !== 'image') return;
     closeCreateMenu();
-    imageNodeMenu.innerHTML = `<button class="menu-btn" data-image-replace="${escapeAttr(nodeId)}"><i data-lucide="image-plus" class="w-4 h-4"></i><span>替换</span></button>`;
+    imageNodeMenu.innerHTML = `<button class="menu-btn" data-image-replace="${escapeAttr(nodeId)}"><i data-lucide="image-plus" class="w-4 h-4"></i><span>替换</span></button><button class="menu-btn" data-image-i2i="${escapeAttr(nodeId)}"><i data-lucide="sparkles" class="w-4 h-4"></i><span>图生图</span></button>`;
     imageNodeMenu.style.left = `${clientX}px`;
     imageNodeMenu.style.top = `${clientY}px`;
     imageNodeMenu.classList.add('open');
@@ -1800,6 +1801,11 @@ function openImageNodeMenu(nodeId, clientX, clientY){
         e.stopPropagation();
         closeImageNodeMenu();
         pickImageForNode(nodeId);
+    };
+    imageNodeMenu.querySelector('[data-image-i2i]').onclick = e => {
+        e.stopPropagation();
+        closeImageNodeMenu();
+        spawnImageNodeI2IChain(nodeId);
     };
     refreshIcons();
 }
@@ -6253,6 +6259,12 @@ function setupLightboxInfoPanel(meta, log){
         const url = currentOutputLightboxUrl;
         if(url) sendOutputToCanvas(url);
     };
+    outputI2IBtn.style.display = isVideoUrl(currentOutputLightboxUrl) ? 'none' : '';
+    outputI2IBtn.onclick = e => {
+        e.stopPropagation();
+        const url = currentOutputLightboxUrl;
+        if(url) sendOutputToImageToImage(url);
+    };
     // 删除记录（仅从日志打开时显示）
     outputDeleteBtn.style.display = currentOutputFromLog ? '' : 'none';
     outputDeleteBtn.onclick = e => {
@@ -6289,6 +6301,49 @@ function sendOutputToCanvas(url){
     };
     img.src = url;
 }
+function getOutputI2IPromptText(meta, log){
+    return meta?.run?.prompt || log?.prompt || '';
+}
+function spawnOutputI2IChain(url, meta, log){
+    if(!ensureCanvas()){
+        alert('需要先打开一个画布才能发送图片');
+        return;
+    }
+    if(!url) return;
+    const img = new Image();
+    img.onload = () => {
+        const promptText = getOutputI2IPromptText(meta, log);
+        const providerId = imageApiProviders()[0]?.id || '';
+        const model = allImageModels(providerId)[0] || '';
+        const chain = window.StudioOutputI2I?.buildOutputI2IChain?.({
+            imageUrl: url,
+            imageName: outputImageName(url),
+            promptText,
+            point: findEmptyPoint(900, 260),
+            uid,
+            providerId,
+            model
+        });
+        if(!chain) return;
+        pushUndo();
+        nodes.push(...chain.nodes);
+        connections.push(...chain.connections);
+        syncGeneratorInputs();
+        render();
+        scheduleSave();
+        closeOutputLightbox();
+        closeCanvasLog();
+        const generator = nodes.find(n => n.id === chain.generatorNodeId);
+        if(generator){
+            viewport.scale = 1;
+            const rect = board.getBoundingClientRect();
+            viewport.x = rect.width / 2 - (generator.x + (generator.w || defaultNodeSize(generator.type).w || 380) / 2) * viewport.scale;
+            viewport.y = rect.height / 2 - (generator.y + (generator.h || defaultNodeSize(generator.type).h || 160) / 2) * viewport.scale;
+            applyViewport();
+        }
+    };
+    img.src = url;
+}
 function deleteOutputFromLightbox(){
     const url = currentOutputLightboxUrl;
     const log = currentOutputLog;
@@ -6311,6 +6366,153 @@ function deleteOutputFromLightbox(){
 }
 function setupOutputPromptPanel(meta, log){
     setupLightboxInfoPanel(meta, log);
+}
+function outputI2IBaseNode(meta, log){
+    const base = JSON.parse(JSON.stringify(meta?.run?.node || log?.run?.node || {}));
+    if(base && Object.keys(base).length) return base;
+    if(log?.model){
+        const inferredType = log.nodeType || 'generator';
+        const req = log.request || {};
+        return {
+            type: inferredType,
+            model: log.model || '',
+            apiProvider: log.platform || '',
+            prompt: log.prompt || '',
+            ratio: req.ratio || req.aspect_ratio || '',
+            resolution: req.resolution || req.size || '',
+            width: req.width || '',
+            height: req.height || '',
+            quality: req.quality || '',
+            format: req.format || 'png',
+            customRatio: req.customRatio || '',
+            customSize: req.customSize || '',
+            customRatioWidth: req.customRatioWidth || '',
+            customRatioHeight: req.customRatioHeight || '',
+            customWidth: req.customWidth || '',
+            customHeight: req.customHeight || '',
+        };
+    }
+    const providerId = imageApiProviders()[0]?.id || '';
+    return {
+        type: 'generator',
+        apiProvider: providerId,
+        model: allImageModels(providerId)[0] || '',
+        ratio: 'square',
+        resolution: '1k',
+        customRatio: '',
+        customSize: '',
+        customRatioWidth: '',
+        customRatioHeight: '',
+        customWidth: '',
+        customHeight: '',
+    };
+}
+function outputI2IChainFootprint(baseNode){
+    const promptSize = {w:310, h:180};
+    const imageSize = {w:260, h:336};
+    const generatorSize = {
+        w:Number(baseNode?.w || defaultNodeSize('generator').w || 380),
+        h:Number(baseNode?.h || defaultNodeSize('generator').h || 160)
+    };
+    const columnGap = 220;
+    const rowGap = 80;
+    const leftColumnW = Math.max(promptSize.w, imageSize.w);
+    const leftColumnH = promptSize.h + rowGap + imageSize.h;
+    return {
+        w:leftColumnW + columnGap + generatorSize.w,
+        h:Math.max(leftColumnH, generatorSize.h)
+    };
+}
+function sendOutputToImageToImage(url){
+    if(!ensureCanvas()){
+        alert('需要先打开一个画布才能发送图片');
+        return;
+    }
+    if(!url) return;
+    const meta = currentOutputMeta || null;
+    const log = currentOutputLog || null;
+    const promptText = String(meta?.run?.prompt || log?.prompt || '');
+    const baseNode = outputI2IBaseNode(meta, log);
+    const footprint = outputI2IChainFootprint(baseNode);
+    const point = findEmptyPoint(footprint.w, footprint.h);
+    const helper = window.StudioOutputI2I?.buildOutputI2IChain;
+    if(typeof helper !== 'function'){
+        alert('图生图功能未加载完成');
+        return;
+    }
+    pushUndo();
+    const chain = helper({
+        imageUrl: url,
+        imageName: outputImageName(url),
+        promptText,
+        point,
+        generatorBase: baseNode,
+        uid: kind => uid(kind),
+    });
+    chain.nodes.forEach(node => nodes.push(node));
+    chain.connections.forEach(conn => connections.push(conn));
+    syncGeneratorInputs();
+    refreshGeneratorInputViews();
+    render();
+    scheduleSave();
+    closeOutputLightbox();
+    closeCanvasLog();
+    selected.clear();
+    if(chain.focusId) selected.add(chain.focusId);
+    viewport.scale = 1;
+    const rect = board.getBoundingClientRect();
+    const focusRect = chain.focusRect || {x:point.x, y:point.y, w:footprint.w, h:footprint.h};
+    viewport.x = rect.width / 2 - (focusRect.x + (focusRect.w || 0) / 2) * viewport.scale;
+    viewport.y = rect.height / 2 - (focusRect.y + (focusRect.h || 0) / 2) * viewport.scale;
+    applyViewport();
+}
+function spawnOutputI2IChain(url, meta, log){
+    currentOutputMeta = meta || currentOutputMeta;
+    currentOutputLog = log || currentOutputLog;
+    sendOutputToImageToImage(url);
+}
+function spawnImageNodeI2IChain(sourceNodeId){
+    if(!ensureCanvas()){
+        alert('需要先打开一个画布才能发送图片');
+        return;
+    }
+    const sourceNode = nodes.find(n => n.id === sourceNodeId && n.type === 'image');
+    if(!sourceNode || !sourceNode.url) return;
+    const helper = window.StudioOutputI2I?.buildImageNodeI2IChain;
+    if(typeof helper !== 'function'){
+        alert('图生图功能未加载完成');
+        return;
+    }
+    const sourceRect = nodeRect(sourceNode);
+    const providerId = imageApiProviders()[0]?.id || '';
+    const generatorBase = {
+        ...outputI2IBaseNode(null, null),
+        apiProvider: providerId,
+        model: allImageModels(providerId)[0] || ''
+    };
+    pushUndo();
+    const chain = helper({
+        sourceNodeId,
+        sourceRect,
+        promptText: '',
+        generatorBase,
+        uid: kind => uid(kind)
+    });
+    if(!chain) return;
+    chain.nodes.forEach(node => nodes.push(node));
+    chain.connections.forEach(conn => connections.push(conn));
+    syncGeneratorInputs();
+    refreshGeneratorInputViews();
+    render();
+    scheduleSave();
+    selected.clear();
+    if(chain.generatorNodeId) selected.add(chain.generatorNodeId);
+    viewport.scale = 1;
+    const rect = board.getBoundingClientRect();
+    const focusRect = chain.focusRect || sourceRect;
+    viewport.x = rect.width / 2 - (focusRect.x + (focusRect.w || 0) / 2) * viewport.scale;
+    viewport.y = rect.height / 2 - (focusRect.y + (focusRect.h || 0) / 2) * viewport.scale;
+    applyViewport();
 }
 function rerunFromOutputMeta(meta){
     const log = currentOutputLog;
