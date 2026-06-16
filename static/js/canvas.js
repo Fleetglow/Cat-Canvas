@@ -5575,8 +5575,6 @@ function renderCanvasLog(){
         const subParts = [
             date,
             `输出 ${(log.outputs || []).length}`,
-            idText ? `ID ${idText}` : '',
-            backendText,
         ].filter(Boolean);
         return `<div class="log-item ${log.status === 'failed' ? 'failed' : ''} ${logBatchMode ? 'batch-mode' : ''}" data-log-index="${i}">
             <div class="log-main">
