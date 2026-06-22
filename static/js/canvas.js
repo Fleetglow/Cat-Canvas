@@ -105,6 +105,9 @@ const outputRefsSection = document.getElementById('outputRefsSection');
 const outputRefsList = document.getElementById('outputRefsList');
 const outputParamsGrid = document.getElementById('outputParamsGrid');
 const outputCopyToast = document.getElementById('outputCopyToast');
+const outputNavPrev = document.getElementById('outputNavPrev');
+const outputNavNext = document.getElementById('outputNavNext');
+const outputNavCounter = document.getElementById('outputNavCounter');
 const logModal = document.getElementById('logModal');
 const logList = document.getElementById('logList');
 let logLayout = 'grid'; // 只保留网格视图
@@ -6126,6 +6129,33 @@ function navigateOutputLightbox(direction){
     openOutputLightbox(next.url, nextOut);
     return true;
 }
+function updateLightboxNavButtons(){
+    if(!outputLightbox.classList.contains('open') || !currentOutputLightboxUrl){
+        outputNavPrev.style.display = 'none';
+        outputNavNext.style.display = 'none';
+        outputNavCounter.style.display = 'none';
+        return;
+    }
+    let items = [];
+    if(currentOutputFromLog){
+        items = outputLightboxItems(null);
+    } else {
+        const out = currentOutputLightboxOutId ? nodes.find(n => n.id === currentOutputLightboxOutId) : null;
+        items = outputLightboxItems(out);
+    }
+    if(items.length < 2){
+        outputNavPrev.style.display = 'none';
+        outputNavNext.style.display = 'none';
+        outputNavCounter.style.display = 'none';
+        return;
+    }
+    outputNavPrev.style.display = 'flex';
+    outputNavNext.style.display = 'flex';
+    outputNavCounter.style.display = 'flex';
+    let idx = items.findIndex(item => item.url === currentOutputLightboxUrl);
+    if(idx < 0) idx = 0;
+    outputNavCounter.textContent = `${idx + 1} / ${items.length}`;
+}
 function createImageCardFromOutput(url, point){
     if(!ensureCanvas() || !url) return;
     if(isVideoUrl(url)) return;
@@ -6715,6 +6745,7 @@ function openOutputLightbox(url, out){
         };
         outputLightbox.classList.add('open');
         refreshIcons();
+        updateLightboxNavButtons();
         return;
     }
     outputLightboxVideo.pause();
@@ -6765,6 +6796,7 @@ function openOutputLightbox(url, out){
     };
     outputLightbox.classList.add('open');
     refreshIcons();
+    updateLightboxNavButtons();
 }
 function closeOutputLightbox(){
     outputLightbox.classList.remove('open');
@@ -6791,6 +6823,7 @@ function closeOutputLightbox(){
     outputRefsList.innerHTML = '';
     outputParamsGrid.innerHTML = '';
     setupOutputPromptPanel(null);
+    updateLightboxNavButtons();
 }
 function groupSelectedImages(){
     if(!ensureCanvas()) return;
@@ -7920,8 +7953,9 @@ window.addEventListener('keydown', e => {
         }
         return;
     }
-    if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
-        if(navigateOutputLightbox(e.key === 'ArrowRight' ? 1 : -1)){
+    if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'A' || e.key === 'd' || e.key === 'D' || e.code === 'KeyA' || e.code === 'KeyD')){
+        const dir = (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.code === 'KeyD') ? 1 : -1;
+        if(navigateOutputLightbox(dir)){
             e.preventDefault();
             e.stopPropagation();
         }
@@ -8103,6 +8137,9 @@ window.onload = async () => {
     document.title = tr('canvas.title');
     initOutputCompareEvents();
     initOutputPreviewZoomEvents();
+    // 翻页导航按钮事件
+    outputNavPrev.addEventListener('click', e => { e.stopPropagation(); navigateOutputLightbox(-1); });
+    outputNavNext.addEventListener('click', e => { e.stopPropagation(); navigateOutputLightbox(1); });
     applyViewport();
     await loadConfig();
     await loadCanvasList(false);
