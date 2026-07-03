@@ -17,6 +17,7 @@ import requests
 import zipfile
 import mimetypes
 import tempfile
+from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 from threading import Lock
 import httpx
@@ -56,7 +57,16 @@ class QuietAccessLogFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(QuietAccessLogFilter())
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    global GLOBAL_LOOP
+    GLOBAL_LOOP = asyncio.get_running_loop()
+    sync_static_html_versions()
+    yield
+    # Shutdown (if needed in future)
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -145,12 +155,6 @@ GITHUB_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
 GITHUB_VERSION_URL = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1"
 GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main"
-
-@app.on_event("startup")
-async def startup_event():
-    global GLOBAL_LOOP
-    GLOBAL_LOOP = asyncio.get_running_loop()
-    sync_static_html_versions()
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket, client_id: str = None):

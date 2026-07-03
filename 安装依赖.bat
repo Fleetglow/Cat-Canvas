@@ -6,22 +6,83 @@ echo   Install Dependencies
 echo ============================================
 echo.
 
-set "PYEXE=%~dp0python\python.exe"
+REM Detect Python: system first, bundled fallback
+set "PYEXE="
 
-if exist "%PYEXE%" (
-    echo [OK] Using bundled Python
-) else (
-    echo [INFO] Bundled Python not found, trying system Python...
-    python --version >nul 2>&1
-    if errorlevel 1 (
-        echo [ERROR] Python not found.
-        echo Please put the extracted python folder in the same directory.
-        pause
-        exit /b 1
+echo [INFO] Detecting Python...
+
+REM Try py launcher first (most reliable for system Python)
+py -3 --version >nul 2>&1
+if not errorlevel 1 (
+    for /f "delims=" %%i in ('py -3 -c "import sys; print(sys.executable)"') do set "PYEXE=%%i"
+    if defined PYEXE (
+        echo [OK] Found system Python via py launcher: !PYEXE!
+        goto :python_found
     )
-    set "PYEXE=python"
-    echo [OK] Using system Python
 )
+
+REM Try PATH commands and verify they work
+for %%c in (python python3 python314 python313 python312 python311 python310) do (
+    where %%c >nul 2>&1
+    if not errorlevel 1 (
+        %%c --version >nul 2>&1
+        if not errorlevel 1 (
+            set "PYEXE=%%c"
+            echo [OK] Found system Python in PATH: %%c
+            goto :python_found
+        )
+    )
+)
+
+REM Try common installation paths
+for %%v in (314 313 312 311 310) do (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python%%v\python.exe" (
+        "%LOCALAPPDATA%\Programs\Python\Python%%v\python.exe" --version >nul 2>&1
+        if not errorlevel 1 (
+            set "PYEXE=%LOCALAPPDATA%\Programs\Python\Python%%v\python.exe"
+            echo [OK] Found system Python: !PYEXE!
+            goto :python_found
+        )
+    )
+    if exist "%LOCALAPPDATA%\Python\Python%%v\python.exe" (
+        "%LOCALAPPDATA%\Python\Python%%v\python.exe" --version >nul 2>&1
+        if not errorlevel 1 (
+            set "PYEXE=%LOCALAPPDATA%\Python\Python%%v\python.exe"
+            echo [OK] Found system Python: !PYEXE!
+            goto :python_found
+        )
+    )
+)
+
+REM Check pythoncore paths (like pythoncore-3.14-64)
+for %%v in (14 13 12 11 10) do (
+    if exist "%LOCALAPPDATA%\Python\pythoncore-3.%%v-64\python.exe" (
+        "%LOCALAPPDATA%\Python\pythoncore-3.%%v-64\python.exe" --version >nul 2>&1
+        if not errorlevel 1 (
+            set "PYEXE=%LOCALAPPDATA%\Python\pythoncore-3.%%v-64\python.exe"
+            echo [OK] Found system Python: !PYEXE!
+            goto :python_found
+        )
+    )
+)
+
+REM Fallback to bundled Python (last resort)
+if exist "%~dp0python\python.exe" (
+    "%~dp0python\python.exe" --version >nul 2>&1
+    if not errorlevel 1 (
+        set "PYEXE=%~dp0python\python.exe"
+        echo [WARN] Using bundled Python as fallback: !PYEXE!
+        goto :python_found
+    )
+)
+
+echo [ERROR] No working Python found.
+echo Please install Python 3.10-3.14 from python.org
+pause
+exit /b 1
+
+:python_found
+setlocal enabledelayedexpansion
 
 echo.
 
