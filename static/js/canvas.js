@@ -225,10 +225,12 @@ function renderCanvasIcon(icon, size = 14) {
 
 const SIZE_MAP = {
     square: { '1k':'1024x1024', '2k':'2048x2048', '4k':'3840x2160' },
+    portrait13: { '1k':'512x1536', '2k':'688x2048', '4k':'1280x3840' },
     portrait: { '1k':'1024x1536', '2k':'1360x2048', '4k':'2352x3520' },
     portrait43: { '1k':'1008x1344', '2k':'1536x2048', '4k':'2448x3264' },
     landscape43: { '1k':'1344x1008', '2k':'2048x1536', '4k':'3264x2448' },
     landscape: { '1k':'1536x1024', '2k':'2048x1360', '4k':'3520x2352' },
+    landscape31: { '1k':'1536x512', '2k':'2048x688', '4k':'3840x1280' },
     story: { '1k':'720x1280', '2k':'1152x2048', '4k':'2160x3840' },
     wide: { '1k':'1280x720', '2k':'2048x1152', '4k':'3840x2160' }
 };
@@ -4208,8 +4210,10 @@ function renderGeneratorBody(node){
                 </select>
                 <select class="select-lite ratio compact-select" data-field="ratio">
                     <option value="square">1:1</option>
+                    <option value="portrait13">1:3</option>
                     <option value="portrait">2:3</option>
                     <option value="landscape">3:2</option>
+                    <option value="landscape31">3:1</option>
                     <option value="portrait43">3:4</option>
                     <option value="landscape43">4:3</option>
                     <option value="story">9:16</option>
@@ -6246,7 +6250,7 @@ function setupLightboxInfoPanel(meta, log){
     const w = node.width || node.size?.split?.('x')?.[0] || '';
     const h = node.height || node.size?.split?.('x')?.[1] || '';
     const sizeStr = (w && h) ? `${w}×${h}` : '';
-    const ratioMap = {square:'1:1', portrait:'2:3', landscape:'3:2', portrait43:'3:4', landscape43:'4:3', story:'9:16', wide:'16:9'};
+    const ratioMap = {square:'1:1', portrait13:'1:3', portrait:'2:3', landscape:'3:2', landscape31:'3:1', portrait43:'3:4', landscape43:'4:3', story:'9:16', wide:'16:9'};
     let ratioLabel = '';
     if(node.ratio && node.ratio !== 'source' && node.ratio !== 'custom') {
         ratioLabel = ratioMap[node.ratio] || node.ratio;
