@@ -2565,7 +2565,10 @@ def normalize_gpt_image_2_size(size):
     if not width or not height:
         return size or "auto"
     if width == height and (width > 2048 or width * height > 4_194_304):
-        return "3840x2160"
+        # GPT-Image-2 不支持边长>2048 的方图，但 1:1 仍应保留为方形：
+        # 夹到 API 上限内的最大真方图 2880x2880（长边≤3840、总像素=8,294,400 正好顶满像素上限）。
+        # 不再强制变成 16:9（3840x2160），否则用户选 1:1 却拿到横图。
+        return "2880x2880"
     ratio = width / height
     if ratio > 3:
         width = height * 3
@@ -2823,7 +2826,9 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
     quality = str(quality or "").strip().lower()
     if quality not in {"low", "medium", "high"}:
         quality = ""
-    if is_gpt_image_2_model(model) and not is_apimart:
+    if is_gpt_image_2_model(model):
+        # 对所有 GPT-Image-2 请求（含 apimart 旁路）统一夹紧尺寸，
+        # 避免 4096x4096 等超大方图直发被上游拒绝（报错“不支持当前尺寸 4096x4096”）。
         size = normalize_gpt_image_2_size(size)
     base_url = (provider.get("base_url") or AI_BASE_URL).rstrip("/")
     if not base_url:

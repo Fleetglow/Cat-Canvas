@@ -224,7 +224,7 @@ function renderCanvasIcon(icon, size = 14) {
 }
 
 const SIZE_MAP = {
-    square: { '1k':'1024x1024', '2k':'2048x2048', '4k':'3840x2160' },
+    square: { '1k':'1024x1024', '2k':'2048x2048', '4k':'4096x4096' },
     portrait13: { '1k':'512x1536', '2k':'688x2048', '4k':'1280x3840' },
     portrait: { '1k':'1024x1536', '2k':'1360x2048', '4k':'2352x3520' },
     portrait43: { '1k':'1008x1344', '2k':'1536x2048', '4k':'2448x3264' },
@@ -577,9 +577,6 @@ function apiImageSize(ratioValue, resolutionValue, customRatioValue = '', custom
 }
 function normalizeApiNodeSizeChoice(node){
     if(!node) return;
-    if(node.resolution === '4k' && (node.ratio || 'square') === 'square'){
-        node.ratio = 'wide';
-    }
 }
 async function generatorSizeForRun(gen, refs){
     if((gen.ratio || 'square') === 'source'){
@@ -595,7 +592,7 @@ async function generatorSizeForRun(gen, refs){
         }
     }
     const ratio = (gen.ratio === 'source' && !gen.customRatio)
-        ? (gen.resolution === '4k' ? 'wide' : 'square')
+        ? 'square'
         : (gen.ratio ?? 'square');
     return apiImageSize(ratio, gen.resolution || '1k', gen.customRatio || '', gen.customSize || '');
 }
@@ -4343,11 +4340,6 @@ function renderGeneratorBody(node){
     };
     const syncSizeControls = () => {
         normalizeApiNodeSizeChoice(node);
-        const squareOption = ratioSelect.querySelector('option[value="square"]');
-        if(squareOption){
-            squareOption.disabled = node.resolution === '4k';
-            squareOption.title = node.resolution === '4k' ? '4K 不支持 1:1' : '';
-        }
         const ratioValue = node.ratio && [...ratioSelect.options].some(opt => opt.value === node.ratio) ? node.ratio : 'square';
         ratioSelect.value = ratioValue;
         resolutionSelect.value = node.resolution || '1k';
