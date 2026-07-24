@@ -146,12 +146,15 @@ let pendingDeleteCanvasId = null;
 let pendingPurgeCanvasId = null;
 let emojiPickerCanvasId = null;
 let localCanvasDirty = false;
+let allowEmptyCanvasSave = false;
 let savingCanvasNow = false;
 let saveCanvasAgain = false;
+let saveWaiters = [];
 let applyingRemoteCanvas = false;
 let remoteSyncTimer = null;
 let remoteSyncInterval = null;
 let remoteSyncBusy = false;
+let canvasOpenQueue = Promise.resolve();
 let lastCanvasUpdatedAt = 0;
 let models = {gpt:'gpt-image-2', nano:'nano-banana-pro'};
 let imageModels = ['gpt-image-2', 'nano-banana-pro'];
@@ -186,6 +189,11 @@ let lastMouseBoard = {x: 0, y: 0};
 let undoStack = [];
 let redoStack = [];
 const UNDO_MAX = 30;
+function resetCanvasHistory(){
+    undoStack = [];
+    redoStack = [];
+    allowEmptyCanvasSave = false;
+}
 const cascadeRunningIds = new Set();
 const cascadeStopIds = new Set();
 const cascadeSerialIds = new Set(); // 记录以串行循环模式启动的运行，用于停止按钮
@@ -789,6 +797,7 @@ function refreshGeometryAfterLayout(){
 }
 function scheduleSave(){
     if(!canvas || applyingRemoteCanvas) return;
+    const canvasId = canvas.id;
     localCanvasDirty = true;
     setStatus('Saving...');
     clearTimeout(saveTimer);
@@ -796,7 +805,26 @@ function scheduleSave(){
         saveCanvasAgain = true;
         return;
     }
-    saveTimer = setTimeout(saveCanvas, 500);
+    saveTimer = setTimeout(() => {
+        saveTimer = null;
+        if(canvas?.id === canvasId) saveCanvas();
+    }, 500);
+}
+function waitForCanvasSave(){
+    if(!savingCanvasNow) return Promise.resolve(true);
+    return new Promise(resolve => saveWaiters.push(resolve));
+}
+async function flushCurrentCanvasSave(){
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if(savingCanvasNow && !await waitForCanvasSave()) return false;
+    while(canvas && localCanvasDirty){
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        if(!await saveCanvas()) return false;
+        if(savingCanvasNow && !await waitForCanvasSave()) return false;
+    }
+    return true;
 }
 function refreshOutputTimer(){
     const hasPending = nodes.some(n => n.type === 'output' && (n._pending || []).length);
@@ -823,60 +851,78 @@ function refreshOutputTimer(){
     }
 }
 async function saveCanvas(){
-    if(!canvas || applyingRemoteCanvas) return;
-    if(savingCanvasNow){
-        saveCanvasAgain = true;
-        return;
-    }
+    if(!canvas || applyingRemoteCanvas) return true;
+    if(savingCanvasNow) return waitForCanvasSave();
     sanitizeConnections();
+    const canvasId = canvas.id;
+    const body = JSON.stringify({
+        title:canvas.title,
+        icon:canvas.icon || '🧩',
+        nodes,
+        connections,
+        viewport,
+        logs:canvas.logs || [],
+        client_id:CLIENT_ID,
+        base_updated_at:Number(lastCanvasUpdatedAt || canvas.updated_at || 0),
+        allow_empty:allowEmptyCanvasSave
+    });
     savingCanvasNow = true;
     saveCanvasAgain = false;
+    localCanvasDirty = false;
+    let succeeded = false;
     try {
-        const res = await fetch(`/api/canvases/${canvas.id}`, {
+        const res = await fetch(`/api/canvases/${canvasId}`, {
             method:'PUT',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                title:canvas.title,
-                icon:canvas.icon || '🧩',
-                nodes,
-                connections,
-                viewport,
-                logs:canvas.logs || [],
-                client_id:CLIENT_ID,
-                base_updated_at:Number(lastCanvasUpdatedAt || canvas.updated_at || 0)
-            })
+            body
         });
+        const isCurrentCanvas = canvas?.id === canvasId;
         if(res.status === 409){
             const data = await res.json().catch(() => ({}));
-            const remote = data.detail?.canvas || data.canvas;
-            if(localCanvasDirty || saveCanvasAgain){
-                lastCanvasUpdatedAt = Number(data.detail?.updated_at || data.updated_at || remote?.updated_at || lastCanvasUpdatedAt || 0);
-                saveCanvasAgain = true;
-                setStatus('Saving...');
-                return;
+            const detail = data.detail || {};
+            const remote = detail.canvas || data.canvas;
+            if(!isCurrentCanvas) return false;
+            if(detail.reason === 'empty_canvas_blocked'){
+                saveCanvasAgain = false;
+                if(remote) applyRemoteCanvasData(remote);
+                setStatus('已阻止意外清空');
+                succeeded = true;
+                return true;
             }
-            if(remote) applyRemoteCanvasData(remote);
-            setStatus('Synced');
-            return;
+            localCanvasDirty = true;
+            setStatus('保存冲突，请刷新后重试');
+            return false;
         }
         if(!res.ok) throw new Error('save failed');
+        if(!isCurrentCanvas) return false;
         const data = await res.json().catch(() => ({}));
-        if(data.canvas) canvas = {...canvas, ...data.canvas};
-        canvas.updated_at = Number(canvas.updated_at || Date.now());
+        canvas.updated_at = Number(data.canvas?.updated_at || canvas.updated_at || Date.now());
         lastCanvasUpdatedAt = canvas.updated_at;
         localCanvasDirty = Boolean(saveCanvasAgain);
+        if(!saveCanvasAgain) allowEmptyCanvasSave = false;
         if(currentCanvasTime) currentCanvasTime.textContent = formatCanvasTime(canvas.updated_at);
         setStatus('Saved');
         loadCanvasList(false);
+        succeeded = true;
+        return true;
     } catch(e) {
-        setStatus('Save failed');
+        if(canvas?.id === canvasId){
+            localCanvasDirty = true;
+            setStatus('Save failed');
+        }
         console.error(e);
+        return false;
     } finally {
         savingCanvasNow = false;
-        if(saveCanvasAgain && canvas && !applyingRemoteCanvas){
+        saveWaiters.splice(0).forEach(resolve => resolve(succeeded));
+        if(succeeded && saveCanvasAgain && canvas?.id === canvasId && !applyingRemoteCanvas){
             saveCanvasAgain = false;
             localCanvasDirty = true;
-            setTimeout(saveCanvas, 0);
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                saveTimer = null;
+                if(canvas?.id === canvasId) saveCanvas();
+            }, 0);
         }
     }
 }
@@ -1087,6 +1133,7 @@ async function createCanvas(){
         connections = canvas.connections || [];
         viewport = canvas.viewport || {x:0, y:0, scale:1};
         sanitizeConnections();
+        resetCanvasHistory();
         selected.clear();
         setCanvasMode(true);
         render();
@@ -1114,11 +1161,15 @@ async function setCanvasIcon(id, icon, event){
     emojiPickerCanvasId = null;
     renderCanvasList();
     try {
-        let target = canvas?.id === id ? canvas : null;
-        if(!target) {
-            const data = await fetch(`/api/canvases/${id}`).then(r => r.json());
-            target = data.canvas;
+        if(canvas?.id === id){
+            canvas.icon = icon || 'layers';
+            scheduleSave();
+            if(!await flushCurrentCanvasSave()) throw new Error('图标保存失败');
+            await loadCanvasList(false);
+            return;
         }
+        const data = await fetch(`/api/canvases/${id}`).then(r => r.json());
+        const target = data.canvas;
         target.icon = icon || 'layers';
         const res = await fetch(`/api/canvases/${id}`, {
             method:'PUT',
@@ -1126,13 +1177,21 @@ async function setCanvasIcon(id, icon, event){
             body:JSON.stringify({
                 title:target.title,
                 icon:target.icon,
-                nodes:target.nodes || [],
-                connections:target.connections || [],
-                viewport:target.viewport || {x:0, y:0, scale:1}
+                nodes:canvas?.id === id ? nodes : (target.nodes || []),
+                connections:canvas?.id === id ? connections : (target.connections || []),
+                viewport:canvas?.id === id ? viewport : (target.viewport || {x:0, y:0, scale:1}),
+                client_id:CLIENT_ID,
+                base_updated_at:Number(target.updated_at || 0),
+                allow_empty:canvas?.id === id && allowEmptyCanvasSave
             })
         });
         if(!res.ok) throw new Error('图标保存失败');
-        if(canvas?.id === id) canvas.icon = target.icon;
+        const saved = await res.json().catch(() => ({}));
+        if(canvas?.id === id && saved.canvas){
+            canvas.icon = saved.canvas.icon;
+            canvas.updated_at = saved.canvas.updated_at;
+            lastCanvasUpdatedAt = Number(canvas.updated_at || lastCanvasUpdatedAt);
+        }
         await loadCanvasList(false);
     } catch(e) {
         setStatus('图标保存失败');
@@ -1178,11 +1237,16 @@ async function setCanvasTitle(id, title){
     if(canvas?.id === id) canvas.title = title;
     renderCanvasList();
     try {
-        let target = canvas?.id === id ? canvas : null;
-        if(!target){
-            const data = await fetch(`/api/canvases/${id}`).then(r => r.json());
-            target = data.canvas;
+        if(canvas?.id === id){
+            canvas.title = title;
+            scheduleSave();
+            if(!await flushCurrentCanvasSave()) throw new Error('重命名失败');
+            if(currentCanvasTitle) currentCanvasTitle.textContent = title;
+            await loadCanvasList(false);
+            return;
         }
+        const data = await fetch(`/api/canvases/${id}`).then(r => r.json());
+        const target = data.canvas;
         target.title = title;
         const res = await fetch(`/api/canvases/${id}`, {
             method:'PUT',
@@ -1190,12 +1254,21 @@ async function setCanvasTitle(id, title){
             body:JSON.stringify({
                 title:target.title,
                 icon:target.icon,
-                nodes:target.nodes || [],
-                connections:target.connections || [],
-                viewport:target.viewport || {x:0, y:0, scale:1}
+                nodes:canvas?.id === id ? nodes : (target.nodes || []),
+                connections:canvas?.id === id ? connections : (target.connections || []),
+                viewport:canvas?.id === id ? viewport : (target.viewport || {x:0, y:0, scale:1}),
+                client_id:CLIENT_ID,
+                base_updated_at:Number(target.updated_at || 0),
+                allow_empty:canvas?.id === id && allowEmptyCanvasSave
             })
         });
         if(!res.ok) throw new Error('重命名失败');
+        const saved = await res.json().catch(() => ({}));
+        if(canvas?.id === id && saved.canvas){
+            canvas.title = saved.canvas.title;
+            canvas.updated_at = saved.canvas.updated_at;
+            lastCanvasUpdatedAt = Number(canvas.updated_at || lastCanvasUpdatedAt);
+        }
         if(currentCanvasTitle && canvas?.id === id) currentCanvasTitle.textContent = title;
         await loadCanvasList(false);
     } catch(e){
@@ -1203,12 +1276,27 @@ async function setCanvasTitle(id, title){
         console.error(e);
     }
 }
-async function openCanvas(id){
+function openCanvas(id){
+    const run = () => openCanvasNow(id);
+    canvasOpenQueue = canvasOpenQueue.then(run, run);
+    return canvasOpenQueue;
+}
+async function openCanvasNow(id){
+    if(canvas){
+        if(!await flushCurrentCanvasSave()) return;
+        if(canvas.id === id) return;
+    }
+    const previousCanvasId = canvas?.id || '';
     setStatus('Opening...');
     try {
         const res = await fetch(`/api/canvases/${id}`);
         if(!res.ok) throw new Error(tr('canvas.openFailed'));
         const data = await res.json();
+        if(previousCanvasId && (canvas?.id !== previousCanvasId || localCanvasDirty || savingCanvasNow)){
+            setStatus('检测到新修改，请再次打开画布');
+            return;
+        }
+        resetCanvasHistory();
         canvas = data.canvas;
         canvas.logs = canvas.logs || [];
         nodes = canvas.nodes || [];
@@ -1216,6 +1304,7 @@ async function openCanvas(id){
         viewport = canvas.viewport || {x:0, y:0, scale:1};
         lastCanvasUpdatedAt = Number(canvas.updated_at || 0);
         localCanvasDirty = false;
+        allowEmptyCanvasSave = false;
         nodes.forEach(n => { if(n.running) n.running = false; });
         sanitizeConnections();
         await refreshMissingCanvasAssets();
@@ -1243,9 +1332,11 @@ function applyRemoteCanvasData(remote){
         viewport = canvas.viewport || {x:0, y:0, scale:1};
         lastCanvasUpdatedAt = Number(canvas.updated_at || Date.now());
         localCanvasDirty = false;
+        allowEmptyCanvasSave = false;
         nodes.forEach(n => { if(n.running) n.running = false; });
         sanitizeConnections();
         refreshMissingCanvasAssets().then(() => render());
+        resetCanvasHistory();
         selected.clear();
         renderCanvasList();
         render();
@@ -1296,12 +1387,14 @@ async function refreshMissingCanvasAssets(){
     }
 }
 async function syncRemoteCanvasNow(){
-    if(!canvas) return;
+    if(!canvas || localCanvasDirty || savingCanvasNow) return;
+    const canvasId = canvas.id;
     try {
-        const res = await fetch(`/api/canvases/${canvas.id}`);
+        const res = await fetch(`/api/canvases/${canvasId}`);
         if(!res.ok) throw new Error(tr('canvas.openFailed'));
         const data = await res.json();
         const remote = data.canvas;
+        if(canvas?.id !== canvasId || localCanvasDirty || savingCanvasNow) return;
         if(Number(remote?.updated_at || 0) >= Number(lastCanvasUpdatedAt || 0)){
             applyRemoteCanvasData(remote);
         }
@@ -1344,20 +1437,20 @@ function handleCanvasUpdatedMessage(data){
     if(data.canvas_id !== canvas.id) return;
     const remoteUpdatedAt = Number(data.updated_at || 0);
     if(remoteUpdatedAt && remoteUpdatedAt <= Number(lastCanvasUpdatedAt || 0)) return;
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    localCanvasDirty = false;
     clearTimeout(remoteSyncTimer);
-    remoteSyncTimer = setTimeout(syncRemoteCanvasNow, savingCanvasNow ? 700 : 120);
-    setStatus('Syncing...');
+    remoteSyncTimer = setTimeout(async () => {
+        if((localCanvasDirty || savingCanvasNow) && !await flushCurrentCanvasSave()) return;
+        await syncRemoteCanvasNow();
+    }, 120);
+    setStatus(localCanvasDirty || savingCanvasNow ? 'Saving...' : 'Syncing...');
 }
 async function returnToCanvasManager(){
-    clearTimeout(saveTimer);
-    if(canvas && localCanvasDirty) await saveCanvas();
+    if(!await flushCurrentCanvasSave()) return;
     stopCanvasRemotePolling();
     canvas = null;
     nodes = [];
     connections = [];
+    resetCanvasHistory();
     selected.clear();
     viewport = {x: -1800, y: -1000, scale: 1};
     setCanvasMode(false);
@@ -1404,6 +1497,7 @@ async function deleteCanvas(id, event){
             canvas = null;
             nodes = [];
             connections = [];
+            resetCanvasHistory();
             selected.clear();
             viewport = {x: -1800, y: -1000, scale: 1};
             setCanvasMode(false);
@@ -5449,6 +5543,7 @@ function deleteNode(id, event){
     pushUndo();
     nodes = nodes.filter(n => n.id !== id);
     connections = connections.filter(c => c.from !== id && c.to !== id);
+    if(!nodes.length) allowEmptyCanvasSave = true;
     selected.delete(id);
     render();
     scheduleSave();
@@ -6947,6 +7042,7 @@ function performUndo(){
     const state = undoStack.pop();
     nodes = state.nodes;
     connections = state.connections;
+    if(!nodes.length) allowEmptyCanvasSave = true;
     selected.clear();
     render();
     scheduleSave();
@@ -6957,6 +7053,7 @@ function performRedo(){
     const state = redoStack.pop();
     nodes = state.nodes;
     connections = state.connections;
+    if(!nodes.length) allowEmptyCanvasSave = true;
     selected.clear();
     render();
     scheduleSave();
@@ -8102,6 +8199,7 @@ function deleteSelectedNodes(){
     selected.forEach(collect);
     nodes = nodes.filter(n => !toDelete.has(n.id));
     connections = connections.filter(c => !toDelete.has(c.from) && !toDelete.has(c.to));
+    if(!nodes.length) allowEmptyCanvasSave = true;
     selected.clear();
     render();
     scheduleSave();

@@ -1169,6 +1169,7 @@ class CanvasSaveRequest(BaseModel):
     settings: Dict[str, Any] = {}
     client_id: str = ""
     base_updated_at: int = 0
+    allow_empty: bool = False
 
 class CanvasAssetCheckRequest(BaseModel):
     urls: List[str] = []
@@ -4174,6 +4175,13 @@ async def update_canvas(canvas_id: str, payload: CanvasSaveRequest):
     if payload.base_updated_at and current_updated_at and int(payload.base_updated_at) < current_updated_at:
         raise HTTPException(status_code=409, detail={
             "message": "画布已被其他页面更新，已拒绝旧版本覆盖。",
+            "canvas": canvas,
+            "updated_at": current_updated_at,
+        })
+    if canvas.get("nodes") and not payload.nodes and not payload.allow_empty:
+        raise HTTPException(status_code=409, detail={
+            "reason": "empty_canvas_blocked",
+            "message": "已阻止非空画布被意外清空。",
             "canvas": canvas,
             "updated_at": current_updated_at,
         })
