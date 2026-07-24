@@ -17,6 +17,7 @@ import requests
 import zipfile
 import mimetypes
 import tempfile
+import hashlib
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 from threading import Lock
@@ -63,6 +64,7 @@ async def lifespan(app: FastAPI):
     global GLOBAL_LOOP
     GLOBAL_LOOP = asyncio.get_running_loop()
     sync_static_html_versions()
+    cleanup_old_thumbnails()
     yield
     # Shutdown (if needed in future)
 
@@ -181,6 +183,7 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
 OUTPUT_OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
 ASSET_LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
+CANVAS_THUMBNAILS_DIR = os.path.join(ASSETS_DIR, "canvas_thumbnails")
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 API_ENV_FILE = os.path.join(BASE_DIR, "API", ".env")
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -564,6 +567,7 @@ os.makedirs(ASSETS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSET_LIBRARY_DIR, exist_ok=True)
+os.makedirs(CANVAS_THUMBNAILS_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(WORKFLOW_DIR, exist_ok=True)
 os.makedirs(CONVERSATION_DIR, exist_ok=True)
@@ -572,6 +576,22 @@ os.makedirs(CANVAS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+
+@app.get("/api/canvas-thumbnail")
+def canvas_thumbnail(url: str):
+    """为画布图片生成缩略图，只处理 /output/ 和 /assets/ 本地资源"""
+    if not url.startswith(("/output/", "/assets/")):
+        raise HTTPException(status_code=400, detail="Invalid URL")
+    
+    source_path = os.path.join(BASE_DIR, url.lstrip("/"))
+    if not os.path.isfile(source_path):
+        raise HTTPException(status_code=404, detail="Source not found")
+    
+    cache_path = generate_thumbnail(source_path)
+    if cache_path:
+        return FileResponse(cache_path, media_type="image/webp")
+    else:
+        return FileResponse(source_path)
 
 # --- Pydantic 模型 ---
 
@@ -618,6 +638,68 @@ def sync_static_html_versions():
                     f.write(new)
     except Exception as e:
         print(f"同步静态页面版本号失败: {e}")
+
+def generate_thumbnail(source_path: str, max_size: int = 640) -> Optional[str]:
+    """生成缩略图并返回缓存路径，失败返回 None"""
+    try:
+        stat = os.stat(source_path)
+        cache_key = hashlib.sha256(f"{source_path}:{stat.st_mtime}:{stat.st_size}:{max_size}".encode()).hexdigest()
+        cache_path = os.path.join(CANVAS_THUMBNAILS_DIR, f"{cache_key}.webp")
+        
+        if os.path.exists(cache_path):
+            return cache_path
+        
+        img = Image.open(source_path)
+        
+        if hasattr(img, "is_animated") and img.is_animated:
+            return None
+        
+        if img.mode in ("RGBA", "LA", "PA"):
+            has_alpha = True
+        else:
+            has_alpha = False
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+        
+        width, height = img.size
+        if width * height > 64_000_000:
+            return None
+        
+        if max(width, height) <= max_size:
+            return None
+        
+        if width > height:
+            new_width = max_size
+            new_height = int(height * max_size / width)
+        else:
+            new_height = max_size
+            new_width = int(width * max_size / height)
+        
+        img.thumbnail((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        if has_alpha:
+            img.save(cache_path, "WEBP", quality=85, method=4)
+        else:
+            img.save(cache_path, "WEBP", quality=85, method=4)
+        
+        return cache_path
+    except Exception:
+        return None
+
+def cleanup_old_thumbnails():
+    """启动时清理旧缩略图，只保留最近 1000 个"""
+    try:
+        if not os.path.exists(CANVAS_THUMBNAILS_DIR):
+            return
+        files = [(os.path.join(CANVAS_THUMBNAILS_DIR, f), os.path.getmtime(os.path.join(CANVAS_THUMBNAILS_DIR, f)))
+                 for f in os.listdir(CANVAS_THUMBNAILS_DIR) if f.endswith(".webp")]
+        if len(files) <= 1000:
+            return
+        files.sort(key=lambda x: x[1], reverse=True)
+        for path, _ in files[1000:]:
+            os.remove(path)
+    except Exception as e:
+        print(f"清理旧缩略图失败: {e}")
 
 def static_html_response(filename: str):
     path = os.path.join(STATIC_DIR, filename)
