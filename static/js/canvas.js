@@ -9,6 +9,22 @@ function actionFailed(labelKey, detail=''){
     return `${label}失败${detail ? `：${detail}` : ''}`;
 }
 function noReturnedImage(labelKey){ return `${tr(labelKey)}失败：未返回图片`; }
+
+function canvasThumbnailUrl(url) {
+    if (!url || !url.startsWith('/')) return url;
+    if (!url.startsWith('/output/') && !url.startsWith('/assets/')) return url;
+    return `/api/canvas-thumbnail?url=${encodeURIComponent(url)}`;
+}
+
+function bindThumbnailFallback(img, originalUrl) {
+    if (!img || !originalUrl) return;
+    img.onerror = function() {
+        if (this.src !== originalUrl) {
+            this.src = originalUrl;
+            this.onerror = null;
+        }
+    };
+}
 window.addEventListener('message', event => {
     if(event.data?.type === 'canvas_updated') handleCanvasUpdatedMessage(event.data);
     if(event.data?.type === 'canvas-focus'){
@@ -3308,9 +3324,11 @@ function renderNode(node){
     if(node.type === 'image') {
         if(node.url) {
             const missing = isMissingAssetUrl(node.url);
-            body.innerHTML = `<div class="image-preview-wrap">${missing ? missingAssetHtml(node.url) : `<img src="${escapeAttr(node.url)}" draggable="false">`}</div><div class="image-caption text-[11px] text-gray-400 truncate">${escapeHtml(node.name || 'image')}${missing ? ` · 文件缺失` : ''}</div>`;
+            const thumbnailUrl = canvasThumbnailUrl(node.url);
+            body.innerHTML = `<div class="image-preview-wrap">${missing ? missingAssetHtml(node.url) : `<img src="${escapeAttr(thumbnailUrl)}" data-url="${escapeAttr(node.url)}" draggable="false">`}</div><div class="image-caption text-[11px] text-gray-400 truncate">${escapeHtml(node.name || 'image')}${missing ? ` · 文件缺失` : ''}</div>`;
             const previewWrap = body.querySelector('.image-preview-wrap');
             const loadedImg = body.querySelector('img');
+            if(loadedImg) bindThumbnailFallback(loadedImg, node.url);
             const openEditor = e => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -3497,6 +3515,8 @@ function bindOutputWrap(wrap, node){
     const video = wrap.querySelector('video');
     const del = wrap.querySelector('.output-del');
     if(img){
+        const originalUrl = img.dataset.url;
+        if(originalUrl) bindThumbnailFallback(img, originalUrl);
         img.draggable = true;
         img.ondragstart = e => {
             e.stopPropagation();
@@ -4685,8 +4705,11 @@ function renderImageInputList(list, node, imageInputs, emptyText=null){
         item.className = 'input-item';
         item.draggable = true;
         item.dataset.sourceId = src.id;
-        const previewHtml = src.preview && !isMissingAssetUrl(src.preview) ? `<img src="${escapeAttr(src.preview)}">` : (src.preview ? missingAssetHtml(src.preview, true) : '<i data-lucide="image" class="w-6 h-6 text-slate-400"></i>');
+        const thumbnailUrl = canvasThumbnailUrl(src.preview);
+        const previewHtml = src.preview && !isMissingAssetUrl(src.preview) ? `<img src="${escapeAttr(thumbnailUrl)}" data-url="${escapeAttr(src.preview)}">` : (src.preview ? missingAssetHtml(src.preview, true) : '<i data-lucide="image" class="w-6 h-6 text-slate-400"></i>');
         item.innerHTML = `<span class="input-index">${i + 1}</span>${previewHtml}<span class="input-label">${escapeHtml(src.label)}</span>`;
+        const img = item.querySelector('img');
+        if(img) bindThumbnailFallback(img, src.preview);
         item.ondragstart = e => {
             e.stopPropagation();
             internalDrag = true;
@@ -4714,7 +4737,8 @@ function renderVideoImageInputs(list, node, imageInputs){
         item.draggable = true;
         item.dataset.sourceId = src.id;
         const frameLabel = node.useFrameRoles && i === 0 ? tr('canvas.videoRoleFirstFrame') : node.useFrameRoles && i === 1 ? tr('canvas.videoRoleLastFrame') : '';
-        const previewHtml = src.preview && !isMissingAssetUrl(src.preview) ? `<img src="${escapeAttr(src.preview)}">` : (src.preview ? missingAssetHtml(src.preview, true) : '<i data-lucide="image" class="w-6 h-6 text-slate-400"></i>');
+        const thumbnailUrl = canvasThumbnailUrl(src.preview);
+        const previewHtml = src.preview && !isMissingAssetUrl(src.preview) ? `<img src="${escapeAttr(thumbnailUrl)}" data-url="${escapeAttr(src.preview)}">` : (src.preview ? missingAssetHtml(src.preview, true) : '<i data-lucide="image" class="w-6 h-6 text-slate-400"></i>');
         item.innerHTML = `
             <div class="video-input-thumb">
                 <span class="input-index">${i + 1}</span>
@@ -4723,6 +4747,8 @@ function renderVideoImageInputs(list, node, imageInputs){
             </div>
             ${frameLabel ? `<div class="video-frame-label">${frameLabel}</div>` : ''}
         `;
+        const img = item.querySelector('img');
+        if(img) bindThumbnailFallback(img, src.preview);
         item.ondragstart = e => { e.stopPropagation(); internalDrag = true; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('application/x-canvas-input', src.id); };
         item.ondragend = () => { internalDrag = false; };
         item.ondragover = e => { e.preventDefault(); e.stopPropagation(); };
@@ -6091,7 +6117,8 @@ function renderOutputMedia(item, useGridLayout=false){
     if(isVideoUrl(url)){
         return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}><video src="${safe}" data-url="${safe}" preload="metadata" muted playsinline></video>${timePill}<div class="output-video-badge"><i data-lucide="play" class="w-3 h-3"></i>VIDEO</div><button class="output-del" title="${tr('common.delete')}">×</button></div>`;
     }
-    return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}><img src="${safe}" data-url="${safe}" alt="generated output">${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+    const thumbnailUrl = canvasThumbnailUrl(url);
+    return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}><img src="${escapeAttr(thumbnailUrl)}" data-url="${safe}" alt="generated output">${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
 }
 function outputGridLayout(node){
     const images = node?.images || [];
