@@ -3280,7 +3280,7 @@ function restoreOutputScrolls(state){
     });
 }
 function isNodeControl(target){
-    return !!target.closest('textarea, input, select, option, button, [contenteditable="true"], .seg, .gen-btn, .input-item, .blank-image, .mode-tabs, .ms-model-tabs, .llm-provider, .llm-output, .llm-chat-log, .llm-bubble, .llm-pane-resizer, .loop-preview');
+    return !!target.closest('textarea, input, select, option, button, [contenteditable="true"], .seg, .gen-btn, .input-item, .blank-image, .mode-tabs, .ms-model-tabs, .llm-provider, .llm-output, .llm-chat-log, .llm-bubble, .llm-pane-resizer, .loop-preview, .output-column-stepper');
 }
 function isNodeDragSurface(target){
     return !isNodeControl(target) && !target.closest('.port, .resize-handle, .output-img-wrap');
@@ -3318,7 +3318,13 @@ function renderNode(node){
         const label = { queued:'排队中', running:'运行中', done:'完成', failed:'失败' }[node.runStatus] || '';
         return `<span class="node-run-status ${node.runStatus}"><span class="dot"></span>${escapeHtml(label)}${node._cascadeIdx?' '+node._cascadeIdx:''}</span>`;
     })() : '';
-    el.innerHTML = `<div class="node-head"><span class="node-title">${title}</span><div style="display:flex;align-items:center;gap:8px">${statusHtml}<button onclick="deleteNode('${node.id}', event)" class="text-gray-300 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>`;
+    const headLeftHtml = node.type === 'output' ? (() => {
+        const columns = outputColumns(node);
+        const locked = outputHasFixedGridLayout(node);
+        const lockedTitle = locked ? ` title="${escapeAttr(tr('canvas.outputColumnsLocked'))}"` : '';
+        return `<div class="output-head-left"><span class="node-title">${title}</span><div class="output-column-stepper" aria-label="${escapeAttr(tr('canvas.customColumns'))}"${lockedTitle}><button type="button" data-output-column-step="-1" title="${escapeAttr(tr('canvas.decreaseColumns'))}"${locked || columns <= OUTPUT_COLUMN_MIN ? ' disabled' : ''}><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button><span class="output-column-count">${columns}</span><button type="button" data-output-column-step="1" title="${escapeAttr(tr('canvas.increaseColumns'))}"${locked ? ' disabled' : ''}><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button></div></div>`;
+    })() : `<span class="node-title">${title}</span>`;
+    el.innerHTML = `<div class="node-head">${headLeftHtml}<div style="display:flex;align-items:center;gap:8px">${statusHtml}<button onclick="deleteNode('${node.id}', event)" class="text-gray-300 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>`;
     const body = document.createElement('div');
     body.className = 'node-body';
     if(node.type === 'image') {
@@ -3487,6 +3493,11 @@ function renderNode(node){
         control.addEventListener('mousedown', e => e.stopPropagation());
         control.addEventListener('click', e => e.stopPropagation());
     });
+    if(node.type === 'output'){
+        el.querySelectorAll('[data-output-column-step]').forEach(button => {
+            button.onclick = () => adjustOutputColumns(node, Number(button.dataset.outputColumnStep));
+        });
+    }
     el.onmousedown = e => {
         if(e.button !== 0 || !isNodeDragSurface(e.target)) return;
         startNodeDrag(e, node);
@@ -3496,8 +3507,15 @@ function renderNode(node){
     if(canInput) el.insertAdjacentHTML('beforeend', `<div class="port in" title="${tr('canvas.connectHere')}"></div>`);
     if(canOutput) el.insertAdjacentHTML('beforeend', `<div class="port out" title="${tr('canvas.dragConnect')}"></div>`);
     el.insertAdjacentHTML('beforeend', `<div class="resize-handle" title="${tr('canvas.resize')}"></div>`);
-    el.querySelector('.node-head').onmousedown = e => { if(e.button === 0 && !spacePan) startNodeDrag(e, node); };
-    el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
+    el.querySelector('.node-head').onmousedown = e => { if(e.button === 0 && !spacePan && !isNodeControl(e.target)) startNodeDrag(e, node); };
+    const resizeHandle = el.querySelector('.resize-handle');
+    resizeHandle.onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
+    if(['output','prompt'].includes(node.type)) resizeHandle.ondblclick = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if(node.type === 'output') fitOutputNodeToContent(node);
+        else fitPromptNodeHeight(node);
+    };
     el.ondragstart = e => {
         // 输出节点图片拖动时，不阻止默认行为
         if(e.target.tagName === 'IMG' && e.target.dataset.url) return;
@@ -3581,8 +3599,7 @@ function refreshOutputNodeContent(node){
     if(!body || !grid) return false;
     const layout = outputGridLayout(node);
     grid.classList.toggle('grid-layout', !!layout);
-    if(layout) grid.style.setProperty('--grid-cols', String(Math.max(1, Number(layout.cols || 1))));
-    else grid.style.removeProperty('--grid-cols');
+    grid.style.setProperty('--grid-cols', String(layout ? Math.max(1, Number(layout.cols || 1)) : outputColumns(node)));
     const items = [
         ...(node.images || []).map(item => ({
             key:outputDomKeyForItem(item),
@@ -3621,6 +3638,78 @@ function defaultNodeSize(type){
     if(type === 'video') return {w:400, h:0};
     if(type === 'output') return {w:460, h:0};
     return {w:260, h:0};
+}
+const OUTPUT_COLUMN_MIN = 1;
+const OUTPUT_COLUMN_WIDTH = 180;
+const OUTPUT_GRID_GAP = 10;
+const OUTPUT_NODE_INSET = 26;
+function clampOutputColumns(value){
+    return Math.max(OUTPUT_COLUMN_MIN, Math.round(Number(value) || 1));
+}
+function outputHasFixedGridLayout(node){
+    return node?.outputLayout?.type === 'grid-split';
+}
+function inferOutputColumns(width){
+    return Math.max(OUTPUT_COLUMN_MIN, Math.floor((Number(width) - OUTPUT_NODE_INSET + OUTPUT_GRID_GAP) / (OUTPUT_COLUMN_WIDTH + OUTPUT_GRID_GAP)));
+}
+function outputColumns(node){
+    if(outputHasFixedGridLayout(node)) return Math.max(1, Math.round(Number(node.outputLayout.cols) || 1));
+    return clampOutputColumns(node?.outputCols || inferOutputColumns(node?.w || defaultNodeSize('output').w));
+}
+function outputWidthForColumns(columns){
+    const cols = clampOutputColumns(columns);
+    return Math.max(220, cols * OUTPUT_COLUMN_WIDTH + (cols - 1) * OUTPUT_GRID_GAP + OUTPUT_NODE_INSET);
+}
+function adjustOutputColumns(node, step){
+    if(!node || outputHasFixedGridLayout(node)) return;
+    const columns = clampOutputColumns(outputColumns(node) + step);
+    if(columns === outputColumns(node)) return;
+    pushUndo();
+    node.outputCols = columns;
+    fitOutputNodeToContent(node, false);
+}
+function fitOutputNodeToContent(node, saveHistory=true){
+    const el = nodesEl.querySelector(`.output-node[data-id="${CSS.escape(node?.id || '')}"]`);
+    if(!node || !el) return;
+    if(saveHistory) pushUndo();
+    const columns = outputColumns(node);
+    const locked = outputHasFixedGridLayout(node);
+    if(!locked) node.outputCols = columns;
+    node.w = outputWidthForColumns(columns);
+    el.style.width = `${node.w}px`;
+    const count = el.querySelector('.output-column-count');
+    if(count) count.textContent = String(columns);
+    el.querySelector('.output-grid')?.style.setProperty('--grid-cols', String(columns));
+    el.querySelectorAll('[data-output-column-step]').forEach(button => {
+        button.disabled = locked || (columns <= OUTPUT_COLUMN_MIN && Number(button.dataset.outputColumnStep) < 0);
+    });
+    delete node.h;
+    el.style.removeProperty('height');
+    el.classList.remove('sized');
+    node.h = Math.max(96, Math.ceil(el.offsetHeight));
+    el.classList.add('sized');
+    el.style.height = `${node.h}px`;
+    refreshGeometry();
+    scheduleMinimapRender();
+    scheduleSave();
+}
+function fitPromptNodeHeight(node){
+    const el = nodesEl.querySelector(`.prompt-node[data-id="${CSS.escape(node?.id || '')}"]`);
+    const textarea = el?.querySelector('textarea');
+    if(!node || !el || !textarea) return;
+    pushUndo();
+    delete node.h;
+    el.style.removeProperty('height');
+    el.classList.remove('sized');
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    node.h = Math.max(200, Math.ceil(el.offsetHeight));
+    textarea.style.removeProperty('height');
+    el.classList.add('sized');
+    el.style.height = `${node.h}px`;
+    refreshGeometry();
+    scheduleMinimapRender();
+    scheduleSave();
 }
 function loopCount(node){
     return Math.max(1, Math.min(100, Number(node?.count || 1) || 1));
@@ -6131,8 +6220,8 @@ function outputGridLayout(node){
 function renderOutputGrid(node, pendingHtml=''){
     const layout = outputGridLayout(node);
     const gridClass = layout ? 'output-grid grid-layout' : 'output-grid';
-    const style = layout ? ` style="--grid-cols:${Math.max(1, Number(layout.cols || 1))}"` : '';
-    return `<div class="${gridClass}"${style}>${(node.images || []).map(item => renderOutputMedia(item, !!layout)).join('')}${pendingHtml}</div>`;
+    const columns = layout ? Math.max(1, Number(layout.cols || 1)) : outputColumns(node);
+    return `<div class="${gridClass}" style="--grid-cols:${columns}">${(node.images || []).map(item => renderOutputMedia(item, !!layout)).join('')}${pendingHtml}</div>`;
 }
 function outputImageName(url){
     const clean = (url || '').split('?')[0];
@@ -7277,11 +7366,23 @@ function onNodeResize(e){
     const nextH = Math.max(96, resizeNode.sh + (e.clientY - resizeNode.sy) / viewport.scale);
     resizeNode.node.w = Math.round(nextW);
     resizeNode.node.h = Math.round(nextH);
+    if(resizeNode.node.type === 'output' && !outputHasFixedGridLayout(resizeNode.node)){
+        resizeNode.node.outputCols = inferOutputColumns(resizeNode.node.w);
+    }
     const el = nodesEl.querySelector(`.node[data-id="${resizeNode.node.id}"]`);
     if(el){
         el.classList.add('sized');
         el.style.width = `${resizeNode.node.w}px`;
         el.style.height = `${resizeNode.node.h}px`;
+        if(resizeNode.node.type === 'output'){
+            const columns = outputColumns(resizeNode.node);
+            const count = el.querySelector('.output-column-count');
+            if(count) count.textContent = String(columns);
+            el.querySelector('.output-grid')?.style.setProperty('--grid-cols', String(columns));
+            el.querySelectorAll('[data-output-column-step]').forEach(button => {
+                button.disabled = outputHasFixedGridLayout(resizeNode.node) || (columns <= OUTPUT_COLUMN_MIN && Number(button.dataset.outputColumnStep) < 0);
+            });
+        }
     }
     renderLinks();
     renderSelectionHub();

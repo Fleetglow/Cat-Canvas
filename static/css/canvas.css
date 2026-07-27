@@ -275,9 +275,15 @@
         .gen-step-btn { width:26px; height:100%; display:flex; align-items:center; justify-content:center; color:var(--muted); }
         .gen-step-btn:hover { color:var(--text); background:var(--soft-2); }
         .gen-count-input { width:30px; height:100%; border:0; border-left:1px solid var(--line); border-right:1px solid var(--line); background:var(--card-solid); outline:none; padding:0; color:var(--text); font-size:12px; font-weight:800; text-align:center; }
-        .output-node { width:460px; --output-thumb-max:180px; --output-thumb-min:150px; }
+        .output-node { width:460px; --output-thumb-max:180px; }
         .output-node .node-body { overscroll-behavior:contain; }
-        .output-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(var(--output-thumb-min), var(--output-thumb-max))); gap:10px; justify-content:start; align-content:start; }
+        .output-head-left { min-width:0; display:flex; align-items:center; gap:10px; }
+        .output-column-stepper { height:30px; display:flex; align-items:center; overflow:hidden; border:1px solid var(--line-2); border-radius:999px; background:var(--card-solid); }
+        .output-column-stepper button { width:28px; height:100%; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+        .output-column-stepper button:hover:not(:disabled) { color:var(--text); background:var(--soft-2); }
+        .output-column-stepper button:disabled { opacity:.35; cursor:not-allowed; }
+        .output-column-count { width:30px; height:100%; display:flex; align-items:center; justify-content:center; border-left:1px solid var(--line); border-right:1px solid var(--line); color:var(--text); font-size:12px; font-weight:800; }
+        .output-grid { display:grid; grid-template-columns:repeat(var(--grid-cols), var(--output-thumb-max)); gap:10px; justify-content:start; align-content:start; }
         .output-grid.grid-layout { grid-template-columns:repeat(var(--grid-cols), minmax(0, 1fr)); justify-content:stretch; }
         .node.sized.output-node .output-grid { min-height:100%; grid-auto-rows:auto; }
         .output-img-wrap { position:relative; width:100%; max-width:var(--output-thumb-max); aspect-ratio:1; cursor:zoom-in; }
