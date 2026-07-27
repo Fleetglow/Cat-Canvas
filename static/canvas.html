@@ -54,6 +54,20 @@
             </div>
         </div>
 
+        <div id="selectionLayoutToolbar" class="selection-layout-toolbar editor-only" role="toolbar" aria-label="节点布局" data-i18n-aria-label="canvas.layoutToolbar">
+            <button type="button" data-layout-action="left" title="左对齐 (Alt+A)" aria-label="左对齐" data-i18n-title="canvas.alignLeft" data-i18n-aria-label="canvas.alignLeft"><i data-lucide="align-horizontal-justify-start"></i></button>
+            <button type="button" data-layout-action="center-x" title="左右居中 (Alt+H)" aria-label="左右居中" data-i18n-title="canvas.alignCenterX" data-i18n-aria-label="canvas.alignCenterX"><i data-lucide="align-horizontal-justify-center"></i></button>
+            <button type="button" data-layout-action="right" title="右对齐 (Alt+D)" aria-label="右对齐" data-i18n-title="canvas.alignRight" data-i18n-aria-label="canvas.alignRight"><i data-lucide="align-horizontal-justify-end"></i></button>
+            <button type="button" data-layout-action="top" title="上对齐 (Alt+W)" aria-label="上对齐" data-i18n-title="canvas.alignTop" data-i18n-aria-label="canvas.alignTop"><i data-lucide="align-vertical-justify-start"></i></button>
+            <button type="button" data-layout-action="center-y" title="上下居中 (Alt+V)" aria-label="上下居中" data-i18n-title="canvas.alignCenterY" data-i18n-aria-label="canvas.alignCenterY"><i data-lucide="align-vertical-justify-center"></i></button>
+            <button type="button" data-layout-action="bottom" title="下对齐 (Alt+S)" aria-label="下对齐" data-i18n-title="canvas.alignBottom" data-i18n-aria-label="canvas.alignBottom"><i data-lucide="align-vertical-justify-end"></i></button>
+            <span class="selection-layout-separator" data-layout-distribute aria-hidden="true"></span>
+            <button type="button" data-layout-action="distribute-x" data-layout-distribute title="水平等距" aria-label="水平等距" data-i18n-title="canvas.distributeX" data-i18n-aria-label="canvas.distributeX"><i data-lucide="align-horizontal-space-around"></i></button>
+            <button type="button" data-layout-action="distribute-y" data-layout-distribute title="垂直等距" aria-label="垂直等距" data-i18n-title="canvas.distributeY" data-i18n-aria-label="canvas.distributeY"><i data-lucide="align-vertical-space-around"></i></button>
+            <span class="selection-layout-separator" aria-hidden="true"></span>
+            <button type="button" class="selection-layout-arrange" data-layout-action="arrange" title="整理选中" aria-label="整理选中" data-i18n-title="canvas.arrangeSelected" data-i18n-aria-label="canvas.arrangeSelected"><i data-lucide="layout-grid"></i><span data-i18n="canvas.arrangeSelected">整理选中</span></button>
+        </div>
+
         <div id="canvasGate" class="canvas-gate">
             <div class="gate-panel">
                 <div class="gate-head">
@@ -221,6 +235,8 @@
                     <div class="help-row"><kbd>空格</kbd><span>按住平移画布</span></div>
                     <div class="help-row"><kbd>F</kbd><span>聚焦</span></div>
                     <div class="help-row"><kbd>X</kbd><span>删除选中节点</span></div>
+                    <div class="help-row"><kbd>Alt+A/D/W/S</kbd><span>左/右/上/下对齐</span></div>
+                    <div class="help-row"><kbd>Alt+H/V</kbd><span>左右/上下居中</span></div>
                     <div class="help-row"><kbd>双击/右键空白</kbd><span>弹出添加节点菜单</span></div>
                 </div>
             </div>

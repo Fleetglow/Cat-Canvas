@@ -84,6 +84,7 @@ const nodeOutputMenu = document.getElementById('nodeOutputMenu');
 const imageNodeMenu = document.getElementById('imageNodeMenu');
 const selectionBox = document.getElementById('selectionBox');
 const selectionHub = document.getElementById('selectionHub');
+const selectionLayoutToolbar = document.getElementById('selectionLayoutToolbar');
 const gateStatus = document.getElementById('gateStatus');
 const gateCreateBtn = document.getElementById('gateCreateBtn');
 const gateRefreshBtn = document.getElementById('gateRefreshBtn');
@@ -686,6 +687,7 @@ function setCanvasMode(open){
         currentCanvasTitle.textContent = canvas?.title || tr('canvas.untitled');
         currentCanvasTime.textContent = formatCanvasTime(canvas?.updated_at || canvas?.created_at);
     }
+    refreshSelectionLayoutToolbar();
     refreshIcons();
 }
 function ensureCanvas(){
@@ -3217,6 +3219,7 @@ function render(){
     restoreOutputScrolls(outputScrolls);
     refreshGeometry();
     refreshGeometryAfterLayout();
+    refreshSelectionLayoutToolbar();
     refreshIcons();
     refreshOutputTimer();
 }
@@ -7208,6 +7211,10 @@ function pushUndo(){
     if(undoStack.length > UNDO_MAX) undoStack.shift();
     redoStack = [];
 }
+function retainExistingSelection(){
+    const existingIds = new Set(nodes.map(node => node.id));
+    selected.forEach(id => { if(!existingIds.has(id)) selected.delete(id); });
+}
 function performUndo(){
     if(!canvas || !undoStack.length) return;
     redoStack.push({nodes:JSON.parse(JSON.stringify(nodes)), connections:JSON.parse(JSON.stringify(connections))});
@@ -7215,7 +7222,7 @@ function performUndo(){
     nodes = state.nodes;
     connections = state.connections;
     if(!nodes.length) allowEmptyCanvasSave = true;
-    selected.clear();
+    retainExistingSelection();
     render();
     scheduleSave();
 }
@@ -7226,7 +7233,7 @@ function performRedo(){
     nodes = state.nodes;
     connections = state.connections;
     if(!nodes.length) allowEmptyCanvasSave = true;
-    selected.clear();
+    retainExistingSelection();
     render();
     scheduleSave();
 }
@@ -7587,6 +7594,143 @@ function nodeRect(n){
     const h = el?.offsetHeight || n.h || 200;
     return {x:n.x, y:n.y, w, h, cx:n.x + w/2, cy:n.y + h/2};
 }
+function selectionLayoutAtomicIds(ids){
+    const out = new Set((ids || []).filter(id => nodes.some(n => n.id === id)));
+    const seen = new Set();
+    while(out.size){
+        const signature = [...out].sort().join('\0');
+        if(seen.has(signature)) break;
+        seen.add(signature);
+        let changed = false;
+        nodes.filter(n => (n.type === 'group' || n.type === 'promptGroup') && Array.isArray(n.items)).forEach(group => {
+            (group.items || []).forEach(itemId => {
+                if(!out.has(itemId)) return;
+                out.delete(itemId);
+                out.add(group.id);
+                changed = true;
+            });
+        });
+        if(!changed) break;
+    }
+    return [...out];
+}
+function selectionLayoutNodes(){
+    return selectionLayoutAtomicIds([...selected]).map(id => nodes.find(n => n.id === id)).filter(Boolean);
+}
+function refreshSelectionLayoutToolbar(){
+    if(!selectionLayoutToolbar) return;
+    const count = canvas ? selectionLayoutNodes().length : 0;
+    selectionLayoutToolbar.classList.toggle('visible', count >= 2);
+    selectionLayoutToolbar.querySelectorAll('[data-layout-distribute]').forEach(element => element.hidden = count < 3);
+}
+function translateSelectionLayoutNode(node, dx, dy, seen=new Set()){
+    if(!node || seen.has(node.id)) return;
+    seen.add(node.id);
+    node.x = Math.round((Number(node.x) || 0) + dx);
+    node.y = Math.round((Number(node.y) || 0) + dy);
+    if(node.type === 'group' || node.type === 'promptGroup'){
+        (node.items || []).forEach(id => translateSelectionLayoutNode(nodes.find(n => n.id === id), dx, dy, seen));
+    }
+}
+function moveSelectionLayoutNode(node, x, y){
+    translateSelectionLayoutNode(node, Math.round(x - (Number(node.x) || 0)), Math.round(y - (Number(node.y) || 0)));
+}
+function applySelectionLayout(action){
+    if(!canvas || !action) return false;
+    const targets = selectionLayoutNodes();
+    if(targets.length < 2 || (action.startsWith('distribute') && targets.length < 3)) return false;
+    const rects = new Map(targets.map(node => [node.id, nodeRect(node)]));
+    const left = Math.min(...targets.map(node => rects.get(node.id).x));
+    const top = Math.min(...targets.map(node => rects.get(node.id).y));
+    const right = Math.max(...targets.map(node => rects.get(node.id).x + rects.get(node.id).w));
+    const bottom = Math.max(...targets.map(node => rects.get(node.id).y + rects.get(node.id).h));
+    const positions = new Map();
+    const setPosition = (node, x, y) => positions.set(node.id, {node, x:Math.round(x), y:Math.round(y)});
+
+    if(action === 'left' || action === 'center-x' || action === 'right'){
+        targets.forEach(node => {
+            const rect = rects.get(node.id);
+            const x = action === 'left' ? left : action === 'right' ? right - rect.w : (left + right - rect.w) / 2;
+            setPosition(node, x, rect.y);
+        });
+    } else if(action === 'top' || action === 'center-y' || action === 'bottom'){
+        targets.forEach(node => {
+            const rect = rects.get(node.id);
+            const y = action === 'top' ? top : action === 'bottom' ? bottom - rect.h : (top + bottom - rect.h) / 2;
+            setPosition(node, rect.x, y);
+        });
+    } else if(action === 'distribute-x'){
+        const ordered = targets.slice().sort((a, b) => rects.get(a.id).x - rects.get(b.id).x || String(a.id).localeCompare(String(b.id)));
+        const width = ordered.reduce((sum, node) => sum + rects.get(node.id).w, 0);
+        const gap = (right - left - width) / (ordered.length - 1);
+        let x = left;
+        ordered.forEach((node, index) => {
+            const rect = rects.get(node.id);
+            setPosition(node, index === ordered.length - 1 ? rect.x : x, rect.y);
+            x += rect.w + gap;
+        });
+    } else if(action === 'distribute-y'){
+        const ordered = targets.slice().sort((a, b) => rects.get(a.id).y - rects.get(b.id).y || String(a.id).localeCompare(String(b.id)));
+        const height = ordered.reduce((sum, node) => sum + rects.get(node.id).h, 0);
+        const gap = (bottom - top - height) / (ordered.length - 1);
+        let y = top;
+        ordered.forEach((node, index) => {
+            const rect = rects.get(node.id);
+            setPosition(node, rect.x, index === ordered.length - 1 ? rect.y : y);
+            y += rect.h + gap;
+        });
+    } else if(action === 'arrange'){
+        const idSet = new Set(targets.map(node => node.id));
+        const internal = connections.filter(c => idSet.has(c.from) && idSet.has(c.to));
+        const depth = new Map(targets.map(node => [node.id, 0]));
+        if(internal.length){
+            const indegree = new Map(targets.map(node => [node.id, 0]));
+            internal.forEach(c => indegree.set(c.to, (indegree.get(c.to) || 0) + 1));
+            const roots = [...indegree].filter(([, count]) => count === 0).map(([id]) => id);
+            const queue = roots.length ? roots : [targets[0].id];
+            const visited = new Set(queue);
+            while(queue.length){
+                const id = queue.shift();
+                internal.filter(c => c.from === id).forEach(c => {
+                    depth.set(c.to, Math.max(depth.get(c.to) || 0, (depth.get(id) || 0) + 1));
+                    if(!visited.has(c.to)){
+                        visited.add(c.to);
+                        queue.push(c.to);
+                    }
+                });
+            }
+        }
+        const columns = new Map();
+        targets.forEach(node => {
+            const column = depth.get(node.id) || 0;
+            if(!columns.has(column)) columns.set(column, []);
+            columns.get(column).push(node);
+        });
+        let x = left;
+        [...columns.keys()].sort((a, b) => a - b).forEach(column => {
+            const ordered = columns.get(column).slice().sort((a, b) => rects.get(a.id).y - rects.get(b.id).y || String(a.id).localeCompare(String(b.id)));
+            let y = top;
+            let maxWidth = 0;
+            ordered.forEach(node => {
+                const rect = rects.get(node.id);
+                setPosition(node, x, y);
+                y += Math.max(120, rect.h) + 56;
+                maxWidth = Math.max(maxWidth, Math.max(220, rect.w));
+            });
+            x += maxWidth + 180;
+        });
+    } else {
+        return false;
+    }
+
+    const changed = [...positions.values()].filter(item => item.x !== Math.round(Number(item.node.x) || 0) || item.y !== Math.round(Number(item.node.y) || 0));
+    if(!changed.length) return false;
+    pushUndo();
+    changed.forEach(item => moveSelectionLayoutNode(item.node, item.x, item.y));
+    render();
+    scheduleSave();
+    return true;
+}
 function handoffExistingInputsToGroup(group, children){
     if(!group || group.type !== 'group') return false;
     const childIds = new Set((children || []).filter(n => ['image','prompt'].includes(n?.type)).map(n => n.id));
@@ -7798,6 +7942,7 @@ function refreshSelectionVisuals(){
     });
     renderLinks();
     renderSelectionHub();
+    refreshSelectionLayoutToolbar();
     scheduleMinimapRender();
 }
 function pathEl(x1,y1,x2,y2,cls){
@@ -7933,6 +8078,17 @@ function isEditableTarget(target){
     const tag = target?.tagName;
     return tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable || target?.closest?.('select, option');
 }
+selectionLayoutToolbar?.addEventListener('mousedown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+selectionLayoutToolbar?.addEventListener('click', e => {
+    const button = e.target.closest('[data-layout-action]');
+    if(!button) return;
+    e.preventDefault();
+    e.stopPropagation();
+    applySelectionLayout(button.dataset.layoutAction);
+});
 minimap?.addEventListener('mousedown', e => {
     if(!canvas || e.button !== 0) return;
     e.preventDefault();
@@ -8113,6 +8269,23 @@ function preventBrowserZoom(e){
 }
 window.addEventListener('keydown', preventBrowserZoom, true);
 document.addEventListener('keydown', preventBrowserZoom, true);
+
+window.addEventListener('keydown', e => {
+    if(!canvas || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.repeat || isEditableTarget(document.activeElement)) return;
+    if(document.querySelector('.log-modal.open, .help-modal.open, .image-edit-modal.open, .error-modal.open, .output-lightbox.open')) return;
+    const action = {
+        KeyA:'left',
+        KeyD:'right',
+        KeyW:'top',
+        KeyS:'bottom',
+        KeyV:'center-y',
+        KeyH:'center-x'
+    }[e.code];
+    if(!action || selectionLayoutNodes().length < 2) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    applySelectionLayout(action);
+}, true);
 
 // ESC 键关闭弹窗（按层级：先关闭最上层弹窗）
 document.addEventListener('keydown', e => {

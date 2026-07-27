@@ -62,6 +62,15 @@
         .tool-btn { height:38px; min-width:38px; padding:0 12px; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:7px; color:var(--muted); background:var(--card-solid); border:1px solid var(--line); font-size:11px; font-weight:700; transition:all .2s var(--ease); pointer-events:auto; }
         .tool-btn:hover { background:var(--soft-2); color:var(--text); }
         .theme-toggle.active { background:var(--strong); color:var(--strong-text); border-color:var(--strong); }
+        .selection-layout-toolbar { position:absolute; top:22px; left:50%; z-index:31; display:flex; align-items:center; gap:4px; padding:6px; border:1px solid var(--line); border-radius:16px; background:var(--panel); box-shadow:0 16px 44px var(--shadow); backdrop-filter:blur(16px); opacity:0; pointer-events:none; transform:translate(-50%,-8px); transition:opacity .16s var(--ease), transform .16s var(--ease); }
+        .selection-layout-toolbar.visible { opacity:1; pointer-events:auto; transform:translate(-50%,0); }
+        .selection-layout-toolbar button { width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; border:0; border-radius:10px; color:var(--muted); background:transparent; cursor:pointer; transition:background .14s var(--ease), color .14s var(--ease), transform .14s var(--ease); }
+        .selection-layout-toolbar [hidden] { display:none; }
+        .selection-layout-toolbar button:hover { color:var(--text); background:var(--soft-2); transform:translateY(-1px); }
+        .selection-layout-toolbar button:active { transform:translateY(0); }
+        .selection-layout-toolbar button i,.selection-layout-toolbar button svg { width:17px; height:17px; }
+        .selection-layout-toolbar .selection-layout-arrange { width:auto; padding:0 10px; gap:6px; font-size:11px; font-weight:700; white-space:nowrap; }
+        .selection-layout-separator { width:1px; height:20px; margin:0 3px; background:var(--line); }
         .board { position:absolute; inset:0; cursor:grab; background-color:var(--page); background-image:radial-gradient(var(--grid) 1px, transparent 1px); background-size:24px 24px; }
         .space-pan .board { cursor:grabbing !important; }
         body.space-pan .image-edit-stage { cursor:grab !important; }
