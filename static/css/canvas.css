@@ -114,7 +114,6 @@
         .node.sized.video-node .input-list { flex:1; min-height:64px; max-height:none; }
         .node.sized.video-node .gen-run-row,
         .node.sized.video-node .gen-btn { margin-top:auto; }
-        .node.sized.generator-node .gen-run-row,
         .node.sized.llm-node .gen-run-row { margin-top:auto; }
         .gen-cascade-btn { height:40px; width:100%; flex:0 0 40px; border-radius:16px; background:transparent; border:1.5px solid var(--strong); color:var(--strong); display:flex; align-items:center; justify-content:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:.12em; transition:all .15s ease; }
         .gen-cascade-btn:hover { background:var(--strong); color:var(--strong-text); }
@@ -233,9 +232,10 @@
         .generator-node { width:380px; }
         .generator-body { min-height:0; }
         .node.sized.generator-node .generator-body { height:100%; display:flex; flex-direction:column; }
+        .generator-node .gen-settings { margin-bottom:0; }
+        .generator-node .gen-run-row { margin-top:12px; }
         .generator-controls { display:flex; gap:8px; flex-wrap:wrap; }
         .node.sized.generator-node .input-list { flex:1; min-height:64px; max-height:none; }
-        .node.sized.generator-node .gen-btn { margin-top:auto; }
         .gen-settings { display:flex; flex-direction:column; gap:8px; margin-top:12px; margin-bottom:12px; padding:10px; border:1px solid var(--line-2); border-radius:16px; background:linear-gradient(180deg, var(--card-solid), var(--soft)); box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 8px 20px var(--shadow); }
         .gen-settings-row { display:flex; align-items:center; gap:6px; min-width:0; flex-wrap:wrap; }
         .gen-settings-row .model-select { flex:1; min-width:0; }
@@ -374,6 +374,12 @@
         .input-label { position:absolute; left:5px; right:5px; bottom:5px; border-radius:10px; padding:2px 4px; background:rgba(255,255,255,.86); color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .video-frame-label { width:100%; min-height:22px; border:1px solid var(--line-2); border-radius:9px; background:var(--card-solid); color:var(--text); font-size:10px; font-weight:900; display:flex; align-items:center; justify-content:center; }
         .gen-btn { height:40px; width:100%; border-radius:16px; background:#111827; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:.12em; }
+        .run-hover-fx { position:relative; isolation:isolate; overflow:hidden; background:linear-gradient(to right, #00bf63, #5ce1e6); transition:transform .15s ease; }
+        .run-hover-fx::before { content:""; position:absolute; top:0; left:-10%; width:120%; height:100%; z-index:0; background:#111827; transform:skew(30deg); transition:transform .4s cubic-bezier(.3,1,.8,1); }
+        .run-hover-content { position:relative; z-index:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+        .run-hover-fx:hover:not(:disabled)::before { transform:translate3d(100%,0,0); }
+        .run-hover-fx:active:not(:disabled) { transform:scale(.95); }
+        .run-hover-fx:disabled::before { display:none; }
         .gen-btn:disabled { background:#e5e7eb; color:#94a3b8; cursor:not-allowed; }
         .gen-btn.running i { color:#facc15; fill:#facc15; animation:zapPulse .8s ease-in-out infinite; }
         @keyframes zapPulse { 0%,100% { transform:scale(1); opacity:.72; } 50% { transform:scale(1.18); opacity:1; } }
@@ -762,6 +768,8 @@
         .theme-dark .llm-run,
         .theme-dark .primary-btn,
         .theme-dark .model-btn.primary { background:#d8dee9; color:#0f172a; }
+        .theme-dark .run-hover-fx { background:linear-gradient(to right, #00bf63, #5ce1e6); color:#fff; }
+        .theme-dark .run-hover-fx:disabled { background:#d8dee9; color:#64748b; }
         .theme-dark .model-btn.secondary { background:#1e293b; color:#e5e7eb; border:1px solid #475569; box-shadow:0 8px 20px rgba(0,0,0,.18); }
         .theme-dark .model-btn.secondary:hover { background:#334155; color:#fff; border-color:#94a3b8; }
         .theme-dark .model-btn.secondary.danger { background:rgba(127,29,29,.78); color:#fecaca; border-color:#ef4444; box-shadow:0 8px 20px rgba(127,29,29,.24); }

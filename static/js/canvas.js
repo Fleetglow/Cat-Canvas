@@ -3510,11 +3510,12 @@ function renderNode(node){
     el.querySelector('.node-head').onmousedown = e => { if(e.button === 0 && !spacePan && !isNodeControl(e.target)) startNodeDrag(e, node); };
     const resizeHandle = el.querySelector('.resize-handle');
     resizeHandle.onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
-    if(['output','prompt'].includes(node.type)) resizeHandle.ondblclick = e => {
+    if(['output','prompt','generator'].includes(node.type)) resizeHandle.ondblclick = e => {
         e.preventDefault();
         e.stopPropagation();
         if(node.type === 'output') fitOutputNodeToContent(node);
-        else fitPromptNodeHeight(node);
+        else if(node.type === 'prompt') fitPromptNodeHeight(node);
+        else fitGeneratorNodeHeight(node);
     };
     el.ondragstart = e => {
         // 输出节点图片拖动时，不阻止默认行为
@@ -3683,6 +3684,12 @@ function fitOutputNodeToContent(node, saveHistory=true){
     el.querySelectorAll('[data-output-column-step]').forEach(button => {
         button.disabled = locked || (columns <= OUTPUT_COLUMN_MIN && Number(button.dataset.outputColumnStep) < 0);
     });
+    fitOutputNodeHeight(node, false);
+}
+function fitOutputNodeHeight(node, saveHistory=true){
+    const el = nodesEl.querySelector(`.output-node[data-id="${CSS.escape(node?.id || '')}"]`);
+    if(!node || !el) return;
+    if(saveHistory) pushUndo();
     delete node.h;
     el.style.removeProperty('height');
     el.classList.remove('sized');
@@ -3705,6 +3712,28 @@ function fitPromptNodeHeight(node){
     textarea.style.height = `${textarea.scrollHeight}px`;
     node.h = Math.max(200, Math.ceil(el.offsetHeight));
     textarea.style.removeProperty('height');
+    el.classList.add('sized');
+    el.style.height = `${node.h}px`;
+    refreshGeometry();
+    scheduleMinimapRender();
+    scheduleSave();
+}
+function measureGeneratorNodeHeight(el){
+    if(!el) return 96;
+    const wasSized = el.classList.contains('sized');
+    const height = el.style.height;
+    el.style.removeProperty('height');
+    el.classList.remove('sized');
+    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight) + 24);
+    if(wasSized) el.classList.add('sized');
+    if(height) el.style.height = height;
+    return naturalHeight;
+}
+function fitGeneratorNodeHeight(node, saveHistory=true){
+    const el = nodesEl.querySelector(`.generator-node[data-id="${CSS.escape(node?.id || '')}"]`);
+    if(!node || !el) return;
+    if(saveHistory) pushUndo();
+    node.h = measureGeneratorNodeHeight(el);
     el.classList.add('sized');
     el.style.height = `${node.h}px`;
     refreshGeometry();
@@ -4189,7 +4218,7 @@ function renderLLMNodePane(container, node){
             <div class="llm-output llm-result-output">${escapeHtml(node.outputText || tr('canvas.llmOutputEmpty'))}</div>
         </div>
         <div class="gen-run-row mt-2">
-            <button class="llm-run ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : 'Run LLM'}</button>
+            <button class="llm-run run-hover-fx ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : 'Run LLM'}</span></button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -4222,7 +4251,7 @@ function renderLLMChatPane(container, node){
     container.innerHTML = `
         <div class="llm-chat-log">${messages.length ? messages.map((msg, mi) => `<div class="llm-bubble ${msg.role === 'user' ? 'user' : 'assistant'}" data-msg-idx="${mi}">${escapeHtml(msg.content || '')}${msg.role === 'assistant' ? `<button class="llm-bubble-copy" type="button" title="复制"><i data-lucide="copy" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></button>` : ''}</div>`).join('') : `<div class="text-[11px] text-gray-300">${tr('canvas.startChat')}</div>`}</div>
         <textarea class="llm-chat-input mt-2" rows="2" placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
-        <button class="llm-run mt-2" ${node.running ? 'disabled' : ''}><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</button>
+        <button class="llm-run run-hover-fx mt-2" ${node.running ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</span></button>
     `;
     bindScrollableText(container.querySelector('.llm-chat-log'));
     bindScrollableText(container.querySelector('.llm-chat-input'));
@@ -4393,9 +4422,11 @@ function renderGeneratorBody(node){
     if(!imageProviderModels.length) node.model = '';
     else if(!imageProviderModels.includes(resolveImageModel(node.model))) node.model = imageProviderModels[0] || '';
     wrap.innerHTML = `
-        <div class="prompt-list mb-3"></div>
-        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">${tr('canvas.images')}</div>
-        <div class="input-list"></div>
+        <div class="prompt-input-section" ${promptInputs.length ? '' : 'hidden'}><div class="prompt-list mb-3"></div></div>
+        <div class="image-input-section" ${imageInputs.length ? '' : 'hidden'}>
+            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">${tr('canvas.images')}</div>
+            <div class="input-list"></div>
+        </div>
         <div class="gen-settings">
             <div class="gen-settings-row">
                 <select class="select-lite provider-select">${providerOptions(node.apiProvider)}</select>
@@ -4458,7 +4489,7 @@ function renderGeneratorBody(node){
             </div>
         </div>
         <div class="gen-run-row">
-            <button class="gen-btn ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><i data-lucide="zap" class="w-4 h-4"></i>${node.running ? tr('canvas.generating') : tr('canvas.apiGenerate')}</button>
+            <button class="gen-btn run-hover-fx"><span class="run-hover-content"><i data-lucide="zap" class="w-4 h-4"></i>${tr('canvas.apiGenerate')}</span></button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -4734,7 +4765,7 @@ function renderVideoBody(node){
             </div>
         </div>
         <div class="gen-run-row">
-            <button class="gen-btn ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><i data-lucide="clapperboard" class="w-4 h-4"></i>${node.running ? tr('canvas.generating') : tr('canvas.videoGenerate')}</button>
+            <button class="gen-btn run-hover-fx ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="clapperboard" class="w-4 h-4"></i>${node.running ? tr('canvas.generating') : tr('canvas.videoGenerate')}</span></button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -4987,7 +5018,17 @@ function reorderInput(gen, movedId, targetId){
     scheduleSave();
 }
 function syncGeneratorInputs(){
-    nodes.filter(n => ['generator','video'].includes(n.type)).forEach(gen => orderedSources(gen, generatorSources(gen)));
+    const changedGenerators = [];
+    nodes.filter(n => ['generator','video'].includes(n.type)).forEach(gen => {
+        const before = (gen.inputs || []).join('\n');
+        orderedSources(gen, generatorSources(gen));
+        if(gen.type === 'generator' && before !== (gen.inputs || []).join('\n')) changedGenerators.push(gen);
+    });
+    if(changedGenerators.length) requestAnimationFrame(() => {
+        const active = changedGenerators.filter(gen => nodes.some(node => node.id === gen.id));
+        refreshNodes(active.map(gen => gen.id));
+        active.forEach(gen => fitGeneratorNodeHeight(gen, false));
+    });
 }
 function refreshGeneratorInputViews(){
     nodes.filter(n => ['generator','video'].includes(n.type)).forEach(gen => {
@@ -4995,14 +5036,21 @@ function refreshGeneratorInputViews(){
         if(!el) return;
         const sources = orderedSources(gen, generatorSources(gen));
         const imageInputs = sources.filter(src => src.refs?.length);
-        renderPromptPreview(el.querySelector('.prompt-list'), sources.filter(src => src.prompt && !src.refs?.length));
+        const promptInputs = sources.filter(src => src.prompt && !src.refs?.length);
+        if(gen.type === 'generator'){
+            const promptSection = el.querySelector('.prompt-input-section');
+            const imageSection = el.querySelector('.image-input-section');
+            if(promptSection) promptSection.hidden = !promptInputs.length;
+            if(imageSection) imageSection.hidden = !imageInputs.length;
+        }
+        renderPromptPreview(el.querySelector('.prompt-list'), promptInputs);
         if(gen.type === 'generator') renderImageInputList(el.querySelector('.input-list'), gen, imageInputs);
         if(gen.type === 'video') renderVideoImageInputs(el.querySelector('.video-img-list'), gen, imageInputs);
     });
 }
 async function runGenerator(genId, opts={}){
     const gen = nodes.find(n => n.id === genId);
-    if(!gen || (gen.running && !opts.cascade)) return;
+    if(!gen) return;
     const sources = orderedSources(gen, generatorSources(gen));
     const prompt = sources.map(s => s.prompt).filter(Boolean).join('\n\n');
     const refs = sources.flatMap(s => s.refs || []);
@@ -5033,6 +5081,7 @@ async function runGenerator(genId, opts={}){
             }))
         ];
         refreshRunNodes(gen, out);
+        fitOutputNodeHeight(out, false);
         scheduleSave();
         await saveCanvas();
         const statuses = await Promise.all(taskInfos.map(task => pollCanvasImageTask(task.task_id)));
@@ -5120,6 +5169,7 @@ async function runVideoNode(nodeId, opts={}){
     if(out) out._pending = [...(out._pending || []), makePending(pendingId, run)];
     if(!opts.cascade){ node.running = true; refreshRunNodes(node, out); }
     else refreshRunNodes(node, out);
+    fitOutputNodeHeight(out, false);
     try {
         const result = await fetch('/api/canvas-video', {
             method:'POST',
@@ -5366,15 +5416,16 @@ function computeConnectedWorkflowOrder(anchorId){
 }
 async function runCanvasGenerate(nodeId){
     const node = nodes.find(n => n.id === nodeId);
-    if(!node || node.running || cascadeRunningIds.has(nodeId)) return;
+    const allowConcurrent = node?.type === 'generator';
+    if(!node || (!allowConcurrent && (node.running || cascadeRunningIds.has(nodeId)))) return;
     const order = computeConnectedWorkflowOrder(nodeId);
     if(order.length > 1){
-        cascadeRunningIds.add(nodeId);
+        if(!allowConcurrent) cascadeRunningIds.add(nodeId);
         refreshNodes(order);
         try {
             await runOneCascadePass(order);
         } finally {
-            cascadeRunningIds.delete(nodeId);
+            if(!allowConcurrent) cascadeRunningIds.delete(nodeId);
             refreshNodes(order);
         }
         return;
@@ -6266,6 +6317,11 @@ function appendOutputImages(out, images, compareRef, metas=[], layout=null){
             out.imageComparisons[url] = {url:compareRef.url, name:compareRef.name || 'input image'};
         });
     }
+    requestAnimationFrame(() => {
+        if(!nodes.some(node => node.id === out.id)) return;
+        refreshNodes([out.id]);
+        fitOutputNodeHeight(out, false);
+    });
 }
 function outputCompareUrlFor(url, out){
     const source = out?.imageComparisons?.[url];
@@ -7363,16 +7419,17 @@ function onNodeResize(e){
     if(!resizeNode) return;
     const min = defaultNodeSize(resizeNode.node.type);
     const nextW = Math.max(Math.min(min.w, 220), resizeNode.sw + (e.clientX - resizeNode.sx) / viewport.scale);
-    const nextH = Math.max(96, resizeNode.sh + (e.clientY - resizeNode.sy) / viewport.scale);
+    const proposedH = resizeNode.sh + (e.clientY - resizeNode.sy) / viewport.scale;
     resizeNode.node.w = Math.round(nextW);
-    resizeNode.node.h = Math.round(nextH);
+    const el = nodesEl.querySelector(`.node[data-id="${resizeNode.node.id}"]`);
+    if(el) el.style.width = `${resizeNode.node.w}px`;
+    const minH = resizeNode.node.type === 'generator' ? measureGeneratorNodeHeight(el) : 96;
+    resizeNode.node.h = Math.round(resizeNode.node.type === 'generator' ? Math.max(minH, resizeNode.sh) : Math.max(minH, proposedH));
     if(resizeNode.node.type === 'output' && !outputHasFixedGridLayout(resizeNode.node)){
         resizeNode.node.outputCols = inferOutputColumns(resizeNode.node.w);
     }
-    const el = nodesEl.querySelector(`.node[data-id="${resizeNode.node.id}"]`);
     if(el){
         el.classList.add('sized');
-        el.style.width = `${resizeNode.node.w}px`;
         el.style.height = `${resizeNode.node.h}px`;
         if(resizeNode.node.type === 'output'){
             const columns = outputColumns(resizeNode.node);
