@@ -1710,16 +1710,31 @@ function addNode(node){
     return node;
 }
 function defaultPoint(dx=0, dy=0){ return screenToWorld(window.innerWidth / 2 + dx, window.innerHeight / 2 + dy); }
-function findEmptyPoint(w, h, margin=80){
-    if(!nodes || !nodes.length){
-        const rect = board.getBoundingClientRect();
-        const center = screenToWorld(rect.width / 2, rect.height / 2);
-        return {x: center.x - (w||0)/2, y: center.y - (h||0)/2};
+function findEmptyPoint(w, h, gap=40){
+    const width = Math.max(1, Number(w) || 200);
+    const height = Math.max(1, Number(h) || 160);
+    const view = currentWorldViewRect();
+    const startX = view.x + (view.w - width) / 2;
+    const startY = view.y + (view.h - height) / 2;
+    const occupied = (nodes || []).map(estimatedNodeRect).map(rect => ({
+        x:Number(rect.x) || 0,
+        y:Number(rect.y) || 0,
+        w:Math.max(1, Number(rect.w) || 1),
+        h:Math.max(1, Number(rect.h) || 1)
+    }));
+    const collides = (x, y) => occupied.some(rect =>
+        x < rect.x + rect.w + gap &&
+        x + width + gap > rect.x &&
+        y < rect.y + rect.h + gap &&
+        y + height + gap > rect.y
+    );
+    for(let column = 0; ; column++){
+        const x = Math.round(startX + column * (width + gap));
+        for(let row = 0; row < 20; row++){
+            const y = Math.round(startY + row * (height + gap));
+            if(!collides(x, y)) return {x, y};
+        }
     }
-    const m = margin || 80;
-    const rightMost = Math.max(...nodes.map(n => n.x + (n.w || defaultNodeSize(n.type).w || 200)));
-    const topMost = Math.min(...nodes.map(n => n.y));
-    return {x: rightMost + m, y: topMost};
 }
 function focusOnPoint(x, y, w, h){
     if(!board) return;
@@ -6608,7 +6623,7 @@ function sendOutputToCanvas(url){
     img.onload = () => {
         const w = Math.min(img.naturalWidth, 512);
         const h = Math.min(img.naturalHeight, 512);
-        const p = findEmptyPoint(w, h);
+        const p = findEmptyPoint(Math.max(220, w), Math.max(96, h));
         const node = {
             id:uid('image'), type:'image', x:p.x, y:p.y,
             w, h, url, inputs:[]
@@ -6874,18 +6889,22 @@ function rerunFromOutputMeta(meta){
     }
     if(!ensureCanvas() || !meta?.run?.nodeType) return;
     const base = JSON.parse(JSON.stringify(meta.run.node || {}));
-    const mainW = (base.w || defaultNodeSize(meta.run.nodeType).w || 200);
-    const mainH = (base.h || defaultNodeSize(meta.run.nodeType).h || 160);
-    const p = findEmptyPoint(mainW, mainH);
+    const mainW = Number(base.w) || defaultNodeSize(meta.run.nodeType).w || 200;
+    const mainH = Number(base.h) || defaultNodeSize(meta.run.nodeType).h || 160;
+    const prompt = meta.run.prompt || '';
+    const refs = (meta.run.refs || []).slice(0, 8);
+    const leftOffset = (prompt || refs.length) ? 340 : 0;
+    const refsHeight = refs.length ? 110 + (refs.length - 1) * 86 + 336 : 0;
+    const origin = findEmptyPoint(mainW + leftOffset, Math.max(mainH, prompt ? 180 : 0, refsHeight));
+    const p = {x:origin.x + leftOffset, y:origin.y};
     const node = {...base, id:uid(base.type || meta.run.nodeType), type:meta.run.nodeType, x:p.x, y:p.y, inputs:[], running:false};
     nodes.push(node);
-    const prompt = meta.run.prompt || '';
     if(prompt){
         const promptNode = {id:uid('pr'), type:'prompt', x:p.x - 340, y:p.y, text:prompt};
         nodes.push(promptNode);
         connections.push({id:uid('c'), from:promptNode.id, to:node.id});
     }
-    (meta.run.refs || []).slice(0, 8).forEach((ref, i) => {
+    refs.forEach((ref, i) => {
         const imgNode = {id:uid('img'), type:'image', x:p.x - 340, y:p.y + 110 + i * 86, url:ref.url, name:ref.name || 'image'};
         nodes.push(imgNode);
         connections.push({id:uid('c'), from:imgNode.id, to:node.id});
