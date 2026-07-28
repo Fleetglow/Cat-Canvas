@@ -63,6 +63,8 @@
         "canvas.distributeX": "水平等距",
         "canvas.distributeY": "垂直等距",
         "canvas.arrangeSelected": "整理选中",
+        "canvas.panModeSwitch": "抓手模式，点击切换为选择模式",
+        "canvas.selectModeSwitch": "选择模式，点击切换为抓手模式",
         "canvas.generationLogs": "生成日志",
         "canvas.noLogs": "还没有生成日志",
         "canvas.success": "成功",

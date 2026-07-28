@@ -46,6 +46,7 @@ window.addEventListener('studio-lang-change', () => {
     if(canvas) currentCanvasTitle.textContent = canvas?.title || tr('canvas.untitled');
     renderCanvasList();
     render();
+    refreshCanvasInteractionMode();
 });
 const shell = document.getElementById('shell');
 const canvasGate = document.getElementById('canvasGate');
@@ -56,6 +57,8 @@ const minimap = document.getElementById('minimap');
 const minimapContent = document.getElementById('minimapContent');
 let minimapViewport = document.getElementById('minimapViewport');
 const zoomPercentLabel = document.getElementById('zoomPercentLabel');
+const canvasModeToggle = document.getElementById('canvasModeToggle');
+const canvasModeIcon = document.getElementById('canvasModeIcon');
 const settingsModal = document.getElementById('settingsModal');
 let showGenTime = localStorage.getItem('canvas_showGenTime') !== '0';
 const showGenTimeSwitch = document.getElementById('showGenTimeSwitch');
@@ -73,6 +76,8 @@ const preserveConnectionsSwitch = document.getElementById('preserveConnectionsSw
 if(preserveConnectionsSwitch) preserveConnectionsSwitch.checked = preserveConnections;
 let spacePan = false;
 let spacePanDownPos = null; // 记录空格平移开始的鼠标位置，用于阻止误触 click
+const CANVAS_INTERACTION_MODE_KEY = 'canvas_interaction_mode';
+let canvasInteractionMode = localStorage.getItem(CANVAS_INTERACTION_MODE_KEY) === 'select' ? 'select' : 'pan';
 const linksEl = document.getElementById('links');
 const linkControlsEl = document.getElementById('linkControls');
 const knifeTrailSvg = document.getElementById('knifeTrailSvg');
@@ -314,6 +319,33 @@ function toggleQuickToolbar(){
     localStorage.setItem(QUICK_TOOLBAR_COLLAPSED_KEY, next ? '1' : '0');
     applyQuickToolbarState();
 }
+function refreshCanvasInteractionMode(){
+    const selecting = canvasInteractionMode === 'select';
+    document.body.classList.toggle('canvas-select-mode', selecting);
+    if(canvasModeIcon) canvasModeIcon.style.setProperty('--canvas-mode-icon', `url('/static/images/layout/canvas-${selecting ? 'select' : 'pan'}.svg')`);
+    if(canvasModeToggle){
+        const key = selecting ? 'canvas.selectModeSwitch' : 'canvas.panModeSwitch';
+        const fallback = selecting ? '选择模式，点击切换为抓手模式' : '抓手模式，点击切换为选择模式';
+        const title = tr(key) === key ? fallback : tr(key);
+        canvasModeToggle.title = title;
+        canvasModeToggle.setAttribute('aria-label', title);
+        canvasModeToggle.dataset.mode = canvasInteractionMode;
+    }
+}
+function setCanvasInteractionMode(mode){
+    canvasInteractionMode = mode === 'select' ? 'select' : 'pan';
+    localStorage.setItem(CANVAS_INTERACTION_MODE_KEY, canvasInteractionMode);
+    refreshCanvasInteractionMode();
+}
+function toggleCanvasInteractionMode(){
+    setCanvasInteractionMode(canvasInteractionMode === 'pan' ? 'select' : 'pan');
+}
+canvasModeToggle?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleCanvasInteractionMode();
+});
+refreshCanvasInteractionMode();
 function loadLocalModelLists(){
     try {
         const managedRaw = localStorage.getItem(MANAGED_IMAGE_MODELS_KEY);
@@ -8107,7 +8139,7 @@ minimap?.addEventListener('mousedown', e => {
 });
 function startBoardPan(e){
     if(!canvas) return false;
-    if(isEditableTarget(e.target) || e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, .minimap')) return false;
+    if(isEditableTarget(e.target) || e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, .minimap, .zoom-control')) return false;
     e.preventDefault();
     e.stopPropagation();
     closeCreateMenu();
@@ -8137,7 +8169,7 @@ board.onmousedown = e => {
     if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
     closeCreateMenu();
-    if(isMultiSelectKey(e)){
+    if(canvasInteractionMode === 'select' || isMultiSelectKey(e)){
         e.preventDefault();
         startSelection(e);
         return;
@@ -8340,6 +8372,14 @@ function focusOnSelectedOrAll(){
 }
 window.addEventListener('keydown', e => {
     if(!canvas) return;
+    if(!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.repeat && !isEditableTarget(document.activeElement)){
+        const mode = {KeyH:'pan', KeyV:'select'}[e.code];
+        if(mode && !document.querySelector('.log-modal.open, .help-modal.open, .image-edit-modal.open, .error-modal.open, .output-lightbox.open')){
+            e.preventDefault();
+            setCanvasInteractionMode(mode);
+            return;
+        }
+    }
     // Ctrl/Cmd + 加号/减号/0 控制画布缩放（屏蔽浏览器缩放）
     if((e.ctrlKey || e.metaKey) && !e.altKey){
         const tag = document.activeElement?.tagName;
@@ -8413,6 +8453,15 @@ window.addEventListener('keydown', e => {
         return;
     }
     if(e.key === 'Escape' && outputLightbox.classList.contains('open')) { closeOutputLightbox(); return; }
+    if(e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.code === 'KeyA') {
+        if(isEditableTarget(document.activeElement) || document.querySelector('.log-modal.open, .help-modal.open, .image-edit-modal.open, .error-modal.open, .output-lightbox.open')) return;
+        if(!nodes.length) return;
+        e.preventDefault();
+        selected.clear();
+        nodes.forEach(node => selected.add(node.id));
+        refreshSelectionVisuals();
+        return;
+    }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g') { e.preventDefault(); groupSelectedImages(); }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         // 在输入框/可编辑元素里时，让浏览器原生 Ctrl+C 工作

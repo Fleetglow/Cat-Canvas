@@ -25,12 +25,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.14"></script>
-    <script src="/static/vendor/js/lucide.js?v=2026.07.14"></script>
-    <script src="/static/js/theme.js?v=2026.07.14"></script>
-    <script src="/static/js/i18n.js?v=2026.07.14"></script>
-    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.07.14">
-    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.14">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.28"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.07.28"></script>
+    <script src="/static/js/theme.js?v=2026.07.28"></script>
+    <script src="/static/js/i18n.js?v=2026.07.28"></script>
+    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.07.28">
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.28">
     <style>html.canvas-booting .canvas-gate{visibility:hidden!important}</style>
 </head>
 <body>
@@ -55,17 +55,17 @@
         </div>
 
         <div id="selectionLayoutToolbar" class="selection-layout-toolbar editor-only" role="toolbar" aria-label="节点布局" data-i18n-aria-label="canvas.layoutToolbar">
-            <button type="button" data-layout-action="left" title="左对齐 (Alt+A)" aria-label="左对齐" data-i18n-title="canvas.alignLeft" data-i18n-aria-label="canvas.alignLeft"><i data-lucide="align-horizontal-justify-start"></i></button>
-            <button type="button" data-layout-action="center-x" title="左右居中 (Alt+H)" aria-label="左右居中" data-i18n-title="canvas.alignCenterX" data-i18n-aria-label="canvas.alignCenterX"><i data-lucide="align-horizontal-justify-center"></i></button>
-            <button type="button" data-layout-action="right" title="右对齐 (Alt+D)" aria-label="右对齐" data-i18n-title="canvas.alignRight" data-i18n-aria-label="canvas.alignRight"><i data-lucide="align-horizontal-justify-end"></i></button>
-            <button type="button" data-layout-action="top" title="上对齐 (Alt+W)" aria-label="上对齐" data-i18n-title="canvas.alignTop" data-i18n-aria-label="canvas.alignTop"><i data-lucide="align-vertical-justify-start"></i></button>
-            <button type="button" data-layout-action="center-y" title="上下居中 (Alt+V)" aria-label="上下居中" data-i18n-title="canvas.alignCenterY" data-i18n-aria-label="canvas.alignCenterY"><i data-lucide="align-vertical-justify-center"></i></button>
-            <button type="button" data-layout-action="bottom" title="下对齐 (Alt+S)" aria-label="下对齐" data-i18n-title="canvas.alignBottom" data-i18n-aria-label="canvas.alignBottom"><i data-lucide="align-vertical-justify-end"></i></button>
+            <button type="button" data-layout-action="left" title="左对齐 (Alt+A)" aria-label="左对齐" data-i18n-title="canvas.alignLeft" data-i18n-aria-label="canvas.alignLeft"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/align-left.svg')"></span></button>
+            <button type="button" data-layout-action="center-x" title="左右居中 (Alt+H)" aria-label="左右居中" data-i18n-title="canvas.alignCenterX" data-i18n-aria-label="canvas.alignCenterX"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/align-center-x.svg')"></span></button>
+            <button type="button" data-layout-action="right" title="右对齐 (Alt+D)" aria-label="右对齐" data-i18n-title="canvas.alignRight" data-i18n-aria-label="canvas.alignRight"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/align-right.svg')"></span></button>
+            <button type="button" data-layout-action="top" title="上对齐 (Alt+W)" aria-label="上对齐" data-i18n-title="canvas.alignTop" data-i18n-aria-label="canvas.alignTop"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/align-top.svg')"></span></button>
+            <button type="button" data-layout-action="center-y" title="上下居中 (Alt+V)" aria-label="上下居中" data-i18n-title="canvas.alignCenterY" data-i18n-aria-label="canvas.alignCenterY"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/align-center-y.svg')"></span></button>
+            <button type="button" data-layout-action="bottom" title="下对齐 (Alt+S)" aria-label="下对齐" data-i18n-title="canvas.alignBottom" data-i18n-aria-label="canvas.alignBottom"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/align-bottom.svg')"></span></button>
             <span class="selection-layout-separator" data-layout-distribute aria-hidden="true"></span>
-            <button type="button" data-layout-action="distribute-x" data-layout-distribute title="水平等距" aria-label="水平等距" data-i18n-title="canvas.distributeX" data-i18n-aria-label="canvas.distributeX"><i data-lucide="align-horizontal-space-around"></i></button>
-            <button type="button" data-layout-action="distribute-y" data-layout-distribute title="垂直等距" aria-label="垂直等距" data-i18n-title="canvas.distributeY" data-i18n-aria-label="canvas.distributeY"><i data-lucide="align-vertical-space-around"></i></button>
+            <button type="button" data-layout-action="distribute-x" data-layout-distribute title="水平等距" aria-label="水平等距" data-i18n-title="canvas.distributeX" data-i18n-aria-label="canvas.distributeX"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/distribute-x.svg')"></span></button>
+            <button type="button" data-layout-action="distribute-y" data-layout-distribute title="垂直等距" aria-label="垂直等距" data-i18n-title="canvas.distributeY" data-i18n-aria-label="canvas.distributeY"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/distribute-y.svg')"></span></button>
             <span class="selection-layout-separator" aria-hidden="true"></span>
-            <button type="button" class="selection-layout-arrange" data-layout-action="arrange" title="整理选中" aria-label="整理选中" data-i18n-title="canvas.arrangeSelected" data-i18n-aria-label="canvas.arrangeSelected"><i data-lucide="layout-grid"></i><span data-i18n="canvas.arrangeSelected">整理选中</span></button>
+            <button type="button" class="selection-layout-arrange" data-layout-action="arrange" title="整理选中" aria-label="整理选中" data-i18n-title="canvas.arrangeSelected" data-i18n-aria-label="canvas.arrangeSelected"><span class="selection-layout-icon" style="--layout-icon:url('/static/images/layout/arrange.svg')"></span><span data-i18n="canvas.arrangeSelected">整理选中</span></button>
         </div>
 
         <div id="canvasGate" class="canvas-gate">
@@ -126,6 +126,7 @@
                 <div id="nodes"></div>
             </div>
             <div id="zoomControl" class="zoom-control">
+                <button id="canvasModeToggle" class="zoom-mode-toggle" type="button" title="抓手模式，点击切换为选择模式" aria-label="抓手模式，点击切换为选择模式" data-i18n-title="canvas.panModeSwitch" data-i18n-aria-label="canvas.panModeSwitch"><span id="canvasModeIcon" class="canvas-mode-icon"></span></button>
                 <button class="zoom-toggle-map" onclick="toggleMinimap()" title="切换小地图"><i data-lucide="map" class="w-3.5 h-3.5"></i></button>
                 <button class="zoom-percent" onclick="resetZoomTo100()" title="点击重置为100%"><span id="zoomPercentLabel">100%</span></button>
             </div>
@@ -231,9 +232,12 @@
                 </div>
                 <div class="help-body">
                     <div class="help-row"><kbd>Ctrl</kbd><kbd>点击</kbd><span>多选节点</span></div>
+                    <div class="help-row"><kbd>Ctrl+A</kbd><span>选中所有节点</span></div>
                     <div class="help-row"><kbd>Shift</kbd><span>按住切换切割模式</span></div>
                     <div class="help-row"><kbd>空格</kbd><span>按住平移画布</span></div>
                     <div class="help-row"><kbd>F</kbd><span>聚焦</span></div>
+                    <div class="help-row"><kbd>H</kbd><span>切换到抓手模式</span></div>
+                    <div class="help-row"><kbd>V</kbd><span>切换到选择模式</span></div>
                     <div class="help-row"><kbd>X</kbd><span>删除选中节点</span></div>
                     <div class="help-row"><kbd>Alt+A/D/W/S</kbd><span>左/右/上/下对齐</span></div>
                     <div class="help-row"><kbd>Alt+H/V</kbd><span>左右/上下居中</span></div>
@@ -370,9 +374,9 @@
             </div>
         </div>
     </div>
-    <script src="/static/js/output-i2i-helper.js?v=2026.07.14"></script>
-    <script src="/static/js/canvas.js?v=2026.07.14"></script>
+    <script src="/static/js/output-i2i-helper.js?v=2026.07.28"></script>
+    <script src="/static/js/canvas.js?v=2026.07.28"></script>
 
-    <script src="/static/js/ltx-director-timeline.js?v=2026.07.14"></script>
+    <script src="/static/js/ltx-director-timeline.js?v=2026.07.28"></script>
 </body>
 </html>

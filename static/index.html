@@ -23,12 +23,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.14"></script>
-    <script src="/static/js/theme.js?v=2026.07.14"></script>
-    <script src="/static/js/i18n.js?v=2026.07.14"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.28"></script>
+    <script src="/static/js/theme.js?v=2026.07.28"></script>
+    <script src="/static/js/i18n.js?v=2026.07.28"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=2026.07.14');
-        @import url('/static/vendor/css/fonts.css?v=2026.07.14');
+        @import url('/static/vendor/css/fonts.css?v=2026.07.28');
+        @import url('/static/vendor/css/fonts.css?v=2026.07.28');
 
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -55,10 +55,6 @@
             --text: #121212;
             --muted: #999;
             --nav-hover-bg: #fafafa;
-            --monitor-bg: rgba(255, 255, 255, 0.7);
-            --monitor-border: rgba(0, 0, 0, 0.05);
-            --monitor-shadow: rgba(0, 0, 0, 0.04);
-            --divider: rgba(0, 0, 0, 0.1);
             --scrollbar: #d8d8d8;
             --scrollbar-hover: #c0c0c0;
             --author-name: #000;
@@ -75,10 +71,6 @@
             --text: #e5e9f0;
             --muted: #8f9aab;
             --nav-hover-bg: #171d29;
-            --monitor-bg: rgba(23, 29, 41, 0.82);
-            --monitor-border: rgba(255, 255, 255, 0.08);
-            --monitor-shadow: rgba(0, 0, 0, 0.3);
-            --divider: rgba(255, 255, 255, 0.15);
             --scrollbar: #334155;
             --scrollbar-hover: #475569;
             --author-name: #e5e9f0;
@@ -356,86 +348,6 @@
             transform: scale(1);
             filter: blur(0);
             pointer-events: auto;
-        }
-
-        /* 左下角监视器 */
-        .nano-monitor {
-            position: absolute;
-            bottom: 24px;
-            left: 24px;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--monitor-bg);
-            backdrop-filter: blur(12px);
-            padding: 6px 14px;
-            border-radius: 16px;
-            border: 1px solid var(--monitor-border);
-            box-shadow: 0 4px 20px var(--monitor-shadow);
-            font-family: monospace;
-            transition: all 0.4s var(--fluid-ease);
-        }
-
-        .nano-monitor.is-busy {
-            background: #000;
-            color: #fff;
-            border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .stat-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .nano-monitor.is-busy .stat-group {
-            color: #fff;
-        }
-
-        .divider {
-            width: 1px;
-            height: 12px;
-            background: var(--divider);
-        }
-
-        .is-busy .divider {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .pulse-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #10b981;
-        }
-
-        .spinner-nano {
-            width: 10px;
-            height: 10px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            display: none;
-        }
-
-        .is-busy .spinner-nano { display: block; }
-        .is-busy .pulse-dot { display: none; }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .label-nano {
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            opacity: 0.5;
-            font-size: 9px;
         }
 
         /* 作者组件 */
@@ -972,25 +884,11 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.14" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.14" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.07.14" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.14" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.28" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.28" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.07.28" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.28" scrolling="yes"></iframe>
 
-
-            <div class="nano-monitor" id="nano-monitor">
-                <div class="stat-group">
-                    <div class="pulse-dot animate-pulse"></div>
-                    <div class="spinner-nano"></div>
-                    <span class="label-nano">ONLINE</span>
-                    <span id="online-val">1</span>
-                </div>
-                <div class="divider"></div>
-                <div class="stat-group">
-                    <span class="label-nano">QUEUE</span>
-                    <span id="queue-val">0</span>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -1174,20 +1072,9 @@
             try {
                 const res = await fetch(`/api/queue_status?client_id=${CID}`);
                 const data = await res.json();
-                const monitor = document.getElementById('nano-monitor');
-                const queueVal = document.getElementById('queue-val');
                 const logoDot = document.getElementById('logo-light') || document.getElementById('logo-dark');
-                const total = data.total || 0;
                 const pos = data.position || 0;
-                if (pos > 0) {
-                    monitor.classList.add('is-busy');
-                    queueVal.innerText = `${pos}/${total}`;
-                    logoDot.style.filter = 'drop-shadow(0 0 3px #3b82f6)';
-                } else {
-                    monitor.classList.remove('is-busy');
-                    queueVal.innerText = total > 0 ? total : '0';
-                    logoDot.style.filter = 'none';
-                }
+                logoDot.style.filter = pos > 0 ? 'drop-shadow(0 0 3px #3b82f6)' : 'none';
             } catch (e) { }
         }
 
@@ -1197,9 +1084,7 @@
             const ws = new WebSocket(`${protocol}://${host}/ws/stats?client_id=${CID}`);
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.type === 'stats') {
-                    document.getElementById('online-val').innerText = data.online_count;
-                } else if (data.type === 'cloud_status') {
+                if (data.type === 'cloud_status') {
                     const iframe = document.querySelector('iframe.active');
                     if (iframe && iframe.contentWindow) {
                         iframe.contentWindow.postMessage(data, '*');
