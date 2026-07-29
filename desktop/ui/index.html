@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cat Canvas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <img src="logo.png" alt="Cat Canvas" class="logo">
+    <h1>Cat Canvas</h1>
+    <p id="status">正在准备桌面环境…</p>
+    <div class="progress"><span id="progress"></span></div>
+
+    <section id="migration" hidden>
+      <h2>导入旧版数据</h2>
+      <p>首次启动可从原来的便携版目录导入画布、素材和配置。旧目录不会被修改。</p>
+      <div class="actions">
+        <button id="import" class="primary">选择旧版目录</button>
+        <button id="skip">暂不导入</button>
+      </div>
+    </section>
+
+    <section id="error" hidden>
+      <p id="errorText"></p>
+      <div class="actions">
+        <button id="retry" class="primary">重试</button>
+        <button id="backups">打开备份目录</button>
+      </div>
+    </section>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>

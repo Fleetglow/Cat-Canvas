@@ -18,9 +18,10 @@ import zipfile
 import mimetypes
 import tempfile
 import hashlib
+import hmac
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
-from threading import Lock
+from threading import Lock, Thread
 import httpx
 from PIL import Image
 from io import BytesIO
@@ -30,6 +31,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
+
+DESKTOP_MODE = os.getenv("CAT_CANVAS_DESKTOP", "").strip() == "1"
+DESKTOP_TOKEN = os.getenv("CAT_CANVAS_TOKEN", "").strip()
+DESKTOP_PARENT_PID = int(os.getenv("CAT_CANVAS_PARENT_PID", "0") or 0)
+DESKTOP_COOKIE = "cat_canvas_session"
 
 QUIET_ACCESS_PATHS = {
     "/api/queue_status",
@@ -69,12 +75,23 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.middleware("http")
+async def desktop_session_guard(request: Request, call_next):
+    if not DESKTOP_MODE or request.url.path == "/desktop-session":
+        return await call_next(request)
+    cookie = request.cookies.get(DESKTOP_COOKIE, "")
+    if not DESKTOP_TOKEN or not hmac.compare_digest(cookie, DESKTOP_TOKEN):
+        if request.url.path != "/api/health":
+            return JSONResponse({"detail": "Desktop session required"}, status_code=401)
+    return await call_next(request)
+
+if not DESKTOP_MODE:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # --- WebSocket 状态管理器 ---
 class ConnectionManager:
@@ -151,14 +168,18 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.05.19"
-GITHUB_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
-GITHUB_VERSION_URL = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION"
-GITHUB_TREE_URL = "https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1"
-GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main"
+GITHUB_REPO_URL = "https://github.com/Fleetglow/Cat-Canvas"
+GITHUB_VERSION_URL = "https://raw.githubusercontent.com/Fleetglow/Cat-Canvas/main/VERSION"
+GITHUB_TREE_URL = "https://api.github.com/repos/Fleetglow/Cat-Canvas/git/trees/main?recursive=1"
+GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/Fleetglow/Cat-Canvas/main"
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
+    if DESKTOP_MODE:
+        cookie = websocket.cookies.get(DESKTOP_COOKIE, "")
+        if not DESKTOP_TOKEN or not hmac.compare_digest(cookie, DESKTOP_TOKEN):
+            await websocket.close(code=4401)
+            return
     await manager.connect(websocket, client_id)
     try:
         while True:
@@ -173,24 +194,50 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
 
 # --- 配置区域 ---
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-WORKFLOW_DIR = os.path.join(BASE_DIR, "workflows")
+SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
+RESOURCE_DIR = os.path.abspath(getattr(sys, "_MEIPASS", SOURCE_DIR))
+BASE_DIR = RESOURCE_DIR
+USER_ROOT = os.path.abspath(os.getenv("CAT_CANVAS_USER_ROOT") or SOURCE_DIR)
+LOCAL_ROOT = os.path.abspath(os.getenv("CAT_CANVAS_LOCAL_ROOT") or USER_ROOT)
+WORKFLOW_DIR = os.path.join(RESOURCE_DIR, "workflows")
+USER_WORKFLOW_DIR = os.path.join(USER_ROOT, "Config", "workflows") if DESKTOP_MODE else WORKFLOW_DIR
 WORKFLOW_PATH = os.path.join(WORKFLOW_DIR, "Z-Image.json")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+STATIC_DIR = os.path.join(RESOURCE_DIR, "static")
+if DESKTOP_MODE:
+    PROJECTS_DIR = os.path.join(USER_ROOT, "Projects")
+    CONFIG_DIR = os.path.join(USER_ROOT, "Config")
+    ASSETS_DIR = os.path.join(USER_ROOT, "Assets")
+    OUTPUT_DIR = os.path.join(ASSETS_DIR, "generated")
+    CACHE_DIR = os.path.join(LOCAL_ROOT, "Cache")
+    LOG_DIR = os.path.join(LOCAL_ROOT, "Logs")
+    TEMP_DIR = os.path.join(LOCAL_ROOT, "Temp")
+    HISTORY_FILE = os.path.join(PROJECTS_DIR, "history.json")
+    API_ENV_FILE = os.path.join(CONFIG_DIR, ".env")
+    DATA_DIR = PROJECTS_DIR
+    ASSET_LIBRARY_PATH = os.path.join(CONFIG_DIR, "asset_library.json")
+    API_PROVIDERS_FILE = os.path.join(CONFIG_DIR, "api_providers.json")
+    GLOBAL_CONFIG_FILE = os.path.join(CONFIG_DIR, "global_config.json")
+    CANVAS_THUMBNAILS_DIR = os.path.join(CACHE_DIR, "canvas_thumbnails")
+else:
+    PROJECTS_DIR = os.path.join(SOURCE_DIR, "data")
+    CONFIG_DIR = SOURCE_DIR
+    ASSETS_DIR = os.path.join(SOURCE_DIR, "assets")
+    OUTPUT_DIR = os.path.join(SOURCE_DIR, "output")
+    CACHE_DIR = ASSETS_DIR
+    LOG_DIR = SOURCE_DIR
+    TEMP_DIR = tempfile.gettempdir()
+    HISTORY_FILE = os.path.join(SOURCE_DIR, "history.json")
+    API_ENV_FILE = os.path.join(SOURCE_DIR, "API", ".env")
+    DATA_DIR = PROJECTS_DIR
+    ASSET_LIBRARY_PATH = os.path.join(DATA_DIR, "asset_library.json")
+    API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
+    GLOBAL_CONFIG_FILE = os.path.join(SOURCE_DIR, "global_config.json")
+    CANVAS_THUMBNAILS_DIR = os.path.join(ASSETS_DIR, "canvas_thumbnails")
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
 OUTPUT_OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
 ASSET_LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
-CANVAS_THUMBNAILS_DIR = os.path.join(ASSETS_DIR, "canvas_thumbnails")
-HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
-API_ENV_FILE = os.path.join(BASE_DIR, "API", ".env")
-DATA_DIR = os.path.join(BASE_DIR, "data")
 CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 CANVAS_DIR = os.path.join(DATA_DIR, "canvases")
-ASSET_LIBRARY_PATH = os.path.join(DATA_DIR, "asset_library.json")
-API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
-GLOBAL_CONFIG_FILE = os.path.join(BASE_DIR, "global_config.json")
 CANVAS_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 LOCAL_IMAGE_IMPORT_MAX_BYTES = int(os.getenv("LOCAL_IMAGE_IMPORT_MAX_BYTES", str(50 * 1024 * 1024)))
 LOCAL_IMAGE_IMPORT_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -567,10 +614,18 @@ os.makedirs(OUTPUT_INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSET_LIBRARY_DIR, exist_ok=True)
 os.makedirs(CANVAS_THUMBNAILS_DIR, exist_ok=True)
-os.makedirs(STATIC_DIR, exist_ok=True)
-os.makedirs(WORKFLOW_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(CONFIG_DIR, exist_ok=True)
+os.makedirs(USER_WORKFLOW_DIR, exist_ok=True)
 os.makedirs(CONVERSATION_DIR, exist_ok=True)
 os.makedirs(CANVAS_DIR, exist_ok=True)
+if DESKTOP_MODE:
+    os.makedirs(os.path.join(USER_ROOT, "Exports"), exist_ok=True)
+    os.makedirs(os.path.join(USER_ROOT, "Backups", "Updates"), exist_ok=True)
+    os.makedirs(os.path.join(USER_ROOT, "Backups", "Installers"), exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    os.makedirs(LOG_DIR, exist_ok=True)
+    os.makedirs(TEMP_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
@@ -582,7 +637,11 @@ def canvas_thumbnail(url: str):
     if not url.startswith(("/output/", "/assets/")):
         raise HTTPException(status_code=400, detail="Invalid URL")
     
-    source_path = os.path.join(BASE_DIR, url.lstrip("/"))
+    root = OUTPUT_DIR if url.startswith("/output/") else ASSETS_DIR
+    rel = url.split("/", 2)[2] if url.count("/") >= 2 else ""
+    source_path = os.path.abspath(os.path.join(root, rel.replace("/", os.sep)))
+    if os.path.commonpath([os.path.abspath(root), source_path]) != os.path.abspath(root):
+        raise HTTPException(status_code=400, detail="Invalid URL")
     if not os.path.isfile(source_path):
         raise HTTPException(status_code=404, detail="Source not found")
     
@@ -595,7 +654,7 @@ def canvas_thumbnail(url: str):
 # --- Pydantic 模型 ---
 
 def current_app_version():
-    version_file = os.path.join(BASE_DIR, "VERSION")
+    version_file = os.path.join(RESOURCE_DIR, "VERSION")
     try:
         if os.path.exists(version_file):
             with open(version_file, "r", encoding="utf-8") as f:
@@ -604,10 +663,7 @@ def current_app_version():
                     return version
     except Exception:
         pass
-    try:
-        return time.strftime("%Y.%m.%d", time.localtime())
-    except Exception:
-        return ""
+    return "0.0.0"
 
 def versioned_static_html(html: str) -> str:
     version = current_app_version()
@@ -689,14 +745,34 @@ def static_html_response(filename: str):
         headers={"Cache-Control": "no-cache"},
     )
 
+@app.get("/api/health")
+def health():
+    return {"ok": True, "version": current_app_version(), "desktop": DESKTOP_MODE}
+
+@app.get("/desktop-session")
+def desktop_session(token: str = ""):
+    if not DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if not DESKTOP_TOKEN or not hmac.compare_digest(token, DESKTOP_TOKEN):
+        raise HTTPException(status_code=401, detail="Invalid desktop session")
+    response = static_html_response("index.html")
+    response.set_cookie(
+        DESKTOP_COOKIE,
+        DESKTOP_TOKEN,
+        httponly=True,
+        samesite="strict",
+        secure=False,
+    )
+    return response
+
 @app.get("/api/app-info")
 def app_info():
     version = current_app_version()
     return {
         "version": version,
+        "desktop": DESKTOP_MODE,
         "repo_url": GITHUB_REPO_URL,
-        "version_url": GITHUB_VERSION_URL,
-        "tree_url": GITHUB_TREE_URL,
+        "user_root": USER_ROOT if DESKTOP_MODE else "",
     }
 
 def connectivity_probe(name: str, url: str, timeout: float = 8.0) -> Dict[str, Any]:
@@ -730,6 +806,8 @@ def connectivity_probe(name: str, url: str, timeout: float = 8.0) -> Dict[str, A
 
 @app.get("/api/update-connectivity")
 def update_connectivity():
+    if DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="桌面版更新由 Tauri 管理")
     targets = [
         ("GitHub 更新列表", GITHUB_TREE_URL),
         ("GitHub 版本文件", GITHUB_VERSION_URL),
@@ -911,6 +989,8 @@ class UpdateRequest(BaseModel):
 
 @app.post("/api/update-from-github")
 def update_from_github(req: UpdateRequest = UpdateRequest()):
+    if DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="桌面版更新由 Tauri 管理")
     if not UPDATE_LOCK.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="正在更新中，请稍后再试")
     staging_root = ""
@@ -1038,6 +1118,8 @@ def list_update_backups() -> List[Dict[str, Any]]:
 
 @app.get("/api/update-backups")
 def get_update_backups():
+    if DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="桌面版备份由 Tauri 管理")
     return {"backups": list_update_backups()}
 
 class RollbackRequest(BaseModel):
@@ -1047,6 +1129,8 @@ class RollbackRequest(BaseModel):
 
 @app.post("/api/update-rollback")
 def rollback_update(req: RollbackRequest):
+    if DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="桌面版回退使用上一版安装器")
     if not req.name:
         raise HTTPException(status_code=400, detail="缺少备份名称")
     if not UPDATE_LOCK.acquire(blocking=False):
@@ -4633,30 +4717,39 @@ class WorkflowUploadRequest(BaseModel):
 def workflow_path_from_name(name: str) -> str:
     if not WORKFLOW_NAME_RE.match(name):
         raise HTTPException(status_code=400, detail="Invalid workflow name")
-    path = os.path.abspath(os.path.join(WORKFLOW_DIR, *name.split("/")))
-    workflow_root = os.path.abspath(WORKFLOW_DIR)
-    if os.path.commonpath([workflow_root, path]) != workflow_root:
+    custom = "/" in name
+    root = USER_WORKFLOW_DIR if DESKTOP_MODE and custom else WORKFLOW_DIR
+    path = os.path.abspath(os.path.join(root, *name.split("/")))
+    root_abs = os.path.abspath(root)
+    if os.path.commonpath([root_abs, path]) != root_abs:
         raise HTTPException(status_code=400, detail="Invalid workflow name")
     return path
 
-def workflow_config_path(name: str) -> str:
+def bundled_workflow_config_path(name: str) -> str:
     return workflow_path_from_name(name).replace(".json", ".config.json")
+
+def workflow_config_path(name: str) -> str:
+    if not DESKTOP_MODE:
+        return bundled_workflow_config_path(name)
+    safe_name = name.replace("/", "__").replace("\\", "__")
+    return os.path.join(USER_WORKFLOW_DIR, "configs", safe_name.replace(".json", ".config.json"))
 
 def is_builtin_workflow(name: str) -> bool:
     return "/" not in name and os.path.basename(name) in BUILTIN_WORKFLOWS
 
 @app.get("/api/workflows")
 def list_workflows():
-    if not os.path.isdir(WORKFLOW_DIR):
+    scan_root = USER_WORKFLOW_DIR if DESKTOP_MODE else WORKFLOW_DIR
+    if not os.path.isdir(scan_root):
         return {"workflows": []}
     items = []
-    for root, dirs, files in os.walk(WORKFLOW_DIR):
-        if os.path.abspath(root) == os.path.abspath(WORKFLOW_DIR):
+    for root, dirs, files in os.walk(scan_root):
+        if os.path.abspath(root) == os.path.abspath(scan_root):
             dirs[:] = [d for d in dirs if d in {CUSTOM_WORKFLOW_FOLDER, LEGACY_CUSTOM_WORKFLOW_FOLDER}]
         for fn in sorted(files):
             if not fn.endswith(".json") or fn.endswith(".config.json"):
                 continue
-            rel = os.path.relpath(os.path.join(root, fn), WORKFLOW_DIR).replace("\\", "/")
+            rel = os.path.relpath(os.path.join(root, fn), scan_root).replace("\\", "/")
             if is_builtin_workflow(rel):
                 continue
             cfg = {}
@@ -4686,13 +4779,15 @@ def get_workflow(name: str):
     with open(workflow_path, "r", encoding="utf-8") as f:
         workflow = json.load(f)
     cfg = {"title": name.replace(".json", ""), "fields": []}
+    default_cfg_path = bundled_workflow_config_path(name)
     cfg_path = workflow_config_path(name)
-    if os.path.exists(cfg_path):
-        try:
-            with open(cfg_path, "r", encoding="utf-8") as f:
-                cfg = json.load(f) or cfg
-        except Exception:
-            pass
+    for candidate in dict.fromkeys([default_cfg_path, cfg_path]):
+        if os.path.exists(candidate):
+            try:
+                with open(candidate, "r", encoding="utf-8") as f:
+                    cfg = json.load(f) or cfg
+            except Exception:
+                pass
     return {"name": name, "workflow": workflow, "config": cfg, "builtin": is_builtin_workflow(name)}
 
 @app.post("/api/workflows")
@@ -4708,7 +4803,7 @@ def upload_workflow(payload: WorkflowUploadRequest):
     sample = next(iter(payload.workflow.values()), None)
     if not isinstance(sample, dict) or "class_type" not in sample:
         raise HTTPException(status_code=400, detail="不是有效的工作流 JSON（需包含 class_type）")
-    custom_dir = os.path.join(WORKFLOW_DIR, CUSTOM_WORKFLOW_FOLDER)
+    custom_dir = os.path.join(USER_WORKFLOW_DIR, CUSTOM_WORKFLOW_FOLDER)
     os.makedirs(custom_dir, exist_ok=True)
     stored_name = f"{CUSTOM_WORKFLOW_FOLDER}/{name}"
     path = workflow_path_from_name(stored_name)
@@ -4724,6 +4819,7 @@ def save_workflow_config(name: str, payload: WorkflowConfig):
     if not os.path.exists(workflow_path):
         raise HTTPException(status_code=404, detail="Workflow not found")
     cfg_path = workflow_config_path(name)
+    os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
     with open(cfg_path, "w", encoding="utf-8") as f:
         json.dump(payload.dict(), f, ensure_ascii=False, indent=2)
     return {"config": payload.dict()}
@@ -4743,7 +4839,38 @@ def delete_workflow(name: str):
         os.remove(cfg_path)
     return {"ok": True}
 
+def parent_process_alive(pid: int) -> bool:
+    if pid <= 0:
+        return True
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+    try:
+        import ctypes
+        handle = ctypes.windll.kernel32.OpenProcess(0x00100000, False, pid)
+        if not handle:
+            return False
+        status = ctypes.windll.kernel32.WaitForSingleObject(handle, 0)
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return status == 0x00000102
+    except Exception:
+        return True
+
+
+def watch_desktop_parent(pid: int):
+    while parent_process_alive(pid):
+        time.sleep(2)
+    os._exit(0)
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=4796)
+    if DESKTOP_MODE and DESKTOP_PARENT_PID:
+        Thread(target=watch_desktop_parent, args=(DESKTOP_PARENT_PID,), daemon=True).start()
+    host = "127.0.0.1" if DESKTOP_MODE else os.getenv("CAT_CANVAS_HOST", "0.0.0.0")
+    port = int(os.getenv("CAT_CANVAS_PORT", "4796"))
+    uvicorn.run(app, host=host, port=port)
 

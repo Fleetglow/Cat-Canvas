@@ -1,14 +1,83 @@
-# 项目源地址：
+# Cat Canvas
 
-https://github.com/hero8152/Infinite-Canvas/tree/main
+项目仓库：
 
-本项目是基于 wuli大雄 的画布进行 DIY 设计，自用
+- GitHub：https://github.com/Fleetglow/Cat-Canvas
+- Gitee：https://gitee.com/hnz4796/Cat-Canvas
+- 上游项目：https://github.com/hero8152/Infinite-Canvas
 
-精简了大部分功能，只保留了核心的生图功能
+本项目基于 wuli大雄 的画布进行 DIY 设计，自用，精简了大部分功能，只保留核心生图能力，并持续优化画布体验。
 
-新增并优化了很多使用体验
+## Windows 桌面版
 
-\---------------------
+桌面版使用 Tauri 2 单窗口外壳，现有 FastAPI 后端通过 PyInstaller `onedir` 作为本地 sidecar 随 NSIS 安装器发布。首发仅支持 Windows x64；正式用户使用安装版，`run.bat` 与内置 Python 继续作为开发和应急入口。
+
+### 运行与数据目录
+
+- FastAPI 仅监听 `127.0.0.1` 随机端口，并使用单次启动令牌保护 HTTP 与 WebSocket。
+- 应用只允许单实例运行；关闭主窗口会终止 FastAPI 及其子进程。
+- 正式数据默认位于 Windows“文档”系统目录下的 `Cat Canvas\`：
+  - `Projects\`：画布、对话、历史和结构化项目数据。
+  - `Assets\`：导入素材和生成结果。
+  - `Config\`：API 密钥、平台配置和自定义工作流。
+  - `Exports\`：导出内容。
+  - `Backups\`：更新数据快照和上一版安装器。
+- `%LOCALAPPDATA%\com.fleetglow.catcanvas\` 仅保存 `Cache`、`Logs` 和 `Temp`，与 `%LOCALAPPDATA%\Cat Canvas\` 中的安装程序分离。
+- 首次启动可选择旧便携版目录进行一次性导入；导入不会修改旧目录。
+- 卸载和程序更新默认保留“文档”中的用户数据。
+
+### 安装与更新
+
+- NSIS 安装器按当前用户安装，不需要管理员权限。
+- 当前没有购买 Windows Authenticode 证书，首次安装会显示“未知发布者”；更新包仍强制使用 Tauri minisign 密钥和 SHA-256 双重校验。
+- 应用启动后静默检查更新，有新版时在侧栏显示目标版本。
+- 用户确认后下载；下载完成可立即重启安装，也可稍后点击“重启安装更新”。
+- GitHub 为主更新源，Gitee 为备用源；两边使用同一份签名构建产物。
+- 更新前自动备份 `Projects` 和 `Config`，仅保留最近 3 份。
+- 每次 NSIS 安装都会把安装器复制到 `文档\Cat Canvas\Backups\Installers\`，桌面程序只保留最近 2 份。
+- 新版本异常时可运行上一版安装器覆盖安装，并从 `Backups\Updates\` 手动恢复对应数据快照。
+
+### 本地桌面构建
+
+构建机需要 Python、Node.js、Rust 和 NSIS。首次准备：
+
+```powershell
+python -m pip install -r requirements.txt pyinstaller
+npm install --include=dev --prefix desktop
+cargo generate-lockfile --manifest-path desktop/src-tauri/Cargo.toml
+```
+
+项目更新签名密钥保存在已忽略的 `desktop/.tauri-keys/`。私钥和密码不能提交到 Git：
+
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content desktop/.tauri-keys/cat-canvas.key -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = Get-Content desktop/.tauri-keys/password.txt -Raw
+./desktop/scripts/sync-version.ps1
+./desktop/scripts/build-backend.ps1 -Python python
+npm run desktop:build --prefix desktop -- --target x86_64-pc-windows-msvc
+```
+
+构建产物位于 `desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/`。
+
+### 自动发布
+
+GitHub Actions 需要配置以下仓库 Secrets：
+
+- `TAURI_SIGNING_PRIVATE_KEY`：`desktop/.tauri-keys/cat-canvas.key` 的完整内容。
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：`desktop/.tauri-keys/password.txt` 的完整内容。
+- `GITEE_TOKEN`：可创建 Release、上传附件和推送分支的 Gitee 私人令牌。
+
+发布步骤：
+
+1. 修改根目录 `VERSION`，例如 `0.1.0` → `0.1.1`。
+2. 运行 `./desktop/scripts/sync-version.ps1`，同步 Tauri、Cargo 和 npm 版本。
+3. 提交代码后创建同版本标签，例如 `v0.1.1`。
+4. 推送标签，`.github/workflows/desktop-release.yml` 会构建一次并发布到 GitHub/Gitee。
+5. 工作流最后更新两个远程的 `desktop-updates` 分支；更新清单最后发布，避免客户端看到尚未上传完成的版本。
+
+`0.1.1` 应专门用于验证 `0.1.0 → 0.1.1` 的真实自动更新链路。多画布标签页计划放在 `0.2.0`。
+
+---------------------
 
 # 更新日志
 

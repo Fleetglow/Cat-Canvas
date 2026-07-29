@@ -1,0 +1,69 @@
+{
+    "$schema":  "https://schema.tauri.app/config/2",
+    "productName":  "Cat Canvas",
+    "version":  "0.1.0",
+    "identifier":  "com.fleetglow.catcanvas",
+    "build":  {
+                  "frontendDist":  "../ui"
+              },
+    "app":  {
+                "withGlobalTauri":  true,
+                "windows":  [
+                                {
+                                    "label":  "main",
+                                    "title":  "Cat Canvas",
+                                    "url":  "index.html",
+                                    "width":  1440,
+                                    "height":  900,
+                                    "minWidth":  1024,
+                                    "minHeight":  700,
+                                    "center":  true,
+                                    "resizable":  true,
+                                    "fullscreen":  false
+                                }
+                            ],
+                "security":  {
+                                 "csp":  "default-src \u0027self\u0027; img-src \u0027self\u0027 data:; style-src \u0027self\u0027 \u0027unsafe-inline\u0027; script-src \u0027self\u0027; connect-src \u0027self\u0027 ipc: http://ipc.localhost"
+                             }
+            },
+    "bundle":  {
+                   "active":  true,
+                   "targets":  [
+                                   "nsis"
+                               ],
+                   "createUpdaterArtifacts":  true,
+                   "publisher":  "Fleetglow",
+                   "homepage":  "https://github.com/Fleetglow/Cat-Canvas",
+                   "icon":  [
+                                "icons/icon.ico",
+                                "icons/icon.png"
+                            ],
+                   "resources":  {
+                                     "../backend-dist/":  "backend/"
+                                 },
+                   "windows":  {
+                                   "allowDowngrades":  false,
+                                   "nsis":  {
+                                                "installMode":  "currentUser",
+                                                "languages":  [
+                                                                  "SimpChinese",
+                                                                  "English"
+                                                              ],
+                                                "installerHooks":  "windows/hooks.nsh",
+                                                "startMenuFolder":  "Cat Canvas"
+                                            }
+                               }
+               },
+    "plugins":  {
+                    "updater":  {
+                                    "pubkey":  "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFENkI4RDNCNjEwNTFERDAKUldUUUhRVmhPNDFySGR3K1Zkb0V1S3IyNTBoQlpnS1dqMjhLRkVTL2NzQ202RllLMXNxa0ZoN2gK",
+                                    "endpoints":  [
+                                                      "https://raw.githubusercontent.com/Fleetglow/Cat-Canvas/desktop-updates/latest-github.json",
+                                                      "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/latest-gitee.json"
+                                                  ],
+                                    "windows":  {
+                                                    "installMode":  "passive"
+                                                }
+                                }
+                }
+}

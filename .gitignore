@@ -31,6 +31,17 @@ history.json
 .DS_Store
 Thumbs.db
 
+# 桌面构建产物与本地签名密钥
+desktop/node_modules/
+desktop/backend-dist/*
+!desktop/backend-dist/.gitkeep
+desktop/.backend-build/
+desktop/.pyinstaller/
+desktop/release/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+desktop/.tauri-keys/
+
 # 日志文件
 *.log
 

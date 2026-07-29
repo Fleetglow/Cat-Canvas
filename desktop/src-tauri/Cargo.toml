@@ -1,0 +1,24 @@
+[package]
+name = "cat-canvas-desktop"
+version = "0.1.0"
+description = "Cat Canvas Windows desktop shell"
+authors = ["Fleetglow"]
+edition = "2021"
+
+[lib]
+name = "cat_canvas_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.4", features = [] }
+
+[dependencies]
+fs2 = "0.4.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tauri = { version = "2.11.5", features = [] }
+tauri-plugin-dialog = "2.7.2"
+tauri-plugin-single-instance = "2.4.3"
+tauri-plugin-updater = "2.10.1"
+uuid = { version = "1.18", features = ["v4"] }

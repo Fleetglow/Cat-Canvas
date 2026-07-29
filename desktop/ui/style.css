@@ -1,0 +1,26 @@
+:root { color-scheme: light dark; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background:#f4f2ed; color:#1f2328; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(circle at 50% 35%, #fff 0, #f4f2ed 45%, #e9e5dd 100%); }
+.shell { width:min(520px, calc(100vw - 48px)); text-align:center; padding:44px; border:1px solid rgba(31,35,40,.12); border-radius:24px; background:rgba(255,255,255,.78); box-shadow:0 24px 80px rgba(34,38,43,.12); backdrop-filter:blur(18px); }
+.logo { width:76px; height:76px; object-fit:contain; margin-bottom:14px; }
+h1 { margin:0; font-size:28px; letter-spacing:-.04em; }
+h2 { margin:28px 0 8px; font-size:18px; }
+p { color:#697079; line-height:1.65; }
+.progress { height:4px; margin:24px 0 4px; overflow:hidden; border-radius:99px; background:#dedbd4; }
+.progress span { display:block; width:34%; height:100%; border-radius:inherit; background:#1f2328; animation:loading 1.2s ease-in-out infinite alternate; }
+.actions { display:flex; justify-content:center; gap:10px; margin-top:18px; }
+button { min-height:40px; padding:0 18px; border:1px solid #c9c5bd; border-radius:10px; background:#fff; color:#1f2328; cursor:pointer; font-weight:600; }
+button.primary { border-color:#1f2328; background:#1f2328; color:#fff; }
+button:disabled { opacity:.55; cursor:wait; }
+#errorText { color:#b42318; white-space:pre-wrap; }
+@keyframes loading { from { transform:translateX(-80%); } to { transform:translateX(280%); } }
+@media (prefers-color-scheme: dark) {
+  :root { background:#161719; color:#f2f2f2; }
+  body { background:radial-gradient(circle at 50% 35%, #292b2f 0, #18191c 58%, #111214 100%); }
+  .shell { background:rgba(31,33,37,.84); border-color:rgba(255,255,255,.1); box-shadow:0 24px 80px rgba(0,0,0,.35); }
+  p { color:#aeb4bd; }
+  .progress { background:#3b3d42; }
+  .progress span { background:#f2f2f2; }
+  button { background:#292b2f; color:#f2f2f2; border-color:#4a4d53; }
+  button.primary { background:#f2f2f2; color:#17181a; border-color:#f2f2f2; }
+}

@@ -1,0 +1,106 @@
+name: 发布 Windows 桌面版
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-desktop:
+    runs-on: windows-latest
+    env:
+      CARGO_TERM_COLOR: always
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: 校验并同步版本号
+        shell: pwsh
+        run: ./desktop/scripts/sync-version.ps1 -ExpectedVersion "${{ github.ref_name }}"
+
+      - name: 安装构建依赖
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+          npm ci --include=dev --prefix desktop
+
+      - name: 构建 FastAPI sidecar
+        shell: pwsh
+        run: ./desktop/scripts/build-backend.ps1 -Python python
+
+      - name: 构建 Tauri NSIS 与更新包
+        shell: pwsh
+        run: npm run desktop:build --prefix desktop -- --target x86_64-pc-windows-msvc
+
+      - name: 整理发布产物与双源清单
+        shell: pwsh
+        run: ./desktop/scripts/prepare-release.ps1 -BundleDir "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
+
+      - name: 发布 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Cat Canvas ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            desktop/release/*.exe
+            desktop/release/*.sig
+
+      - name: 镜像标签到 Gitee
+        shell: pwsh
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: git push "https://hnz4796:$env:GITEE_TOKEN@gitee.com/hnz4796/Cat-Canvas.git" "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}"
+
+      - name: 镜像到 Gitee Release
+        shell: pwsh
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: ./desktop/scripts/publish-gitee.ps1 -Token $env:GITEE_TOKEN -Tag "${{ github.ref_name }}" -AssetDir "desktop/release"
+
+      - name: 发布双源更新清单
+        shell: pwsh
+        env:
+          GH_PUSH_TOKEN: ${{ github.token }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $channel = Join-Path $env:RUNNER_TEMP "cat-canvas-update-channel"
+          New-Item $channel -ItemType Directory -Force | Out-Null
+          Copy-Item desktop/release/latest-github.json $channel
+          Copy-Item desktop/release/latest-gitee.json $channel
+          Push-Location $channel
+          git init -b desktop-updates
+          git config user.name "Fleetglow"
+          git config user.email "47961924@qq.com"
+          git add .
+          git commit -m "更新桌面版发布清单"
+          git remote add github "https://x-access-token:$env:GH_PUSH_TOKEN@github.com/Fleetglow/Cat-Canvas.git"
+          git remote add gitee "https://hnz4796:$env:GITEE_TOKEN@gitee.com/hnz4796/Cat-Canvas.git"
+          git push github HEAD:desktop-updates --force
+          git push gitee HEAD:desktop-updates --force
+          Pop-Location
