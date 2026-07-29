@@ -22,5 +22,8 @@ try {
 
 Get-ChildItem $AssetDir -File | Where-Object { $_.Name -notlike "latest-*.json" } | ForEach-Object {
     Write-Host "Uploading to Gitee: $($_.Name)"
-    Invoke-RestMethod "$base/releases/$($release.id)/attach_files?access_token=$Token" -Method Post -Form @{ file = $_ } | Out-Null
+    Invoke-RestMethod "$base/releases/$($release.id)/attach_files" -Method Post -Form @{
+        file = $_
+        access_token = $Token
+    } | Out-Null
 }

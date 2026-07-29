@@ -75,7 +75,7 @@ jobs:
         shell: pwsh
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-        run: git push "https://hnz4796:$env:GITEE_TOKEN@gitee.com/hnz4796/Cat-Canvas.git" "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}"
+        run: git push "https://hnz4796:$env:GITEE_TOKEN@gitee.com/hnz4796/Cat-Canvas.git" "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}" --force
 
       - name: 镜像到 Gitee Release
         shell: pwsh
