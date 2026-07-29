@@ -3,7 +3,14 @@
 API/
 assets/
 data/
+output/
 .codegraph/
+
+# 本地文档、测试与 Agent 状态
+docs/
+tests/
+.pi-subagents/
+.claude/settings.local.json
 
 # 本地配置（不提交）
 API/.env
@@ -11,6 +18,7 @@ data/api_providers.json
 
 # Python 缓存
 __pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 
