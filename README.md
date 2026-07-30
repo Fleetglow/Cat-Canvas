@@ -32,7 +32,7 @@
 - 当前没有购买 Windows Authenticode 证书，首次安装会显示“未知发布者”；更新包仍强制使用 Tauri minisign 密钥和 SHA-256 双重校验。
 - 应用启动后静默检查更新，有新版时在侧栏显示目标版本。
 - 用户确认后下载；下载完成可立即重启安装，也可稍后点击“重启安装更新”。
-- GitHub 为主更新源，Gitee 为备用源；两边使用同一份签名构建产物。
+- GitHub Release 为主更新源，Gitee `desktop-updates` 分支为备用下载镜像；两边使用同一份签名构建产物。
 - 更新前自动备份 `Projects` 和 `Config`，仅保留最近 3 份。
 - 每次 NSIS 安装都会把安装器复制到 `文档\Cat Canvas\Backups\Installers\`，桌面程序只保留最近 2 份。
 - 新版本异常时可运行上一版安装器覆盖安装，并从 `Backups\Updates\` 手动恢复对应数据快照。
@@ -65,21 +65,34 @@ GitHub Actions 需要配置以下仓库 Secrets：
 
 - `TAURI_SIGNING_PRIVATE_KEY`：`desktop/.tauri-keys/cat-canvas.key` 的完整内容。
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：`desktop/.tauri-keys/password.txt` 的完整内容。
-- `GITEE_TOKEN`：可创建 Release、上传附件和推送分支的 Gitee 私人令牌。
+- `GITEE_TOKEN`：可推送标签和 `desktop-updates` 分支的 Gitee 私人令牌。
 
 发布步骤：
 
 1. 修改根目录 `VERSION`，例如 `0.1.0` → `0.1.1`。
 2. 运行 `./desktop/scripts/sync-version.ps1`，同步 Tauri、Cargo 和 npm 版本。
 3. 提交代码后创建同版本标签，例如 `v0.1.1`。
-4. 推送标签，`.github/workflows/desktop-release.yml` 会构建一次并发布到 GitHub/Gitee。
+4. 推送标签，`.github/workflows/desktop-release.yml` 会构建一次，发布 GitHub Release，并把同一安装器、签名和更新清单镜像到 Gitee `desktop-updates` 分支。
 5. 工作流最后更新两个远程的 `desktop-updates` 分支；更新清单最后发布，避免客户端看到尚未上传完成的版本。
 
-`0.1.1` 应专门用于验证 `0.1.0 → 0.1.1` 的真实自动更新链路。多画布标签页计划放在 `0.2.0`。
+`0.1.0` 缺少 localhost 页面调用桌面更新命令的 Tauri ACL 权限，因此首次升级需要手动安装修正版 `0.1.1`。从 `0.1.1` 开始自动更新命令已授权并带 20 秒超时与独立日志，真实自动更新链路改由 `0.1.1 → 0.1.2` 验证。多画布标签页计划放在 `0.2.0`。
 
 ---------------------
 
 # 更新日志
+
+## 2026-07-29
+
+### 🎨 优化
+
+* **桌面图标分离**：应用程序、窗口和快捷方式使用猫头像图标，NSIS 安装包单独使用猫盒图标；两套资源均包含完整 Windows 多尺寸 ICO
+* **API 节点自适应高度**：输入端、提示内容、尺寸设置和运行状态变化后实时重新测量节点高度
+
+### 🐛 修复
+
+* **sidecar 打包稳定性**：排除未使用且可能被 PyInstaller 错误收集的 Brotli 可选模块，构建前及 NSIS 覆盖安装前强制清理旧后端资源，并在 CI 中启动 `/api/health` 烟测
+* **桌面自动更新权限**：为 localhost 页面显式授权更新检查、下载、安装及备份命令，并加入 20 秒超时和 `%LOCALAPPDATA%\com.fleetglow.catcanvas\Logs\updater.log` 诊断日志
+* **桌面文件拖入画布**：关闭 Tauri 原生拖放接管，恢复从资源管理器拖入图片到画布
 
 ## 2026-07-28
 

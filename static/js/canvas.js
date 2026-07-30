@@ -3273,6 +3273,7 @@ function render(){
 function refreshNodes(ids=[]){
     const uniqueIds = [...new Set((ids || []).filter(Boolean))];
     if(!uniqueIds.length) return;
+    const resizedGenerators = [];
     const outputScrolls = captureOutputScrolls();
     applyViewport();
     for(const id of uniqueIds){
@@ -3285,12 +3286,14 @@ function refreshNodes(ids=[]){
             return;
         }
         current.replaceWith(renderNode(node));
+        if(node.type === 'generator') resizedGenerators.push(node);
     }
     restoreOutputScrolls(outputScrolls);
     refreshGeometry();
     refreshGeometryAfterLayout();
     refreshIcons();
     refreshOutputTimer();
+    fitGeneratorNodesAfterLayout(resizedGenerators);
 }
 function refreshRunNodes(node, out=null){
     refreshNodes([node?.id, out?.id]);
@@ -3779,11 +3782,21 @@ function measureGeneratorNodeHeight(el){
     if(height) el.style.height = height;
     return naturalHeight;
 }
+function fitGeneratorNodesAfterLayout(items){
+    const ids = [...new Set((items || []).map(item => item?.id).filter(Boolean))];
+    if(!ids.length) return;
+    requestAnimationFrame(() => ids.forEach(id => {
+        const node = nodes.find(item => item.id === id && item.type === 'generator');
+        if(node) fitGeneratorNodeHeight(node, false);
+    }));
+}
 function fitGeneratorNodeHeight(node, saveHistory=true){
     const el = nodesEl.querySelector(`.generator-node[data-id="${CSS.escape(node?.id || '')}"]`);
     if(!node || !el) return;
     if(saveHistory) pushUndo();
-    node.h = measureGeneratorNodeHeight(el);
+    const height = measureGeneratorNodeHeight(el);
+    if(Number(node.h) === height && el.classList.contains('sized') && el.style.height === `${height}px`) return;
+    node.h = height;
     el.classList.add('sized');
     el.style.height = `${node.h}px`;
     refreshGeometry();
@@ -4663,6 +4676,7 @@ function renderGeneratorBody(node){
             node.customRatioHeight = '';
         }
         syncSizeControls();
+        fitGeneratorNodesAfterLayout([node]);
         scheduleSave();
     };
     resolutionSelect.onmousedown = e => e.stopPropagation();
@@ -4684,6 +4698,7 @@ function renderGeneratorBody(node){
         }
         normalizeApiNodeSizeChoice(node);
         syncSizeControls();
+        fitGeneratorNodesAfterLayout([node]);
         scheduleSave();
     };
     [customRatioWInput, customRatioHInput].forEach(input => {
@@ -4725,6 +4740,7 @@ function renderGeneratorBody(node){
                 node.resolution = 'custom';
                 node.ratio = '';
                 syncSizeControls();
+                fitGeneratorNodesAfterLayout([node]);
                 scheduleSave();
             } catch(err) {
                     showErrorModal(tr('canvas.imageReadFailed'));
@@ -5077,10 +5093,10 @@ function syncGeneratorInputs(){
     if(changedGenerators.length) requestAnimationFrame(() => {
         const active = changedGenerators.filter(gen => nodes.some(node => node.id === gen.id));
         refreshNodes(active.map(gen => gen.id));
-        active.forEach(gen => fitGeneratorNodeHeight(gen, false));
     });
 }
 function refreshGeneratorInputViews(){
+    const resizedGenerators = [];
     nodes.filter(n => ['generator','video'].includes(n.type)).forEach(gen => {
         const el = nodesEl.querySelector(`.node[data-id="${gen.id}"]`);
         if(!el) return;
@@ -5094,9 +5110,13 @@ function refreshGeneratorInputViews(){
             if(imageSection) imageSection.hidden = !imageInputs.length;
         }
         renderPromptPreview(el.querySelector('.prompt-list'), promptInputs);
-        if(gen.type === 'generator') renderImageInputList(el.querySelector('.input-list'), gen, imageInputs);
+        if(gen.type === 'generator') {
+            renderImageInputList(el.querySelector('.input-list'), gen, imageInputs);
+            resizedGenerators.push(gen);
+        }
         if(gen.type === 'video') renderVideoImageInputs(el.querySelector('.video-img-list'), gen, imageInputs);
     });
+    fitGeneratorNodesAfterLayout(resizedGenerators);
 }
 async function runGenerator(genId, opts={}){
     const gen = nodes.find(n => n.id === genId);

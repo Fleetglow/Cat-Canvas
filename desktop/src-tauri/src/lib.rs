@@ -89,6 +89,16 @@ fn unix_timestamp() -> u64 {
         .as_secs()
 }
 
+fn update_log(app: &AppHandle, message: &str) {
+    let path = app
+        .state::<DesktopState>()
+        .local_root
+        .join("Logs/updater.log");
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "{} {message}", unix_timestamp());
+    }
+}
+
 fn ensure_desktop_dirs(user_root: &Path, local_root: &Path) -> Result<(), String> {
     for path in [
         user_root.join("Projects"),
@@ -529,12 +539,27 @@ fn manifest_sha256(update: &tauri_plugin_updater::Update) -> Option<String> {
 #[tauri::command]
 async fn check_desktop_update(app: AppHandle) -> Result<UpdateInfo, String> {
     let current_version = app.package_info().version.to_string();
-    let update = app
-        .updater()
-        .map_err(|error| error.to_string())?
-        .check()
-        .await
+    update_log(&app, &format!("checking from {current_version}"));
+    let updater = app
+        .updater_builder()
+        .timeout(Duration::from_secs(20))
+        .build()
         .map_err(|error| error.to_string())?;
+    let update = match updater.check().await {
+        Ok(update) => update,
+        Err(error) => {
+            update_log(&app, &format!("check failed: {error}"));
+            return Err(error.to_string());
+        }
+    };
+    update_log(
+        &app,
+        update
+            .as_ref()
+            .map(|item| format!("update available: {}", item.version))
+            .as_deref()
+            .unwrap_or("no update"),
+    );
     Ok(match update {
         Some(update) => UpdateInfo {
             available: true,
@@ -555,8 +580,11 @@ async fn check_desktop_update(app: AppHandle) -> Result<UpdateInfo, String> {
 
 #[tauri::command]
 async fn download_desktop_update(app: AppHandle) -> Result<DownloadResult, String> {
+    update_log(&app, "download requested");
     let update = app
-        .updater()
+        .updater_builder()
+        .timeout(Duration::from_secs(20))
+        .build()
         .map_err(|error| error.to_string())?
         .check()
         .await
@@ -611,6 +639,7 @@ async fn install_desktop_update(app: AppHandle) -> Result<(), String> {
     let cleanup_app = app.clone();
     let updater = app
         .updater_builder()
+        .timeout(Duration::from_secs(20))
         .on_before_exit(move || {
             stop_backend(&cleanup_app);
             cleanup_app.cleanup_before_exit();

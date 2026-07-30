@@ -54,6 +54,10 @@ jobs:
         shell: pwsh
         run: ./desktop/scripts/build-backend.ps1 -Python python
 
+      - name: 验证 FastAPI sidecar
+        shell: pwsh
+        run: ./desktop/scripts/test-backend.ps1
+
       - name: 构建 Tauri NSIS 与更新包
         shell: pwsh
         run: npm run desktop:build --prefix desktop -- --target x86_64-pc-windows-msvc
@@ -77,30 +81,9 @@ jobs:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: git push "https://hnz4796:$env:GITEE_TOKEN@gitee.com/hnz4796/Cat-Canvas.git" "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}" --force
 
-      - name: 镜像到 Gitee Release
-        shell: pwsh
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-        run: ./desktop/scripts/publish-gitee.ps1 -Token $env:GITEE_TOKEN -Tag "${{ github.ref_name }}" -AssetDir "desktop/release"
-
-      - name: 发布双源更新清单
+      - name: 发布 GitHub/Gitee 更新通道
         shell: pwsh
         env:
           GH_PUSH_TOKEN: ${{ github.token }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-        run: |
-          $channel = Join-Path $env:RUNNER_TEMP "cat-canvas-update-channel"
-          New-Item $channel -ItemType Directory -Force | Out-Null
-          Copy-Item desktop/release/latest-github.json $channel
-          Copy-Item desktop/release/latest-gitee.json $channel
-          Push-Location $channel
-          git init -b desktop-updates
-          git config user.name "Fleetglow"
-          git config user.email "47961924@qq.com"
-          git add .
-          git commit -m "更新桌面版发布清单"
-          git remote add github "https://x-access-token:$env:GH_PUSH_TOKEN@github.com/Fleetglow/Cat-Canvas.git"
-          git remote add gitee "https://hnz4796:$env:GITEE_TOKEN@gitee.com/hnz4796/Cat-Canvas.git"
-          git push github HEAD:desktop-updates --force
-          git push gitee HEAD:desktop-updates --force
-          Pop-Location
+        run: ./desktop/scripts/publish-update-channel.ps1 -AssetDir "desktop/release" -CommitMessage "更新桌面版发布清单"

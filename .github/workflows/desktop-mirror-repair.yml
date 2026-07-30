@@ -1,0 +1,37 @@
+name: 修复桌面双源镜像
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "需要修复的版本号，例如 0.1.0"
+        required: true
+        default: "0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  mirror-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 下载现有 GitHub Release 产物
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item desktop/download -ItemType Directory -Force | Out-Null
+          gh release download "v${{ inputs.version }}" -R Fleetglow/Cat-Canvas --pattern "*.exe" --pattern "*.sig" --dir desktop/download
+
+      - name: 重新生成双源更新清单
+        shell: pwsh
+        run: ./desktop/scripts/prepare-release.ps1 -BundleDir "desktop/download" -OutputDir "desktop/release" -Version "${{ inputs.version }}"
+
+      - name: 发布 GitHub/Gitee 更新通道
+        shell: pwsh
+        env:
+          GH_PUSH_TOKEN: ${{ github.token }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: ./desktop/scripts/publish-update-channel.ps1 -AssetDir "desktop/release" -CommitMessage "更新桌面版发布清单"

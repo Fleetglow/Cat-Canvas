@@ -15,6 +15,15 @@ try {
     & $Python -m PyInstaller --noconfirm --clean --distpath $buildRoot --workpath "desktop/.pyinstaller" "desktop/backend.spec"
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed" }
     Copy-Item (Join-Path $buildRoot "cat-canvas-backend/*") $target -Recurse -Force
+    foreach ($resourceTarget in @(
+        (Join-Path $root "desktop/src-tauri/target/release/backend"),
+        (Join-Path $root "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/backend")
+    )) {
+        if (Test-Path $resourceTarget) {
+            Remove-Item $resourceTarget -Recurse -Force
+            if (Test-Path $resourceTarget) { throw "Failed to clean stale Tauri backend: $resourceTarget" }
+        }
+    }
 } finally {
     Pop-Location
     Remove-Item $buildRoot -Recurse -Force -ErrorAction SilentlyContinue

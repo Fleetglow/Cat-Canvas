@@ -6,5 +6,15 @@
   "remote": {
     "urls": ["http://127.0.0.1:*"]
   },
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "allow-backend-status",
+    "allow-pick-legacy-folder",
+    "allow-skip-legacy-import",
+    "allow-import-legacy-data",
+    "allow-check-desktop-update",
+    "allow-download-desktop-update",
+    "allow-install-desktop-update",
+    "allow-open-backup-folder"
+  ]
 }

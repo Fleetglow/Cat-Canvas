@@ -1,18 +1,22 @@
 param(
     [Parameter(Mandatory = $true)][string]$BundleDir,
-    [string]$OutputDir = ""
+    [string]$OutputDir = "",
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-$version = (Get-Content (Join-Path $root "VERSION") -Raw).Trim()
+$version = if ($Version) { $Version.TrimStart('v') } else { (Get-Content (Join-Path $root "VERSION") -Raw).Trim() }
 if (-not $OutputDir) { $OutputDir = Join-Path $root "desktop/release" }
 New-Item $OutputDir -ItemType Directory -Force | Out-Null
 Remove-Item (Join-Path $OutputDir "*") -Recurse -Force -ErrorAction SilentlyContinue
 
-$installer = Get-ChildItem $BundleDir -Recurse -Filter "*-setup.exe" | Select-Object -First 1
-if (-not $installer) { throw "NSIS installer was not found" }
+$escapedVersion = [regex]::Escape($version)
+$installer = Get-ChildItem $BundleDir -Recurse -Filter "*-setup.exe" |
+    Where-Object { $_.Name -match "_${escapedVersion}_x64-setup\.exe$" } |
+    Select-Object -First 1
+if (-not $installer) { throw "NSIS installer for $version was not found" }
 $sigPath = "$($installer.FullName).sig"
 if (-not (Test-Path $sigPath)) { throw "Updater signature was not found: $sigPath" }
 
@@ -48,5 +52,5 @@ function Write-Manifest([string]$Path, [string]$Url) {
 }
 
 Write-Manifest (Join-Path $OutputDir "latest-github.json") "https://github.com/Fleetglow/Cat-Canvas/releases/download/v$version/$encodedName"
-Write-Manifest (Join-Path $OutputDir "latest-gitee.json") "https://gitee.com/hnz4796/Cat-Canvas/releases/download/v$version/$encodedName"
+Write-Manifest (Join-Path $OutputDir "latest-gitee.json") "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/$encodedName"
 Write-Host "Release artifacts ready: $OutputDir"

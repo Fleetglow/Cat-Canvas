@@ -1179,6 +1179,8 @@
             const button = document.getElementById('desktop-update-btn');
             if(!window.__TAURI__?.core?.invoke || !button) return;
             button.hidden = false;
+            button.title = '检查更新';
+            button.dataset.tip = '检查更新';
             setDesktopUpdateText('检查中…');
             try {
                 desktopUpdateInfo = await desktopInvoke('check_desktop_update');
@@ -1189,8 +1191,11 @@
                     if(manual) alert(`当前已是最新版本 ${desktopUpdateInfo.currentVersion}`);
                 }
             } catch(error) {
-                setDesktopUpdateText('检查更新');
-                if(manual) alert(`检查更新失败：${error}`);
+                const message = `检查更新失败：${error}`;
+                setDesktopUpdateText('检查失败');
+                button.title = message;
+                button.dataset.tip = message;
+                if(manual) alert(message);
             }
         }
 

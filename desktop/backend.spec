@@ -26,7 +26,7 @@ analysis = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=["brotli", "brotlicffi"],
     noarchive=False,
 )
 pyz = PYZ(analysis.pure)
