@@ -253,19 +253,39 @@ body.studio-theme-dark .border-\[\#eef2f7\] {
 html.studio-theme-dark body .glass-btn,
 html.studio-theme-dark body .btn-action-dark,
 html.studio-theme-dark body .send-btn,
-html.studio-theme-dark body .gen-btn,
-html.studio-theme-dark body .llm-run,
+html.studio-theme-dark body .gen-btn:not(.run-hover-fx),
+html.studio-theme-dark body .llm-run:not(.run-hover-fx),
 html.studio-theme-dark body .primary-btn,
 html.studio-theme-dark body .bg-black,
 body.studio-theme-dark .glass-btn,
 body.studio-theme-dark .btn-action-dark,
 body.studio-theme-dark .send-btn,
-body.studio-theme-dark .gen-btn,
-body.studio-theme-dark .llm-run,
+body.studio-theme-dark .gen-btn:not(.run-hover-fx),
+body.studio-theme-dark .llm-run:not(.run-hover-fx),
 body.studio-theme-dark .primary-btn,
 body.studio-theme-dark .bg-black {
     background-color: #d8dee9 !important;
     color: #10141d !important;
+}
+
+/* hover 生成按钮暗色：静置浅罩+深字，悬停露出渐变+白字 */
+html.studio-theme-dark body .run-hover-fx,
+body.studio-theme-dark .run-hover-fx {
+    background: linear-gradient(to right, #00bf63, #5ce1e6) !important;
+    color: #10141d !important;
+}
+html.studio-theme-dark body .run-hover-fx::before,
+body.studio-theme-dark .run-hover-fx::before {
+    background: #d8dee9;
+}
+html.studio-theme-dark body .run-hover-fx:hover:not(:disabled),
+body.studio-theme-dark .run-hover-fx:hover:not(:disabled) {
+    color: #fff !important;
+}
+html.studio-theme-dark body .run-hover-fx:disabled,
+body.studio-theme-dark .run-hover-fx:disabled {
+    background: #2a3444 !important;
+    color: #64748b !important;
 }
 
 html.studio-theme-dark body .glass-btn:hover,

@@ -272,7 +272,64 @@ const MANAGED_IMAGE_MODELS_KEY = 'canvas_image_models_ordered';
 const MANAGED_CHAT_MODELS_KEY = 'canvas_chat_models_ordered';
 const CANVAS_THEME_KEY = 'canvas_theme';
 const LAST_CANVAS_ID_KEY = 'canvas_last_id';
+const LAST_GENERATOR_PREFS_KEY = 'canvas_last_generator_prefs';
 const QUICK_TOOLBAR_COLLAPSED_KEY = 'canvas_quick_toolbar_collapsed';
+function loadLastGeneratorPrefs(){
+    try {
+        const raw = localStorage.getItem(LAST_GENERATOR_PREFS_KEY);
+        if(!raw) return null;
+        const data = JSON.parse(raw);
+        return data && typeof data === 'object' ? data : null;
+    } catch(_) { return null; }
+}
+function rememberLastGeneratorPrefs(node){
+    if(!node || node.type !== 'generator') return;
+    try {
+        localStorage.setItem(LAST_GENERATOR_PREFS_KEY, JSON.stringify({
+            apiProvider: node.apiProvider || '',
+            model: node.model || '',
+            ratio: node.ratio || 'square',
+            resolution: node.resolution || '1k',
+            quality: node.quality || 'auto',
+            count: Math.max(1, Math.min(8, Number(node.count || 1))),
+            customRatio: node.customRatio || '',
+            customSize: node.customSize || '',
+            customRatioWidth: node.customRatioWidth || '',
+            customRatioHeight: node.customRatioHeight || '',
+            customWidth: node.customWidth || '',
+            customHeight: node.customHeight || ''
+        }));
+    } catch(_) {}
+}
+function defaultGeneratorPrefs(){
+    const saved = loadLastGeneratorPrefs() || {};
+    const providers = imageApiProviders();
+    let providerId = resolveImageProviderId(saved.apiProvider || '') || providers[0]?.id || '';
+    if(providerId && !providers.some(p => p.id === providerId)) providerId = providers[0]?.id || '';
+    const models = allImageModels(providerId);
+    let model = resolveImageModel(saved.model || '');
+    if(!models.includes(model)) model = models[0] || '';
+    const resolution = ['1k','2k','4k','custom'].includes(saved.resolution) ? saved.resolution : '1k';
+    let ratio = saved.ratio || 'square';
+    if(resolution === 'custom') ratio = '';
+    else if(!ratio) ratio = 'square';
+    const quality = ['auto','low','medium','high'].includes(saved.quality) ? saved.quality : 'auto';
+    const count = Math.max(1, Math.min(8, Number(saved.count || 1) || 1));
+    return {
+        apiProvider: providerId,
+        model,
+        ratio,
+        resolution,
+        quality,
+        count,
+        customRatio: saved.customRatio || '',
+        customSize: saved.customSize || '',
+        customRatioWidth: saved.customRatioWidth || '',
+        customRatioHeight: saved.customRatioHeight || '',
+        customWidth: saved.customWidth || '',
+        customHeight: saved.customHeight || ''
+    };
+}
 let desktopCanvasState = false;
 async function loadLastCanvasId(){
     try {
@@ -1819,8 +1876,8 @@ function addLLMNode(point){
 }
 function addGeneratorNode(point){
     const p = point || defaultPoint(120, 0);
-    const providerId = imageApiProviders()[0]?.id || '';
-    return addNode({id:uid('gen'), type:'generator', x:p.x, y:p.y, apiProvider:providerId, model:allImageModels(providerId)[0] || '', ratio:'square', resolution:'1k', customRatio:'', customSize:'', customRatioWidth:'', customRatioHeight:'', customWidth:'', customHeight:'', inputs:[]});
+    const prefs = defaultGeneratorPrefs();
+    return addNode({id:uid('gen'), type:'generator', x:p.x, y:p.y, ...prefs, inputs:[]});
 }
 function addVideoNode(point){
     const p = point || defaultPoint(160, 0);
@@ -4594,6 +4651,7 @@ function renderGeneratorBody(node){
         if(!providerModels.includes(resolveImageModel(node.model))) node.model = providerModels[0] || '';
         modelSelect.innerHTML = imageModelOptions(node.model, node.apiProvider);
         syncQualityControls();
+        rememberLastGeneratorPrefs(node);
         scheduleSave();
     };
     modelSelect.onmousedown = e => e.stopPropagation();
@@ -4602,6 +4660,7 @@ function renderGeneratorBody(node){
         e.stopPropagation();
         node.model = e.target.value;
         syncQualityControls();
+        rememberLastGeneratorPrefs(node);
         scheduleSave();
     };
     const ratioSelect = wrap.querySelector('.ratio');
@@ -4684,6 +4743,7 @@ function renderGeneratorBody(node){
     qualitySelect.onchange = e => {
         e.stopPropagation();
         node.quality = e.target.value;
+        rememberLastGeneratorPrefs(node);
         scheduleSave();
     };
     ratioSelect.onmousedown = e => e.stopPropagation();
@@ -4703,6 +4763,7 @@ function renderGeneratorBody(node){
         }
         syncSizeControls();
         fitGeneratorNodesAfterLayout([node]);
+        rememberLastGeneratorPrefs(node);
         scheduleSave();
     };
     resolutionSelect.onmousedown = e => e.stopPropagation();
@@ -4725,6 +4786,7 @@ function renderGeneratorBody(node){
         normalizeApiNodeSizeChoice(node);
         syncSizeControls();
         fitGeneratorNodesAfterLayout([node]);
+        rememberLastGeneratorPrefs(node);
         scheduleSave();
     };
     [customRatioWInput, customRatioHInput].forEach(input => {
@@ -4736,6 +4798,7 @@ function renderGeneratorBody(node){
             node.customRatio = node.customRatioWidth && node.customRatioHeight ? `${node.customRatioWidth}:${node.customRatioHeight}` : '';
             node.ratio = 'custom';
             syncSizeControls();
+            rememberLastGeneratorPrefs(node);
             scheduleSave();
         };
     });
@@ -4749,6 +4812,7 @@ function renderGeneratorBody(node){
             node.resolution = 'custom';
             node.ratio = '';
             syncSizeControls();
+            rememberLastGeneratorPrefs(node);
             scheduleSave();
         };
     });
@@ -4767,6 +4831,7 @@ function renderGeneratorBody(node){
                 node.ratio = '';
                 syncSizeControls();
                 fitGeneratorNodesAfterLayout([node]);
+                rememberLastGeneratorPrefs(node);
                 scheduleSave();
             } catch(err) {
                     showErrorModal(tr('canvas.imageReadFailed'));
@@ -4780,6 +4845,7 @@ function renderGeneratorBody(node){
     countInput.oninput = e => {
         const value = Math.max(1, Math.min(8, Number(e.target.value) || 1));
         node.count = value;
+        rememberLastGeneratorPrefs(node);
         scheduleSave();
     };
     countInput.onblur = e => { e.target.value = String(Math.max(1, Math.min(8, Number(node.count || 1)))); };
@@ -4789,6 +4855,7 @@ function renderGeneratorBody(node){
             const next = Math.max(1, Math.min(8, Number(node.count || 1) + Number(btn.dataset.step || 0)));
             node.count = next;
             countInput.value = String(next);
+            rememberLastGeneratorPrefs(node);
             scheduleSave();
         };
     });
@@ -6779,19 +6846,9 @@ function outputI2IBaseNode(meta, log){
             customHeight: req.customHeight || '',
         };
     }
-    const providerId = imageApiProviders()[0]?.id || '';
     return {
         type: 'generator',
-        apiProvider: providerId,
-        model: allImageModels(providerId)[0] || '',
-        ratio: 'square',
-        resolution: '1k',
-        customRatio: '',
-        customSize: '',
-        customRatioWidth: '',
-        customRatioHeight: '',
-        customWidth: '',
-        customHeight: '',
+        ...defaultGeneratorPrefs()
     };
 }
 function outputI2IChainFootprint(baseNode){
@@ -6871,11 +6928,9 @@ function spawnImageNodeI2IChain(sourceNodeId){
         return;
     }
     const sourceRect = nodeRect(sourceNode);
-    const providerId = imageApiProviders()[0]?.id || '';
     const generatorBase = {
         ...outputI2IBaseNode(null, null),
-        apiProvider: providerId,
-        model: allImageModels(providerId)[0] || ''
+        ...defaultGeneratorPrefs()
     };
     pushUndo();
     const chain = helper({

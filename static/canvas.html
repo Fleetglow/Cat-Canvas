@@ -17,13 +17,8 @@
         })();
     </script>
     <script>
-        (function(){
-            try {
-                if(localStorage.getItem('canvas_last_id')){
-                    document.documentElement.classList.add('canvas-booting');
-                }
-            } catch(e) {}
-        })();
+        // 启动先藏选择页；桌面端 last id 在服务端，localStorage 不可靠
+        document.documentElement.classList.add('canvas-booting');
     </script>
     <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.28"></script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.28"></script>

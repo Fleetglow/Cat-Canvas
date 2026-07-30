@@ -257,11 +257,24 @@ fn prune_old_entries(root: &Path, keep: usize) -> Result<(), String> {
     Ok(())
 }
 
+// 固定桌面端口：随机端口会换 origin，WebView localStorage 全丢
+const DESKTOP_PORT: u16 = 47960;
+
 fn pick_free_port() -> Result<u16, String> {
     TcpListener::bind(("127.0.0.1", 0))
         .and_then(|listener| listener.local_addr())
         .map(|address| address.port())
         .map_err(|error| format!("无法分配本地端口：{error}"))
+}
+
+fn pick_desktop_port() -> Result<u16, String> {
+    match TcpListener::bind(("127.0.0.1", DESKTOP_PORT)) {
+        Ok(listener) => listener
+            .local_addr()
+            .map(|address| address.port())
+            .map_err(|error| format!("无法读取本地端口：{error}")),
+        Err(_) => pick_free_port(),
+    }
 }
 
 fn append_log<R: Read + Send + 'static>(reader: R, path: PathBuf, prefix: &'static str) {
@@ -311,7 +324,7 @@ fn start_backend(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let port = pick_free_port()?;
+    let port = pick_desktop_port()?;
     let token = Uuid::new_v4().simple().to_string();
     let session_url = format!("http://127.0.0.1:{port}/desktop-session?token={token}");
     let (mut command, executable) = backend_command(app)?;
