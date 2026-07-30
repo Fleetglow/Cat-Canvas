@@ -674,6 +674,45 @@
             cursor:wait;
         }
 
+        .update-modal-panel { width:min(760px, 100%); }
+        .update-summary { margin:0; color:#475569; font-size:13px; line-height:1.7; }
+        .update-notes {
+            padding:14px;
+            border:1px solid #e2e8f0;
+            border-radius:8px;
+            background:#f8fafc;
+        }
+        .update-notes-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; font-size:12px; font-weight:900; }
+        .update-notes-version { color:#64748b; }
+        .update-notes-body { white-space:pre-wrap; color:#334155; font-size:12px; line-height:1.7; }
+        .update-source-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .update-source-card {
+            display:block;
+            padding:14px;
+            border:1px solid #e2e8f0;
+            border-radius:10px;
+            background:#fff;
+            cursor:pointer;
+            transition:border-color .15s, background .15s, box-shadow .15s;
+        }
+        .update-source-card:hover { border-color:#94a3b8; }
+        .update-source-card.selected { border-color:#16a34a; background:#f0fdf4; box-shadow:0 0 0 1px #16a34a; }
+        .update-source-card input { position:absolute; opacity:0; pointer-events:none; }
+        .update-source-title { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; font-weight:900; }
+        .update-source-desc { margin-top:5px; color:#64748b; font-size:11px; line-height:1.55; }
+        .update-source-status { display:flex; align-items:center; gap:7px; margin-top:12px; padding-top:10px; border-top:1px solid #e2e8f0; color:#64748b; font-size:11px; }
+        .update-source-dot { width:8px; height:8px; border-radius:50%; background:#cbd5e1; flex:0 0 auto; }
+        .update-source-status.ok { color:#15803d; }
+        .update-source-status.ok .update-source-dot { background:#22c55e; }
+        .update-source-status.error { color:#dc2626; }
+        .update-source-status.error .update-source-dot { background:#ef4444; }
+        .update-progress { padding:14px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; }
+        .update-progress[hidden] { display:none; }
+        .update-progress-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:9px; color:#334155; font-size:12px; font-weight:900; }
+        .update-progress-track { height:8px; overflow:hidden; border-radius:999px; background:#e2e8f0; }
+        .update-progress-bar { width:0; height:100%; border-radius:inherit; background:#16a34a; transition:width .18s ease; }
+        .update-progress-detail { margin-top:8px; color:#64748b; font-size:11px; }
+
         html.theme-dark .studio-modal,
         body.theme-dark .studio-modal {
             background:rgba(2,6,23,.56);
@@ -700,17 +739,42 @@
         }
 
         html.theme-dark .studio-modal-copy,
-        body.theme-dark .studio-modal-copy {
+        body.theme-dark .studio-modal-copy,
+        html.theme-dark .update-summary,
+        body.theme-dark .update-summary,
+        html.theme-dark .update-source-desc,
+        body.theme-dark .update-source-desc,
+        html.theme-dark .update-progress-detail,
+        body.theme-dark .update-progress-detail {
             color:#8f9aab;
         }
 
+        html.theme-dark .update-notes,
+        body.theme-dark .update-notes,
+        html.theme-dark .update-source-card,
+        body.theme-dark .update-source-card,
+        html.theme-dark .update-progress,
+        body.theme-dark .update-progress {
+            background:#16181d;
+            border-color:#2a2d34;
+            color:#e8e8ea;
+        }
+        html.theme-dark .update-source-card.selected,
+        body.theme-dark .update-source-card.selected { background:#10251a; border-color:#22c55e; }
+        html.theme-dark .update-notes-body,
+        body.theme-dark .update-notes-body,
+        html.theme-dark .update-progress-head,
+        body.theme-dark .update-progress-head { color:#cbd5e1; }
+        html.theme-dark .update-source-status,
+        body.theme-dark .update-source-status { border-color:#2a2d34; }
+        html.theme-dark .update-progress-track,
+        body.theme-dark .update-progress-track { background:#2a2d34; }
         html.theme-dark .studio-modal-btn.primary,
         body.theme-dark .studio-modal-btn.primary {
             background:#d8dee9;
             border-color:#d8dee9;
             color:#10141d;
         }
-
         html.theme-dark .studio-modal-btn.primary:hover,
         body.theme-dark .studio-modal-btn.primary:hover {
             background:#86efac;
@@ -732,6 +796,7 @@
             .studio-modal-btn {
                 flex:1 1 130px;
             }
+            .update-source-grid { grid-template-columns:1fr; }
         }
 
         .sidebar.is-pinned {
@@ -852,7 +917,7 @@
                     </svg>
                     <span class="side-pill-text" data-i18n="common.settings">设置</span>
                 </button>
-                <button id="desktop-update-btn" class="side-pill" type="button" title="检查更新" data-tip="检查更新" hidden onclick="handleDesktopUpdate()">
+                <button id="desktop-update-btn" class="side-pill" type="button" title="检查更新" data-tip="检查更新" hidden>
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path>
                         <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
@@ -897,6 +962,57 @@
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.28" scrolling="yes"></iframe>
 
         </main>
+    </div>
+
+    <div id="desktop-update-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="desktop-update-modal-title">
+        <div class="studio-modal-panel update-modal-panel">
+            <div class="studio-modal-head">
+                <div>
+                    <div class="studio-modal-kicker">发现更新</div>
+                    <h2 id="desktop-update-modal-title" class="studio-modal-title">更新到 v<span id="desktop-update-version"></span></h2>
+                </div>
+                <button id="desktop-update-close" class="studio-modal-close" type="button" title="关闭" aria-label="关闭">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="studio-modal-body" style="display:flex;flex-direction:column;gap:16px;">
+                <p id="desktop-update-summary" class="update-summary"></p>
+                <section class="update-notes">
+                    <div class="update-notes-head">
+                        <span>本次更新内容</span>
+                        <span id="desktop-update-notes-version" class="update-notes-version"></span>
+                    </div>
+                    <div id="desktop-update-notes" class="update-notes-body"></div>
+                </section>
+                <div class="update-source-grid" role="radiogroup" aria-label="下载源">
+                    <label class="update-source-card selected" data-update-source="github">
+                        <input type="radio" name="desktop-update-source" value="github" checked>
+                        <span class="update-source-title"><span>GitHub 下载源</span><span>主源</span></span>
+                        <span class="update-source-desc">GitHub Release 官方安装包，适合可稳定访问 GitHub 的网络。</span>
+                        <span class="update-source-status" data-update-source-status="github"><span class="update-source-dot"></span><span>等待连接测试</span></span>
+                    </label>
+                    <label class="update-source-card" data-update-source="gitee">
+                        <input type="radio" name="desktop-update-source" value="gitee">
+                        <span class="update-source-title"><span>Gitee 下载源</span><span>国内备用</span></span>
+                        <span class="update-source-desc">Gitee 分支归档镜像，适合国内网络；提取后执行相同签名校验。</span>
+                        <span class="update-source-status" data-update-source-status="gitee"><span class="update-source-dot"></span><span>等待连接测试</span></span>
+                    </label>
+                </div>
+                <section id="desktop-update-progress" class="update-progress" hidden>
+                    <div class="update-progress-head"><span id="desktop-update-progress-status">准备下载</span><span id="desktop-update-progress-percent">0%</span></div>
+                    <div class="update-progress-track"><div id="desktop-update-progress-bar" class="update-progress-bar"></div></div>
+                    <div id="desktop-update-progress-detail" class="update-progress-detail">正在等待下载任务</div>
+                </section>
+            </div>
+            <div class="studio-modal-actions">
+                <button id="desktop-update-test" class="studio-modal-btn" type="button">测试连接</button>
+                <button id="desktop-update-cancel" class="studio-modal-btn" type="button">取消</button>
+                <button id="desktop-update-start" class="studio-modal-btn primary" type="button">开始更新</button>
+            </div>
+        </div>
     </div>
 
     <div id="support-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="support-modal-title">
@@ -1158,6 +1274,9 @@
         let desktopUpdateInfo = null;
         let desktopUpdateDownloaded = false;
         let desktopUpdateBusy = false;
+        let desktopUpdateTesting = false;
+        let desktopCurrentVersion = '';
+        let desktopUpdateSource = 'github';
 
         function desktopInvoke(command, args) {
             const invoke = window.__TAURI__?.core?.invoke;
@@ -1175,63 +1294,218 @@
             }
         }
 
+        function setDesktopUpdateTip(detail = '点击检查更新') {
+            const button = document.getElementById('desktop-update-btn');
+            if(!button) return;
+            const tip = desktopCurrentVersion ? `当前版本 ${desktopCurrentVersion} · ${detail}` : detail;
+            button.title = tip;
+            button.dataset.tip = tip;
+        }
+
+        function desktopUpdateErrorMessage(error) {
+            const detail = String(error || '未知错误');
+            return /timed?\s*out|timeout|connect|network|dns|tls|certificate|request|http/i.test(detail)
+                ? '网络连接失败，请检查网络后重试'
+                : detail;
+        }
+
+        function formatUpdateBytes(bytes) {
+            const value = Number(bytes || 0);
+            if(value < 1024) return `${value} B`;
+            if(value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+            return `${(value / 1024 / 1024).toFixed(1)} MB`;
+        }
+
+        function setDesktopUpdateSource(source) {
+            desktopUpdateSource = source;
+            document.querySelectorAll('[data-update-source]').forEach(card => {
+                const selected = card.dataset.updateSource === source;
+                card.classList.toggle('selected', selected);
+                const input = card.querySelector('input');
+                if(input) input.checked = selected;
+            });
+        }
+
+        function setUpdateSourceStatus(source, state, text, detail = '') {
+            const status = document.querySelector(`[data-update-source-status="${source}"]`);
+            if(!status) return;
+            status.classList.toggle('ok', state === 'ok');
+            status.classList.toggle('error', state === 'error');
+            status.querySelector('span:last-child').textContent = text;
+            status.title = detail || text;
+        }
+
+        function setDesktopUpdateModalBusy(busy) {
+            desktopUpdateBusy = busy;
+            const downloaded = desktopUpdateDownloaded;
+            document.querySelectorAll('input[name="desktop-update-source"]').forEach(input => input.disabled = busy || downloaded);
+            const close = document.getElementById('desktop-update-close');
+            const cancel = document.getElementById('desktop-update-cancel');
+            const test = document.getElementById('desktop-update-test');
+            const start = document.getElementById('desktop-update-start');
+            if(close) close.disabled = busy;
+            if(cancel) cancel.disabled = busy;
+            if(test) test.disabled = busy || downloaded || desktopUpdateTesting;
+            if(start) start.disabled = busy;
+        }
+
+        function resetDesktopUpdateProgress() {
+            const panel = document.getElementById('desktop-update-progress');
+            const bar = document.getElementById('desktop-update-progress-bar');
+            const percent = document.getElementById('desktop-update-progress-percent');
+            const status = document.getElementById('desktop-update-progress-status');
+            const detail = document.getElementById('desktop-update-progress-detail');
+            if(panel) panel.hidden = true;
+            if(bar) bar.style.width = '0%';
+            if(percent) percent.textContent = '0%';
+            if(status) status.textContent = '准备下载';
+            if(detail) detail.textContent = '正在等待下载任务';
+        }
+
+        function openDesktopUpdateModal() {
+            if(!desktopUpdateInfo?.available) return;
+            const modal = document.getElementById('desktop-update-modal');
+            document.getElementById('desktop-update-version').textContent = desktopUpdateInfo.version || '';
+            document.getElementById('desktop-update-notes-version').textContent = `v${desktopUpdateInfo.version || ''}`;
+            document.getElementById('desktop-update-summary').textContent = `将 Cat Canvas 从 v${desktopCurrentVersion || desktopUpdateInfo.currentVersion} 更新到 v${desktopUpdateInfo.version}。更新前会自动备份画布与配置，安装完成后应用会自动重启。`;
+            document.getElementById('desktop-update-notes').textContent = String(desktopUpdateInfo.notes || '').trim() || '稳定性改进与桌面体验优化。';
+            const start = document.getElementById('desktop-update-start');
+            if(start) start.textContent = desktopUpdateDownloaded ? '重启并安装' : '开始更新';
+            if(!desktopUpdateDownloaded) resetDesktopUpdateProgress();
+            if(modal) modal.hidden = false;
+            setDesktopUpdateSource(desktopUpdateSource);
+            setDesktopUpdateModalBusy(false);
+            if(!desktopUpdateDownloaded) probeDesktopUpdateSources();
+        }
+
+        function closeDesktopUpdateModal() {
+            if(desktopUpdateBusy) return;
+            const modal = document.getElementById('desktop-update-modal');
+            if(modal) modal.hidden = true;
+        }
+
+        async function probeDesktopUpdateSources() {
+            if(desktopUpdateTesting || desktopUpdateBusy) return;
+            desktopUpdateTesting = true;
+            const test = document.getElementById('desktop-update-test');
+            if(test) {
+                test.disabled = true;
+                test.textContent = '测试中…';
+            }
+            for(const source of ['github', 'gitee']) setUpdateSourceStatus(source, '', '正在测试连接…');
+            const results = await Promise.all(['github', 'gitee'].map(async source => {
+                try { return await desktopInvoke('probe_update_source', {source}); }
+                catch(error) { return {source, ok:false, error:String(error || '')}; }
+            }));
+            results.forEach(result => setUpdateSourceStatus(
+                result.source,
+                result.ok ? 'ok' : 'error',
+                result.ok ? `连接正常 · v${result.version}` : '连接失败',
+                result.error || ''
+            ));
+            const selected = results.find(result => result.source === desktopUpdateSource);
+            const fallback = results.find(result => result.ok);
+            if(selected && !selected.ok && fallback) setDesktopUpdateSource(fallback.source);
+            desktopUpdateTesting = false;
+            if(test) {
+                test.textContent = '测试连接';
+                test.disabled = desktopUpdateBusy || desktopUpdateDownloaded;
+            }
+        }
+
+        async function loadDesktopCurrentVersion() {
+            try {
+                const response = await fetch('/api/app-info', {cache:'no-store'});
+                if(response.ok) desktopCurrentVersion = String((await response.json()).version || '');
+            } catch(_) {}
+            setDesktopUpdateTip();
+        }
+
         async function checkDesktopUpdate(manual = false) {
             const button = document.getElementById('desktop-update-btn');
             if(!window.__TAURI__?.core?.invoke || !button) return;
             button.hidden = false;
-            button.title = '检查更新';
-            button.dataset.tip = '检查更新';
+            setDesktopUpdateTip('正在检查更新');
             setDesktopUpdateText('检查中…');
             try {
                 desktopUpdateInfo = await desktopInvoke('check_desktop_update');
+                desktopCurrentVersion = String(desktopUpdateInfo.currentVersion || desktopCurrentVersion);
                 if(desktopUpdateInfo.available) {
                     setDesktopUpdateText(`更新到 ${desktopUpdateInfo.version}`, true);
+                    setDesktopUpdateTip(`发现 ${desktopUpdateInfo.version}，点击查看更新`);
+                    if(manual) openDesktopUpdateModal();
                 } else {
-                    setDesktopUpdateText(`已是 ${desktopUpdateInfo.currentVersion}`);
-                    if(manual) alert(`当前已是最新版本 ${desktopUpdateInfo.currentVersion}`);
+                    desktopUpdateDownloaded = false;
+                    setDesktopUpdateText('已是最新版');
+                    setDesktopUpdateTip('已是最新版，点击重新检查');
+                    if(manual) alert(`当前已是最新版本 ${desktopCurrentVersion}`);
                 }
             } catch(error) {
-                const message = `检查更新失败：${error}`;
-                setDesktopUpdateText('检查失败');
-                button.title = message;
-                button.dataset.tip = message;
-                if(manual) alert(message);
+                const message = desktopUpdateErrorMessage(error);
+                setDesktopUpdateText(message.startsWith('网络') ? '网络故障' : '检查失败');
+                setDesktopUpdateTip(message);
+                if(manual) alert(`检查更新失败：${message}`);
             }
         }
 
         async function handleDesktopUpdate() {
             if(desktopUpdateBusy) return;
+            if(desktopUpdateInfo?.available) {
+                openDesktopUpdateModal();
+                return;
+            }
+            await checkDesktopUpdate(true);
+        }
+
+        async function startDesktopUpdate() {
+            if(desktopUpdateBusy) return;
+            const start = document.getElementById('desktop-update-start');
+            const progress = document.getElementById('desktop-update-progress');
+            const status = document.getElementById('desktop-update-progress-status');
+            const detail = document.getElementById('desktop-update-progress-detail');
             if(desktopUpdateDownloaded) {
-                if(confirm(`更新 ${desktopUpdateInfo?.version || ''} 已下载，是否立即重启安装？`)) {
-                    desktopUpdateBusy = true;
-                    setDesktopUpdateText('正在安装…');
-                    try { await desktopInvoke('install_desktop_update'); }
-                    catch(error) { alert(`安装更新失败：${error}`); desktopUpdateBusy = false; setDesktopUpdateText('重启安装更新', true); }
+                setDesktopUpdateModalBusy(true);
+                if(start) start.textContent = '正在重启安装…';
+                if(status) status.textContent = '正在创建备份并启动安装器';
+                try { await desktopInvoke('install_desktop_update'); }
+                catch(error) {
+                    const message = desktopUpdateErrorMessage(error);
+                    if(status) status.textContent = '安装启动失败';
+                    if(detail) detail.textContent = message;
+                    if(start) start.textContent = '重试安装';
+                    setDesktopUpdateModalBusy(false);
                 }
                 return;
             }
-            if(!desktopUpdateInfo?.available) {
-                await checkDesktopUpdate(true);
-                return;
-            }
-            const notes = String(desktopUpdateInfo.notes || '').trim();
-            const message = `发现新版本 ${desktopUpdateInfo.version}${notes ? `\n\n${notes}` : ''}\n\n是否下载？`;
-            if(!confirm(message)) return;
-            desktopUpdateBusy = true;
+
+            setDesktopUpdateModalBusy(true);
+            if(progress) progress.hidden = false;
+            if(start) start.textContent = '正在下载…';
+            if(status) status.textContent = `正在从 ${desktopUpdateSource === 'gitee' ? 'Gitee' : 'GitHub'} 下载`;
+            if(detail) detail.textContent = '下载完成后将自动校验 SHA-256 与 minisign 签名';
             setDesktopUpdateText('正在下载…', true);
+            setDesktopUpdateTip(`正在从 ${desktopUpdateSource} 下载 ${desktopUpdateInfo.version}`);
             try {
-                await desktopInvoke('download_desktop_update');
+                await desktopInvoke('download_desktop_update', {source:desktopUpdateSource});
                 desktopUpdateDownloaded = true;
+                const bar = document.getElementById('desktop-update-progress-bar');
+                const percent = document.getElementById('desktop-update-progress-percent');
+                if(bar) bar.style.width = '100%';
+                if(percent) percent.textContent = '100%';
+                if(status) status.textContent = '下载并校验完成';
+                if(detail) detail.textContent = '点击“重启并安装”，应用会先备份数据再自动重启。';
+                if(start) start.textContent = '重启并安装';
                 setDesktopUpdateText('重启安装更新', true);
-                if(confirm('更新下载并校验完成，是否立即重启安装？')) {
-                    setDesktopUpdateText('正在安装…');
-                    await desktopInvoke('install_desktop_update');
-                }
+                setDesktopUpdateTip(`更新 ${desktopUpdateInfo.version} 已下载并校验完成`);
             } catch(error) {
-                alert(`下载更新失败：${error}`);
-                setDesktopUpdateText(`更新到 ${desktopUpdateInfo.version}`, true);
+                const message = desktopUpdateErrorMessage(error);
+                if(status) status.textContent = '下载更新失败';
+                if(detail) detail.textContent = message;
+                if(start) start.textContent = '重新下载';
+                setDesktopUpdateText(message.startsWith('网络') ? '网络故障' : `更新到 ${desktopUpdateInfo.version}`, true);
+                setDesktopUpdateTip(message);
             } finally {
-                desktopUpdateBusy = false;
+                setDesktopUpdateModalBusy(false);
             }
         }
 
@@ -1239,7 +1513,16 @@
             const downloaded = Number(event.payload?.downloaded || 0);
             const total = Number(event.payload?.total || 0);
             const percent = total > 0 ? Math.min(100, Math.round(downloaded * 100 / total)) : 0;
+            const bar = document.getElementById('desktop-update-progress-bar');
+            const percentLabel = document.getElementById('desktop-update-progress-percent');
+            const detail = document.getElementById('desktop-update-progress-detail');
+            if(bar) bar.style.width = `${percent}%`;
+            if(percentLabel) percentLabel.textContent = total > 0 ? `${percent}%` : '下载中';
+            if(detail) detail.textContent = total > 0
+                ? `${formatUpdateBytes(downloaded)} / ${formatUpdateBytes(total)}`
+                : `已下载 ${formatUpdateBytes(downloaded)}`;
             setDesktopUpdateText(total > 0 ? `下载 ${percent}%` : '正在下载…', true);
+            setDesktopUpdateTip(total > 0 ? `正在下载 ${percent}%` : '正在下载更新');
         });
 
         // listen for theme changes triggered by theme.js
@@ -1253,7 +1536,15 @@
             const theme = window.StudioTheme ? window.StudioTheme.get() : 'light';
             updateThemeIcon(theme);
             if(window.StudioI18n) window.StudioI18n.apply();
-            checkDesktopUpdate(false);
+            document.getElementById('desktop-update-btn')?.addEventListener('click', handleDesktopUpdate);
+            document.getElementById('desktop-update-close')?.addEventListener('click', closeDesktopUpdateModal);
+            document.getElementById('desktop-update-cancel')?.addEventListener('click', closeDesktopUpdateModal);
+            document.getElementById('desktop-update-test')?.addEventListener('click', probeDesktopUpdateSources);
+            document.getElementById('desktop-update-start')?.addEventListener('click', startDesktopUpdate);
+            document.querySelectorAll('input[name="desktop-update-source"]').forEach(input => {
+                input.addEventListener('change', () => setDesktopUpdateSource(input.value));
+            });
+            loadDesktopCurrentVersion().finally(() => checkDesktopUpdate(false));
         });
 
         // sync theme when iframe loads
@@ -1273,12 +1564,19 @@
             if(modal) modal.hidden = true;
         }
 
+        document.getElementById('desktop-update-modal')?.addEventListener('click', event => {
+            if(event.target?.id === 'desktop-update-modal') closeDesktopUpdateModal();
+        });
+
         document.getElementById('support-modal')?.addEventListener('click', event => {
             if(event.target?.id === 'support-modal') closeSupportModal();
         });
 
         window.addEventListener('keydown', event => {
-            if(event.key === 'Escape') closeSupportModal();
+            if(event.key === 'Escape') {
+                closeDesktopUpdateModal();
+                closeSupportModal();
+            }
         });
     </script>
 </body>

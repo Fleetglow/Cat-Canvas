@@ -749,6 +749,39 @@ def static_html_response(filename: str):
 def health():
     return {"ok": True, "version": current_app_version(), "desktop": DESKTOP_MODE}
 
+class DesktopStatePayload(BaseModel):
+    last_canvas_id: str = ""
+
+@app.get("/api/desktop-state")
+def get_desktop_state():
+    if not DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="Not Found")
+    with GLOBAL_CONFIG_LOCK:
+        try:
+            with open(GLOBAL_CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+    return {"last_canvas_id": str(config.get("last_canvas_id") or "")}
+
+@app.put("/api/desktop-state")
+def set_desktop_state(payload: DesktopStatePayload, request: Request):
+    if not DESKTOP_MODE:
+        raise HTTPException(status_code=404, detail="Not Found")
+    ensure_same_origin_request(request)
+    with GLOBAL_CONFIG_LOCK:
+        try:
+            with open(GLOBAL_CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+        config["last_canvas_id"] = payload.last_canvas_id.strip()[:128]
+        temp_path = f"{GLOBAL_CONFIG_FILE}.{os.getpid()}.tmp"
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+        os.replace(temp_path, GLOBAL_CONFIG_FILE)
+    return {"ok": True}
+
 @app.get("/desktop-session")
 def desktop_session(token: str = ""):
     if not DESKTOP_MODE:

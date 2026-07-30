@@ -1,9 +1,12 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use fs2::available_space;
+use futures_util::StreamExt;
+use minisign_verify::{PublicKey, Signature};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Cursor, Read, Write},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -20,6 +23,13 @@ use uuid::Uuid;
 use std::os::windows::process::CommandExt;
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+const GITHUB_UPDATE_ENDPOINT: &str =
+    "https://raw.githubusercontent.com/Fleetglow/Cat-Canvas/desktop-updates/latest-github.json";
+const GITEE_UPDATE_ENDPOINT: &str =
+    "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/latest-gitee.json";
+const GITEE_UPDATE_ARCHIVE: &str =
+    "https://gitee.com/hnz4796/Cat-Canvas/repository/archive/desktop-updates.zip";
+const UPDATER_PUBLIC_KEY: &str = "RWTQHQVhO41rHdw+VdoEuKr250hBZgKWj28KFES/csCm6FYK1sqkFh7h";
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,6 +44,7 @@ struct BackendSnapshot {
 
 struct PendingUpdate {
     version: String,
+    source: String,
     bytes: Vec<u8>,
 }
 
@@ -54,6 +65,15 @@ struct UpdateInfo {
     version: String,
     notes: String,
     date: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateSourceStatus {
+    source: String,
+    ok: bool,
+    version: String,
+    error: String,
 }
 
 #[derive(Serialize)]
@@ -536,6 +556,122 @@ fn manifest_sha256(update: &tauri_plugin_updater::Update) -> Option<String> {
         .map(|value| value.trim().to_ascii_lowercase())
 }
 
+fn update_endpoint(source: &str) -> Result<url::Url, String> {
+    let endpoint = match source {
+        "github" => GITHUB_UPDATE_ENDPOINT,
+        "gitee" => GITEE_UPDATE_ENDPOINT,
+        _ => return Err("未知更新源".into()),
+    };
+    endpoint
+        .parse()
+        .map_err(|error| format!("更新源地址无效：{error}"))
+}
+
+fn source_updater(
+    app: &AppHandle,
+    source: &str,
+    timeout: Duration,
+) -> Result<tauri_plugin_updater::Updater, String> {
+    app.updater_builder()
+        .endpoints(vec![update_endpoint(source)?])
+        .map_err(|error| error.to_string())?
+        .timeout(timeout)
+        .build()
+        .map_err(|error| error.to_string())
+}
+
+fn verify_update_signature(bytes: &[u8], encoded_signature: &str) -> Result<(), String> {
+    let signature_text = String::from_utf8(
+        STANDARD
+            .decode(encoded_signature)
+            .map_err(|error| format!("更新签名编码无效：{error}"))?,
+    )
+    .map_err(|error| format!("更新签名文本无效：{error}"))?;
+    let public_key = PublicKey::from_base64(UPDATER_PUBLIC_KEY)
+        .map_err(|error| format!("更新公钥无效：{error}"))?;
+    let signature =
+        Signature::decode(&signature_text).map_err(|error| format!("更新签名无效：{error}"))?;
+    public_key
+        .verify(bytes, &signature, true)
+        .map_err(|error| format!("更新包 minisign 校验失败：{error}"))
+}
+
+async fn probe_update_download(
+    source: &str,
+    update: &tauri_plugin_updater::Update,
+) -> Result<(), String> {
+    let url = if source == "gitee" {
+        GITEE_UPDATE_ARCHIVE
+    } else {
+        update.download_url.as_str()
+    };
+    let response = reqwest::Client::builder()
+        .user_agent("Cat-Canvas-Updater")
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|error| error.to_string())?
+        .get(url)
+        .header(reqwest::header::RANGE, "bytes=0-0")
+        .send()
+        .await
+        .map_err(|error| error.to_string())?
+        .error_for_status()
+        .map_err(|error| error.to_string())?;
+    let mut stream = response.bytes_stream();
+    match stream.next().await {
+        Some(Ok(chunk)) if !chunk.is_empty() => Ok(()),
+        Some(Err(error)) => Err(error.to_string()),
+        _ => Err("更新包下载端点未返回数据".into()),
+    }
+}
+
+async fn download_gitee_installer(
+    app: &AppHandle,
+    update: &tauri_plugin_updater::Update,
+) -> Result<Vec<u8>, String> {
+    let response = reqwest::Client::builder()
+        .user_agent("Cat-Canvas-Updater")
+        .timeout(Duration::from_secs(600))
+        .build()
+        .map_err(|error| error.to_string())?
+        .get(GITEE_UPDATE_ARCHIVE)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?
+        .error_for_status()
+        .map_err(|error| error.to_string())?;
+    let total = response.content_length();
+    let mut downloaded = 0u64;
+    let mut archive_bytes = Vec::new();
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|error| error.to_string())?;
+        downloaded += chunk.len() as u64;
+        archive_bytes.extend_from_slice(&chunk);
+        let _ = app.emit(
+            "desktop-update-progress",
+            UpdateProgress { downloaded, total },
+        );
+    }
+
+    let installer_suffix = format!("_{}_x64-setup.exe", update.version);
+    let mut archive = zip::ZipArchive::new(Cursor::new(archive_bytes))
+        .map_err(|error| format!("Gitee 更新包无法解压：{error}"))?;
+    for index in 0..archive.len() {
+        let mut file = archive
+            .by_index(index)
+            .map_err(|error| format!("Gitee 更新包读取失败：{error}"))?;
+        if file.is_file() && file.name().ends_with(&installer_suffix) {
+            let mut bytes = Vec::with_capacity(file.size() as usize);
+            file.read_to_end(&mut bytes)
+                .map_err(|error| format!("Gitee 安装器提取失败：{error}"))?;
+            verify_update_signature(&bytes, &update.signature)?;
+            return Ok(bytes);
+        }
+    }
+    Err("Gitee 更新包中未找到对应安装器".into())
+}
+
 #[tauri::command]
 async fn check_desktop_update(app: AppHandle) -> Result<UpdateInfo, String> {
     let current_version = app.package_info().version.to_string();
@@ -579,13 +715,45 @@ async fn check_desktop_update(app: AppHandle) -> Result<UpdateInfo, String> {
 }
 
 #[tauri::command]
-async fn download_desktop_update(app: AppHandle) -> Result<DownloadResult, String> {
-    update_log(&app, "download requested");
-    let update = app
-        .updater_builder()
-        .timeout(Duration::from_secs(20))
-        .build()
-        .map_err(|error| error.to_string())?
+async fn probe_update_source(app: AppHandle, source: String) -> UpdateSourceStatus {
+    let result = async {
+        let update = source_updater(&app, &source, Duration::from_secs(20))?
+            .check()
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok::<_, String>(match update {
+            Some(item) => {
+                probe_update_download(&source, &item).await?;
+                item.version
+            }
+            None => app.package_info().version.to_string(),
+        })
+    }
+    .await;
+    match result {
+        Ok(version) => UpdateSourceStatus {
+            source,
+            ok: true,
+            version,
+            error: String::new(),
+        },
+        Err(error) => UpdateSourceStatus {
+            source,
+            ok: false,
+            version: String::new(),
+            error,
+        },
+    }
+}
+
+#[tauri::command]
+async fn download_desktop_update(app: AppHandle, source: String) -> Result<DownloadResult, String> {
+    update_log(&app, &format!("download requested from {source}"));
+    *app.state::<DesktopState>()
+        .pending_update
+        .lock()
+        .map_err(|_| "更新状态锁已损坏")? = None;
+    let update = source_updater(&app, &source, Duration::from_secs(600))?
         .check()
         .await
         .map_err(|error| error.to_string())?
@@ -593,21 +761,25 @@ async fn download_desktop_update(app: AppHandle) -> Result<DownloadResult, Strin
     let expected_sha256 =
         manifest_sha256(&update).ok_or_else(|| "更新清单缺少 SHA-256".to_string())?;
     let version = update.version.clone();
-    let progress_app = app.clone();
-    let mut downloaded = 0u64;
-    let bytes = update
-        .download(
-            move |chunk, total| {
-                downloaded += chunk as u64;
-                let _ = progress_app.emit(
-                    "desktop-update-progress",
-                    UpdateProgress { downloaded, total },
-                );
-            },
-            || {},
-        )
-        .await
-        .map_err(|error| error.to_string())?;
+    let bytes = if source == "gitee" {
+        download_gitee_installer(&app, &update).await?
+    } else {
+        let progress_app = app.clone();
+        let mut downloaded = 0u64;
+        update
+            .download(
+                move |chunk, total| {
+                    downloaded += chunk as u64;
+                    let _ = progress_app.emit(
+                        "desktop-update-progress",
+                        UpdateProgress { downloaded, total },
+                    );
+                },
+                || {},
+            )
+            .await
+            .map_err(|error| error.to_string())?
+    };
     let actual_sha256 = format!("{:x}", Sha256::digest(&bytes));
     if actual_sha256 != expected_sha256 {
         return Err("更新包 SHA-256 校验失败".into());
@@ -617,6 +789,7 @@ async fn download_desktop_update(app: AppHandle) -> Result<DownloadResult, Strin
         .lock()
         .map_err(|_| "更新状态锁已损坏")? = Some(PendingUpdate {
         version: version.clone(),
+        source,
         bytes,
     });
     Ok(DownloadResult {
@@ -634,29 +807,40 @@ async fn install_desktop_update(app: AppHandle) -> Result<(), String> {
         .map_err(|_| "更新状态锁已损坏")?
         .take()
         .ok_or_else(|| "尚未下载更新包".to_string())?;
-    create_update_backup(&app)?;
-
-    let cleanup_app = app.clone();
-    let updater = app
-        .updater_builder()
-        .timeout(Duration::from_secs(20))
-        .on_before_exit(move || {
-            stop_backend(&cleanup_app);
-            cleanup_app.cleanup_before_exit();
-        })
-        .build()
-        .map_err(|error| error.to_string())?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|error| error.to_string())?
-        .ok_or_else(|| "更新版本已不可用".to_string())?;
-    if update.version != pending.version {
-        return Err("远端版本已变化，请重新下载".into());
+    let result = async {
+        create_update_backup(&app)?;
+        let cleanup_app = app.clone();
+        let updater = app
+            .updater_builder()
+            .endpoints(vec![update_endpoint(&pending.source)?])
+            .map_err(|error| error.to_string())?
+            .timeout(Duration::from_secs(20))
+            .on_before_exit(move || {
+                stop_backend(&cleanup_app);
+                cleanup_app.cleanup_before_exit();
+            })
+            .build()
+            .map_err(|error| error.to_string())?;
+        let update = updater
+            .check()
+            .await
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| "更新版本已不可用".to_string())?;
+        if update.version != pending.version {
+            return Err("远端版本已变化，请重新下载".into());
+        }
+        update
+            .install(&pending.bytes)
+            .map_err(|error| error.to_string())
     }
-    update
-        .install(&pending.bytes)
-        .map_err(|error| error.to_string())
+    .await;
+    if result.is_err() {
+        *app.state::<DesktopState>()
+            .pending_update
+            .lock()
+            .map_err(|_| "更新状态锁已损坏")? = Some(pending);
+    }
+    result
 }
 
 #[tauri::command]
@@ -722,6 +906,7 @@ pub fn run() {
             skip_legacy_import,
             import_legacy_data,
             check_desktop_update,
+            probe_update_source,
             download_desktop_update,
             install_desktop_update,
             open_backup_folder,

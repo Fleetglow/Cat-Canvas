@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$BundleDir,
     [string]$OutputDir = "",
-    [string]$Version = ""
+    [string]$Version = "",
+    [string]$ReleaseNotesFile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +32,17 @@ try {
 } finally {
     $stream.Dispose()
 }
-$notes = if ($env:RELEASE_NOTES) { $env:RELEASE_NOTES } else { "Cat Canvas $version" }
+$notes = if ($ReleaseNotesFile) {
+    [System.IO.File]::ReadAllText((Resolve-Path $ReleaseNotesFile), [System.Text.Encoding]::UTF8).Trim()
+} elseif ($env:RELEASE_NOTES) {
+    $env:RELEASE_NOTES
+} else {
+    "Cat Canvas $version"
+}
 $pubDate = (Get-Date).ToUniversalTime().ToString("o")
-$encodedName = [uri]::EscapeDataString($updateName)
+$encodedGiteeName = [uri]::EscapeDataString($updateName)
+$githubName = $updateName -replace ' ', '.'
+$encodedGithubName = [uri]::EscapeDataString($githubName)
 
 function Write-Manifest([string]$Path, [string]$Url) {
     $manifest = [ordered]@{
@@ -51,6 +60,6 @@ function Write-Manifest([string]$Path, [string]$Url) {
     [System.IO.File]::WriteAllText($Path, ($manifest | ConvertTo-Json -Depth 8), $utf8)
 }
 
-Write-Manifest (Join-Path $OutputDir "latest-github.json") "https://github.com/Fleetglow/Cat-Canvas/releases/download/v$version/$encodedName"
-Write-Manifest (Join-Path $OutputDir "latest-gitee.json") "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/$encodedName"
+Write-Manifest (Join-Path $OutputDir "latest-github.json") "https://github.com/Fleetglow/Cat-Canvas/releases/download/v$version/$encodedGithubName"
+Write-Manifest (Join-Path $OutputDir "latest-gitee.json") "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/$encodedGiteeName"
 Write-Host "Release artifacts ready: $OutputDir"

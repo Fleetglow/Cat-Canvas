@@ -13,6 +13,7 @@
     "allow-skip-legacy-import",
     "allow-import-legacy-data",
     "allow-check-desktop-update",
+    "allow-probe-update-source",
     "allow-download-desktop-update",
     "allow-install-desktop-update",
     "allow-open-backup-folder"

@@ -27,7 +27,12 @@ jobs:
 
       - name: 重新生成双源更新清单
         shell: pwsh
-        run: ./desktop/scripts/prepare-release.ps1 -BundleDir "desktop/download" -OutputDir "desktop/release" -Version "${{ inputs.version }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notesPath = Join-Path $env:RUNNER_TEMP "cat-canvas-release-notes.txt"
+          gh release view "v${{ inputs.version }}" -R Fleetglow/Cat-Canvas --json body --jq ".body" | Set-Content $notesPath -Encoding utf8NoBOM
+          ./desktop/scripts/prepare-release.ps1 -BundleDir "desktop/download" -OutputDir "desktop/release" -Version "${{ inputs.version }}" -ReleaseNotesFile $notesPath
 
       - name: 发布 GitHub/Gitee 更新通道
         shell: pwsh

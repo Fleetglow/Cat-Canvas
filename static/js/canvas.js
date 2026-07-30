@@ -35,8 +35,9 @@ window.addEventListener('message', event => {
         if(canvas) syncRemoteCanvasNow();
         // 没有打开画布时，尝试恢复上次的画布
         if(!canvas) {
-            const lastId = localStorage.getItem(LAST_CANVAS_ID_KEY);
-            if(lastId) openCanvas(lastId).catch(() => {});
+            loadLastCanvasId().then(lastId => {
+                if(lastId && !canvas) openCanvas(lastId).catch(() => {});
+            });
         }
     }
 });
@@ -272,6 +273,30 @@ const MANAGED_CHAT_MODELS_KEY = 'canvas_chat_models_ordered';
 const CANVAS_THEME_KEY = 'canvas_theme';
 const LAST_CANVAS_ID_KEY = 'canvas_last_id';
 const QUICK_TOOLBAR_COLLAPSED_KEY = 'canvas_quick_toolbar_collapsed';
+let desktopCanvasState = false;
+async function loadLastCanvasId(){
+    try {
+        const response = await fetch('/api/desktop-state', {cache:'no-store'});
+        if(response.ok){
+            desktopCanvasState = true;
+            const state = await response.json();
+            if(state.last_canvas_id) return String(state.last_canvas_id);
+        }
+    } catch(_) {}
+    return localStorage.getItem(LAST_CANVAS_ID_KEY) || '';
+}
+async function rememberLastCanvasId(id){
+    const value = String(id || '');
+    if(value) localStorage.setItem(LAST_CANVAS_ID_KEY, value);
+    else localStorage.removeItem(LAST_CANVAS_ID_KEY);
+    try {
+        await fetch('/api/desktop-state', {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({last_canvas_id:value})
+        });
+    } catch(_) {}
+}
 const DEFAULT_VIDEO_MODELS = [
     // Veo
     'veo2', 'veo2-fast', 'veo2-pro',
@@ -1186,6 +1211,7 @@ async function createCanvas(){
         resetCanvasHistory();
         selected.clear();
         setCanvasMode(true);
+        await rememberLastCanvasId(canvas.id);
         render();
         setStatus('Saved');
         setCreateMode(false);
@@ -1364,7 +1390,7 @@ async function openCanvasNow(id){
         render();
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
-        localStorage.setItem(LAST_CANVAS_ID_KEY, id);
+        await rememberLastCanvasId(id);
         setStatus('Ready');
     } catch(e) {
         setStatus(tr('canvas.openFailed'));
@@ -8683,11 +8709,16 @@ window.onload = async () => {
     applyViewport();
     await loadConfig();
     await loadCanvasList(false);
-    const lastId = localStorage.getItem(LAST_CANVAS_ID_KEY);
+    const lastId = await loadLastCanvasId();
     if(lastId && !canvas) {
         const exists = canvases.some(c => String(c.id) === String(lastId));
         if(exists) await openCanvas(lastId);
-        else setCanvasMode(false);
+        else {
+            await rememberLastCanvasId('');
+            setCanvasMode(false);
+        }
+    } else if(!canvas && desktopCanvasState && canvases[0]) {
+        await openCanvas(canvases[0].id);
     } else if(!canvas) {
         setCanvasMode(false);
     }
