@@ -220,6 +220,23 @@ function resetCanvasHistory(){
 const cascadeRunningIds = new Set();
 const cascadeStopIds = new Set();
 const cascadeSerialIds = new Set(); // 记录以串行循环模式启动的运行，用于停止按钮
+const RUN_BTN_COOLDOWN_MS = 5000;
+const runBtnCooldownUntil = new Map();
+function runBtnCooling(nodeId){
+    return Date.now() < (runBtnCooldownUntil.get(nodeId) || 0);
+}
+function armRunButtonCooldown(btn, nodeId){
+    const until = Date.now() + RUN_BTN_COOLDOWN_MS;
+    runBtnCooldownUntil.set(nodeId, until);
+    if(btn) btn.disabled = true;
+    setTimeout(() => {
+        if((runBtnCooldownUntil.get(nodeId) || 0) !== until) return;
+        runBtnCooldownUntil.delete(nodeId);
+        // 生成开始会 render 换掉旧按钮；不能只解禁旧 DOM，要刷新当前节点
+        if(typeof refreshNodes === 'function') refreshNodes([nodeId]);
+        else if(btn?.isConnected && !nodes.find(n => n.id === nodeId)?.running) btn.disabled = false;
+    }, RUN_BTN_COOLDOWN_MS);
+}
 let cropState = null;
 let cropDrag = null;
 let imageEditMode = 'crop';
@@ -4364,7 +4381,7 @@ function renderLLMNodePane(container, node){
             <div class="llm-output llm-result-output">${escapeHtml(node.outputText || tr('canvas.llmOutputEmpty'))}</div>
         </div>
         <div class="gen-run-row mt-2">
-            <button class="llm-run run-hover-fx ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : 'Run LLM'}</span></button>
+            <button class="llm-run run-hover-fx ${node.running ? 'running' : ''}" ${(node.running || runBtnCooling(node.id)) ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : 'Run LLM'}</span></button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -4376,7 +4393,13 @@ function renderLLMNodePane(container, node){
     }
     bindScrollableText(container.querySelector('.llm-result-output'));
     container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMPaneResize(e, node);
-    container.querySelector('.llm-run').onclick = e => { e.stopPropagation(); runLLMNode(node.id); };
+    const llmRunBtn = container.querySelector('.llm-run');
+    llmRunBtn.onclick = e => {
+        e.stopPropagation();
+        if(llmRunBtn.disabled || runBtnCooling(node.id)) return;
+        armRunButtonCooldown(llmRunBtn, node.id);
+        runLLMNode(node.id);
+    };
     bindCascadeButtons(container, node.id);
     const copyBtn = container.querySelector('.llm-output-copy');
     if(copyBtn){
@@ -4397,20 +4420,26 @@ function renderLLMChatPane(container, node){
     container.innerHTML = `
         <div class="llm-chat-log">${messages.length ? messages.map((msg, mi) => `<div class="llm-bubble ${msg.role === 'user' ? 'user' : 'assistant'}" data-msg-idx="${mi}">${escapeHtml(msg.content || '')}${msg.role === 'assistant' ? `<button class="llm-bubble-copy" type="button" title="复制"><i data-lucide="copy" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></button>` : ''}</div>`).join('') : `<div class="text-[11px] text-gray-300">${tr('canvas.startChat')}</div>`}</div>
         <textarea class="llm-chat-input mt-2" rows="2" placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
-        <button class="llm-run run-hover-fx mt-2" ${node.running ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</span></button>
+        <button class="llm-run run-hover-fx mt-2" ${(node.running || runBtnCooling(node.id)) ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</span></button>
     `;
     bindScrollableText(container.querySelector('.llm-chat-log'));
     bindScrollableText(container.querySelector('.llm-chat-input'));
     const chatInputEl = container.querySelector('.llm-chat-input');
+    const llmChatBtn = container.querySelector('.llm-run');
     chatInputEl.oninput = e => { node.chatInput = e.target.value; scheduleSave(); };
+    const triggerLLMChat = () => {
+        if(llmChatBtn.disabled || runBtnCooling(node.id)) return;
+        armRunButtonCooldown(llmChatBtn, node.id);
+        runLLMChat(node.id);
+    };
     chatInputEl.onkeydown = e => {
         if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){
             e.preventDefault();
             e.stopPropagation();
-            runLLMChat(node.id);
+            triggerLLMChat();
         }
     };
-    container.querySelector('.llm-run').onclick = e => { e.stopPropagation(); runLLMChat(node.id); };
+    llmChatBtn.onclick = e => { e.stopPropagation(); triggerLLMChat(); };
     container.querySelectorAll('.llm-bubble-copy').forEach(btn => {
         btn.onmousedown = e => e.stopPropagation();
         btn.onclick = async e => {
@@ -4635,7 +4664,7 @@ function renderGeneratorBody(node){
             </div>
         </div>
         <div class="gen-run-row">
-            <button class="gen-btn run-hover-fx"><span class="run-hover-content"><i data-lucide="zap" class="w-4 h-4"></i>${tr('canvas.apiGenerate')}</span></button>
+            <button class="gen-btn run-hover-fx" ${runBtnCooling(node.id) ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="zap" class="w-4 h-4"></i>${tr('canvas.apiGenerate')}</span></button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -4862,7 +4891,13 @@ function renderGeneratorBody(node){
     const list = wrap.querySelector('.input-list');
     renderImageInputList(list, node, imageInputs);
     renderPromptPreview(wrap.querySelector('.prompt-list'), promptInputs);
-    wrap.querySelector('.gen-btn').onclick = e => { e.stopPropagation(); runCanvasGenerate(node.id); };
+    const genBtn = wrap.querySelector('.gen-btn');
+    genBtn.onclick = e => {
+        e.stopPropagation();
+        if(genBtn.disabled || runBtnCooling(node.id)) return;
+        armRunButtonCooldown(genBtn, node.id);
+        runCanvasGenerate(node.id);
+    };
     bindCascadeButtons(wrap, node.id);
     return wrap;
 }
@@ -4924,7 +4959,7 @@ function renderVideoBody(node){
             </div>
         </div>
         <div class="gen-run-row">
-            <button class="gen-btn run-hover-fx ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="clapperboard" class="w-4 h-4"></i>${node.running ? tr('canvas.generating') : tr('canvas.videoGenerate')}</span></button>
+            <button class="gen-btn run-hover-fx ${node.running ? 'running' : ''}" ${(node.running || runBtnCooling(node.id)) ? 'disabled' : ''}><span class="run-hover-content"><i data-lucide="clapperboard" class="w-4 h-4"></i>${node.running ? tr('canvas.generating') : tr('canvas.videoGenerate')}</span></button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -4968,7 +5003,13 @@ function renderVideoBody(node){
     const list = wrap.querySelector('.video-img-list');
     renderVideoImageInputs(list, node, imageInputs);
     renderPromptPreview(wrap.querySelector('.prompt-list'), promptInputs);
-    wrap.querySelector('.gen-btn').onclick = e => { e.stopPropagation(); runCanvasGenerate(node.id); };
+    const videoGenBtn = wrap.querySelector('.gen-btn');
+    videoGenBtn.onclick = e => {
+        e.stopPropagation();
+        if(videoGenBtn.disabled || runBtnCooling(node.id)) return;
+        armRunButtonCooldown(videoGenBtn, node.id);
+        runCanvasGenerate(node.id);
+    };
     bindCascadeButtons(wrap, node.id);
     return wrap;
 }
