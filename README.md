@@ -32,8 +32,8 @@
 - 当前没有购买 Windows Authenticode 证书，首次安装会显示“未知发布者”；更新包仍强制使用 Tauri minisign 密钥和 SHA-256 双重校验。
 - 应用启动后静默检查更新，有新版时在侧栏显示目标版本。
 - 点击新版提示会打开更新弹窗，展示更新内容、GitHub/Gitee 下载源及连接状态。
-- 用户确认后下载，弹窗实时显示进度；下载并完成 minisign 与 SHA-256 校验后，再由用户确认重启安装。
-- GitHub Release 为主更新源，Gitee `desktop-updates` 分支为备用下载镜像；两边使用同一份签名构建产物。
+- 用户点击“开始更新”后下载，弹窗实时显示进度；下载并完成 minisign 与 SHA-256 校验后自动备份并重启安装。
+- GitHub Release 为主更新源；Gitee `desktop-updates` 分支保存同一安装器的 4MB 分块，客户端拼接后执行相同签名与哈希校验。
 - 更新前自动备份 `Projects` 和 `Config`，仅保留最近 3 份。
 - 每次 NSIS 安装都会把安装器复制到 `文档\Cat Canvas\Backups\Installers\`，桌面程序只保留最近 2 份。
 - 新版本异常时可运行上一版安装器覆盖安装，并从 `Backups\Updates\` 手动恢复对应数据快照。
@@ -73,10 +73,10 @@ GitHub Actions 需要配置以下仓库 Secrets：
 1. 修改根目录 `VERSION`，例如 `0.1.0` → `0.1.1`。
 2. 运行 `./desktop/scripts/sync-version.ps1`，同步 Tauri、Cargo 和 npm 版本。
 3. 提交代码后创建同版本标签，例如 `v0.1.1`。
-4. 推送标签，`.github/workflows/desktop-release.yml` 会构建一次，发布 GitHub Release，并把同一安装器、签名和更新清单镜像到 Gitee `desktop-updates` 分支。
+4. 推送标签，`.github/workflows/desktop-release.yml` 会构建一次，发布 GitHub Release，并把同一安装器的分块、签名和更新清单镜像到 Gitee `desktop-updates` 分支。
 5. 工作流最后更新两个远程的 `desktop-updates` 分支；更新清单最后发布，避免客户端看到尚未上传完成的版本。
 
-`0.1.0` 缺少 localhost 页面调用桌面更新命令的 Tauri ACL 权限，因此首次升级需要手动安装修正版 `0.1.1`。`0.1.1` 已能检测更新，但旧按钮事件无法启动下载，需手动安装最终版 `0.1.2`；从 `0.1.2` 开始使用更新弹窗、双源选择、下载进度和独立日志验证后续自动更新。多画布标签页计划放在 `0.2.0`。
+当前稳定桌面版为 `0.1.8`：支持更新弹窗、GitHub/Gitee 双源、Gitee 静态分块、下载进度、minisign/SHA-256 校验、更新前备份及校验成功后自动重启安装。保留 `0.1.0` 作为首个桌面版基线；多画布标签页计划放在 `0.2.0`。
 
 ---------------------
 
@@ -86,7 +86,8 @@ GitHub Actions 需要配置以下仓库 Secrets：
 
 ### 🎨 优化
 
-* **桌面更新弹窗**：发现新版本后展示版本说明、GitHub/Gitee 下载源及连接测试，下载期间实时显示百分比和已下载大小，校验完成后再确认重启安装
+* **更新后自动安装**：用户点击“开始更新”即确认完整更新流程，下载和双重校验成功后自动备份并重启安装，无需再次点击
+* **桌面更新弹窗**：发现新版本后展示版本说明、GitHub/Gitee 下载源及连接测试，下载期间实时显示百分比和已下载大小
 * **启动恢复上次画布**：桌面端将最后打开的画布 ID 持久化到 Documents 配置，不再受随机 localhost 端口导致的 localStorage 隔离影响
 * **更新检查反馈**：检查按钮明确显示检查中、最新版、发现更新或网络故障；悬停始终显示当前版本和操作状态
 * **桌面图标分离**：应用程序、窗口和快捷方式使用猫头像图标，NSIS 安装包单独使用猫盒图标；两套资源均包含完整 Windows 多尺寸 ICO
@@ -94,7 +95,8 @@ GitHub Actions 需要配置以下仓库 Secrets：
 
 ### 🐛 修复
 
-* **更新下载源可用性**：修正 GitHub Release 实际附件文件名，并让 Gitee 源从可访问的分支归档提取安装器后执行相同 minisign 与 SHA-256 校验
+* **Gitee 静态分块下载**：安装器发布为 4MB 分块，客户端按清单下载并拼接完整安装器，避开 raw 大文件限制和动态归档人机验证
+* **更新下载源可用性**：修正 GitHub Release 实际附件文件名；GitHub 整包与 Gitee 分块重组结果执行相同 minisign 与 SHA-256 校验
 * **sidecar 打包稳定性**：排除未使用且可能被 PyInstaller 错误收集的 Brotli 可选模块，构建前及 NSIS 覆盖安装前强制清理旧后端资源，并在 CI 中启动 `/api/health` 烟测
 * **桌面自动更新权限**：为 localhost 页面显式授权更新检查、下载、安装及备份命令，并加入 20 秒超时和 `%LOCALAPPDATA%\com.fleetglow.catcanvas\Logs\updater.log` 诊断日志
 * **桌面文件拖入画布**：关闭 Tauri 原生拖放接管，恢复从资源管理器拖入图片到画布

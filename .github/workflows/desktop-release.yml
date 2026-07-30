@@ -65,6 +65,7 @@ jobs:
       - name: 整理发布产物与双源清单
         shell: pwsh
         run: |
+          git fetch origin "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}" --force
           $notesPath = Join-Path $env:RUNNER_TEMP "cat-canvas-release-notes.txt"
           git -c i18n.logOutputEncoding=utf-8 tag -l --format="%(contents)" "${{ github.ref_name }}" | Set-Content $notesPath -Encoding utf8NoBOM
           ./desktop/scripts/prepare-release.ps1 -BundleDir "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle" -ReleaseNotesFile $notesPath
@@ -73,7 +74,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Cat Canvas ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/cat-canvas-release-notes.txt
           files: |
             desktop/release/*.exe
             desktop/release/*.sig

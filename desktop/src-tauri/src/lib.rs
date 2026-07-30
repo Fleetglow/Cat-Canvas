@@ -6,7 +6,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::{BufRead, BufReader, Cursor, Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -27,8 +27,6 @@ const GITHUB_UPDATE_ENDPOINT: &str =
     "https://raw.githubusercontent.com/Fleetglow/Cat-Canvas/desktop-updates/latest-github.json";
 const GITEE_UPDATE_ENDPOINT: &str =
     "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/latest-gitee.json";
-const GITEE_UPDATE_ARCHIVE: &str =
-    "https://gitee.com/hnz4796/Cat-Canvas/repository/archive/desktop-updates.zip";
 const UPDATER_PUBLIC_KEY: &str = "RWTQHQVhO41rHdw+VdoEuKr250hBZgKWj28KFES/csCm6FYK1sqkFh7h";
 
 #[derive(Clone, Serialize)]
@@ -542,18 +540,39 @@ fn create_update_backup(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(target)
 }
 
-fn manifest_sha256(update: &tauri_plugin_updater::Update) -> Option<String> {
-    let platforms = update.raw_json.get("platforms")?.as_object()?;
-    platforms
+fn manifest_platform(update: &tauri_plugin_updater::Update) -> Option<&serde_json::Value> {
+    update
+        .raw_json
+        .get("platforms")?
+        .as_object()?
         .values()
         .find(|platform| {
             platform.get("url").and_then(|value| value.as_str())
                 == Some(update.download_url.as_str())
         })
+}
+
+fn manifest_sha256(update: &tauri_plugin_updater::Update) -> Option<String> {
+    manifest_platform(update)
         .and_then(|platform| platform.get("sha256"))
         .or_else(|| update.raw_json.get("sha256"))
         .and_then(|value| value.as_str())
         .map(|value| value.trim().to_ascii_lowercase())
+}
+
+fn manifest_parts(update: &tauri_plugin_updater::Update) -> Option<Vec<String>> {
+    Some(
+        manifest_platform(update)?
+            .get("parts")?
+            .as_array()?
+            .iter()
+            .map(|value| value.as_str().map(str::to_owned))
+            .collect::<Option<_>>()?,
+    )
+}
+
+fn manifest_size(update: &tauri_plugin_updater::Update) -> Option<u64> {
+    manifest_platform(update)?.get("size")?.as_u64()
 }
 
 fn update_endpoint(source: &str) -> Result<url::Url, String> {
@@ -601,9 +620,11 @@ async fn probe_update_download(
     update: &tauri_plugin_updater::Update,
 ) -> Result<(), String> {
     let url = if source == "gitee" {
-        GITEE_UPDATE_ARCHIVE
+        manifest_parts(update)
+            .and_then(|parts| parts.into_iter().next())
+            .ok_or_else(|| "Gitee 更新清单缺少分块地址".to_string())?
     } else {
-        update.download_url.as_str()
+        update.download_url.to_string()
     };
     let response = reqwest::Client::builder()
         .user_agent("Cat-Canvas-Updater")
@@ -629,47 +650,44 @@ async fn download_gitee_installer(
     app: &AppHandle,
     update: &tauri_plugin_updater::Update,
 ) -> Result<Vec<u8>, String> {
-    let response = reqwest::Client::builder()
+    let parts = manifest_parts(update).ok_or_else(|| "Gitee 更新清单缺少分块地址".to_string())?;
+    let total = manifest_size(update).ok_or_else(|| "Gitee 更新清单缺少文件大小".to_string())?;
+    let client = reqwest::Client::builder()
         .user_agent("Cat-Canvas-Updater")
         .timeout(Duration::from_secs(600))
         .build()
-        .map_err(|error| error.to_string())?
-        .get(GITEE_UPDATE_ARCHIVE)
-        .send()
-        .await
-        .map_err(|error| error.to_string())?
-        .error_for_status()
         .map_err(|error| error.to_string())?;
-    let total = response.content_length();
     let mut downloaded = 0u64;
-    let mut archive_bytes = Vec::new();
-    let mut stream = response.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|error| error.to_string())?;
-        downloaded += chunk.len() as u64;
-        archive_bytes.extend_from_slice(&chunk);
-        let _ = app.emit(
-            "desktop-update-progress",
-            UpdateProgress { downloaded, total },
-        );
-    }
-
-    let installer_suffix = format!("_{}_x64-setup.exe", update.version);
-    let mut archive = zip::ZipArchive::new(Cursor::new(archive_bytes))
-        .map_err(|error| format!("Gitee 更新包无法解压：{error}"))?;
-    for index in 0..archive.len() {
-        let mut file = archive
-            .by_index(index)
-            .map_err(|error| format!("Gitee 更新包读取失败：{error}"))?;
-        if file.is_file() && file.name().ends_with(&installer_suffix) {
-            let mut bytes = Vec::with_capacity(file.size() as usize);
-            file.read_to_end(&mut bytes)
-                .map_err(|error| format!("Gitee 安装器提取失败：{error}"))?;
-            verify_update_signature(&bytes, &update.signature)?;
-            return Ok(bytes);
+    let mut bytes = Vec::with_capacity(total as usize);
+    for url in parts {
+        let response = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|error| error.to_string())?
+            .error_for_status()
+            .map_err(|error| error.to_string())?;
+        let mut stream = response.bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|error| error.to_string())?;
+            downloaded += chunk.len() as u64;
+            bytes.extend_from_slice(&chunk);
+            let _ = app.emit(
+                "desktop-update-progress",
+                UpdateProgress {
+                    downloaded,
+                    total: Some(total),
+                },
+            );
         }
     }
-    Err("Gitee 更新包中未找到对应安装器".into())
+    if downloaded != total {
+        return Err(format!(
+            "Gitee 更新分块不完整：应为 {total} 字节，实际 {downloaded} 字节"
+        ));
+    }
+    verify_update_signature(&bytes, &update.signature)?;
+    Ok(bytes)
 }
 
 #[tauri::command]
@@ -761,8 +779,8 @@ async fn download_desktop_update(app: AppHandle, source: String) -> Result<Downl
     let expected_sha256 =
         manifest_sha256(&update).ok_or_else(|| "更新清单缺少 SHA-256".to_string())?;
     let version = update.version.clone();
-    let bytes = if source == "gitee" {
-        download_gitee_installer(&app, &update).await?
+    let bytes = match if source == "gitee" {
+        download_gitee_installer(&app, &update).await
     } else {
         let progress_app = app.clone();
         let mut downloaded = 0u64;
@@ -778,12 +796,22 @@ async fn download_desktop_update(app: AppHandle, source: String) -> Result<Downl
                 || {},
             )
             .await
-            .map_err(|error| error.to_string())?
+            .map_err(|error| error.to_string())
+    } {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            update_log(&app, &format!("download failed from {source}: {error}"));
+            return Err(error);
+        }
     };
     let actual_sha256 = format!("{:x}", Sha256::digest(&bytes));
     if actual_sha256 != expected_sha256 {
         return Err("更新包 SHA-256 校验失败".into());
     }
+    update_log(
+        &app,
+        &format!("download verified from {source}: {version} {actual_sha256}"),
+    );
     *app.state::<DesktopState>()
         .pending_update
         .lock()

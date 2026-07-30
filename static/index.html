@@ -1367,7 +1367,7 @@
             const modal = document.getElementById('desktop-update-modal');
             document.getElementById('desktop-update-version').textContent = desktopUpdateInfo.version || '';
             document.getElementById('desktop-update-notes-version').textContent = `v${desktopUpdateInfo.version || ''}`;
-            document.getElementById('desktop-update-summary').textContent = `将 Cat Canvas 从 v${desktopCurrentVersion || desktopUpdateInfo.currentVersion} 更新到 v${desktopUpdateInfo.version}。更新前会自动备份画布与配置，安装完成后应用会自动重启。`;
+            document.getElementById('desktop-update-summary').textContent = `将 Cat Canvas 从 v${desktopCurrentVersion || desktopUpdateInfo.currentVersion} 更新到 v${desktopUpdateInfo.version}。点击“开始更新”后会下载并校验更新，成功后自动备份画布与配置并重启安装。`;
             document.getElementById('desktop-update-notes').textContent = String(desktopUpdateInfo.notes || '').trim() || '稳定性改进与桌面体验优化。';
             const start = document.getElementById('desktop-update-start');
             if(start) start.textContent = desktopUpdateDownloaded ? '重启并安装' : '开始更新';
@@ -1457,6 +1457,25 @@
             await checkDesktopUpdate(true);
         }
 
+        async function installDownloadedDesktopUpdate(start, status, detail) {
+            setDesktopUpdateModalBusy(true);
+            if(start) start.textContent = '正在重启安装…';
+            if(status) status.textContent = '下载并校验完成';
+            if(detail) detail.textContent = '正在创建备份并启动安装器';
+            setDesktopUpdateText('正在安装…', true);
+            setDesktopUpdateTip(`正在安装 ${desktopUpdateInfo?.version || ''}`);
+            try { await desktopInvoke('install_desktop_update'); }
+            catch(error) {
+                const message = desktopUpdateErrorMessage(error);
+                if(status) status.textContent = '安装启动失败';
+                if(detail) detail.textContent = message;
+                if(start) start.textContent = '重试安装';
+                setDesktopUpdateText('重试安装更新', true);
+                setDesktopUpdateTip(message);
+                setDesktopUpdateModalBusy(false);
+            }
+        }
+
         async function startDesktopUpdate() {
             if(desktopUpdateBusy) return;
             const start = document.getElementById('desktop-update-start');
@@ -1464,17 +1483,7 @@
             const status = document.getElementById('desktop-update-progress-status');
             const detail = document.getElementById('desktop-update-progress-detail');
             if(desktopUpdateDownloaded) {
-                setDesktopUpdateModalBusy(true);
-                if(start) start.textContent = '正在重启安装…';
-                if(status) status.textContent = '正在创建备份并启动安装器';
-                try { await desktopInvoke('install_desktop_update'); }
-                catch(error) {
-                    const message = desktopUpdateErrorMessage(error);
-                    if(status) status.textContent = '安装启动失败';
-                    if(detail) detail.textContent = message;
-                    if(start) start.textContent = '重试安装';
-                    setDesktopUpdateModalBusy(false);
-                }
+                await installDownloadedDesktopUpdate(start, status, detail);
                 return;
             }
 
@@ -1482,21 +1491,11 @@
             if(progress) progress.hidden = false;
             if(start) start.textContent = '正在下载…';
             if(status) status.textContent = `正在从 ${desktopUpdateSource === 'gitee' ? 'Gitee' : 'GitHub'} 下载`;
-            if(detail) detail.textContent = '下载完成后将自动校验 SHA-256 与 minisign 签名';
+            if(detail) detail.textContent = '下载后将校验 SHA-256 与 minisign 签名，成功后自动重启安装';
             setDesktopUpdateText('正在下载…', true);
             setDesktopUpdateTip(`正在从 ${desktopUpdateSource} 下载 ${desktopUpdateInfo.version}`);
             try {
                 await desktopInvoke('download_desktop_update', {source:desktopUpdateSource});
-                desktopUpdateDownloaded = true;
-                const bar = document.getElementById('desktop-update-progress-bar');
-                const percent = document.getElementById('desktop-update-progress-percent');
-                if(bar) bar.style.width = '100%';
-                if(percent) percent.textContent = '100%';
-                if(status) status.textContent = '下载并校验完成';
-                if(detail) detail.textContent = '点击“重启并安装”，应用会先备份数据再自动重启。';
-                if(start) start.textContent = '重启并安装';
-                setDesktopUpdateText('重启安装更新', true);
-                setDesktopUpdateTip(`更新 ${desktopUpdateInfo.version} 已下载并校验完成`);
             } catch(error) {
                 const message = desktopUpdateErrorMessage(error);
                 if(status) status.textContent = '下载更新失败';
@@ -1504,9 +1503,16 @@
                 if(start) start.textContent = '重新下载';
                 setDesktopUpdateText(message.startsWith('网络') ? '网络故障' : `更新到 ${desktopUpdateInfo.version}`, true);
                 setDesktopUpdateTip(message);
-            } finally {
                 setDesktopUpdateModalBusy(false);
+                return;
             }
+
+            desktopUpdateDownloaded = true;
+            const bar = document.getElementById('desktop-update-progress-bar');
+            const percent = document.getElementById('desktop-update-progress-percent');
+            if(bar) bar.style.width = '100%';
+            if(percent) percent.textContent = '100%';
+            await installDownloadedDesktopUpdate(start, status, detail);
         }
 
         window.__TAURI__?.event?.listen?.('desktop-update-progress', event => {

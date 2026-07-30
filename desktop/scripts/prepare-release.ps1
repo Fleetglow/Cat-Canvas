@@ -40,26 +40,46 @@ $notes = if ($ReleaseNotesFile) {
     "Cat Canvas $version"
 }
 $pubDate = (Get-Date).ToUniversalTime().ToString("o")
-$encodedGiteeName = [uri]::EscapeDataString($updateName)
 $githubName = $updateName -replace ' ', '.'
 $encodedGithubName = [uri]::EscapeDataString($githubName)
+$giteeParts = @()
+$partSize = 4MB
+$source = [System.IO.File]::OpenRead($installer.FullName)
+try {
+    $index = 0
+    $buffer = [byte[]]::new($partSize)
+    while (($count = $source.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        $partName = "$githubName.part$($index.ToString('000'))"
+        $partPath = Join-Path $OutputDir $partName
+        $part = [byte[]]::new($count)
+        [System.Array]::Copy($buffer, $part, $count)
+        [System.IO.File]::WriteAllBytes($partPath, $part)
+        $giteeParts += "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/$([uri]::EscapeDataString($partName))"
+        $index++
+    }
+} finally {
+    $source.Dispose()
+}
 
-function Write-Manifest([string]$Path, [string]$Url) {
+function Write-Manifest([string]$Path, [string]$Url, [string[]]$Parts = @()) {
+    $platform = [ordered]@{
+        url = $Url
+        signature = $signature
+        sha256 = $sha256
+    }
+    if ($Parts.Count -gt 0) {
+        $platform.parts = $Parts
+        $platform.size = $installer.Length
+    }
     $manifest = [ordered]@{
         version = $version
         notes = $notes
         pub_date = $pubDate
-        platforms = [ordered]@{
-            "windows-x86_64" = [ordered]@{
-                url = $Url
-                signature = $signature
-                sha256 = $sha256
-            }
-        }
+        platforms = [ordered]@{ "windows-x86_64" = $platform }
     }
     [System.IO.File]::WriteAllText($Path, ($manifest | ConvertTo-Json -Depth 8), $utf8)
 }
 
 Write-Manifest (Join-Path $OutputDir "latest-github.json") "https://github.com/Fleetglow/Cat-Canvas/releases/download/v$version/$encodedGithubName"
-Write-Manifest (Join-Path $OutputDir "latest-gitee.json") "https://gitee.com/hnz4796/Cat-Canvas/raw/desktop-updates/$encodedGiteeName"
+Write-Manifest (Join-Path $OutputDir "latest-gitee.json") $giteeParts[0] $giteeParts
 Write-Host "Release artifacts ready: $OutputDir"
