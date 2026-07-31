@@ -86,6 +86,11 @@
 
         body.canvas-board-pan,
         body.canvas-board-pan * { cursor:grabbing !important; user-select:none !important; }
+        /* ponytail: pan 时降低节点阴影复杂度，阴影模糊半径是每帧光栅化的主要开销。
+           不用 transform/will-change：transform 会覆盖 JS 设的 viewport，
+           will-change 在 6000×4000 上会强制提升约 96MB 纹理。 */
+        /* body.canvas-board-pan .node { box-shadow:none; }
+        body.canvas-board-pan .node::before { display:none; } */
         .world { position:absolute; left:0; top:0; width:6000px; height:4000px; transform-origin:0 0; }
         .links { position:absolute; inset:0; width:6000px; height:4000px; overflow:visible; pointer-events:none; z-index:1; }
         .link { stroke:var(--faint); stroke-width:2.5; fill:none; opacity:.82; pointer-events:none; }

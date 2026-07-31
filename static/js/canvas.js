@@ -207,6 +207,10 @@ let loopContext = null;
 let clipboard = {nodes:[], connections:[]};
 let lastImagePasteAt = 0;
 const activeCanvasTaskPolls = new Set();
+let renderLinksRafPending = false;
+let renderSelectionHubRafPending = false;
+const linkDomById = new Map();
+let tempLinkPath = null;
 let hoveredConnectionId = '';
 let lastMouseBoard = {x: 0, y: 0};
 let undoStack = [];
@@ -811,8 +815,7 @@ function setCanvasMode(open){
     shell.classList.toggle('no-canvas', !open);
     if(!open){
         nodesEl.innerHTML = '';
-        linksEl.innerHTML = '';
-        linkControlsEl.innerHTML = '';
+        clearLinkDomCache();
         selectionHub.classList.remove('open');
     } else if(currentCanvasTitle) {
         currentCanvasTitle.textContent = canvas?.title || tr('canvas.untitled');
@@ -848,7 +851,7 @@ function screenToWorld(clientX, clientY){
 }
 function applyViewport(){
     world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
-    scheduleMinimapRender();
+    // ponytail: pan 中不更新小地图，每帧 N 次 querySelector 是卡顿主因，停手后补
     if(zoomPercentLabel) zoomPercentLabel.textContent = Math.round((viewport.scale || 1) * 100) + '%';
 }
 function estimatedNodeRect(n){
@@ -891,7 +894,7 @@ function scheduleMinimapRender(){
     });
 }
 function renderMinimap(){
-    if(!minimapContent || !minimapViewport) return;
+    if(!minimapContent) return;
     const bounds = minimapBounds();
     const cw = minimapContent.clientWidth || 172;
     const ch = minimapContent.clientHeight || 110;
@@ -938,10 +941,37 @@ function refreshGeometry(){
     renderLinks();
     renderSelectionHub();
 }
-function refreshGeometryAfterLayout(){
+/* 拖拽/缩放等高频路径用 RAF 合帧：鼠标事件可能 200Hz，渲染没必要超过屏幕刷新率。
+   节点自身位置仍然在事件里同步改，保证跟手；只有连线和选区框跟着合帧重画。 */
+function scheduleRenderLinks(){
+    if(renderLinksRafPending) return;
+    renderLinksRafPending = true;
     requestAnimationFrame(() => {
+        renderLinksRafPending = false;
+        renderLinks();
+    });
+}
+function scheduleRenderSelectionHub(){
+    if(renderSelectionHubRafPending) return;
+    renderSelectionHubRafPending = true;
+    requestAnimationFrame(() => {
+        renderSelectionHubRafPending = false;
+        renderSelectionHub();
+    });
+}
+function scheduleGeometry(){
+    scheduleRenderLinks();
+    scheduleRenderSelectionHub();
+}
+function refreshGeometryAfterLayout(){
+    // 图片/字体加载会改高度，每帧重采端口偏移后再画连线
+    requestAnimationFrame(() => {
+        cachePortPositions();
         refreshGeometry();
-        requestAnimationFrame(refreshGeometry);
+        requestAnimationFrame(() => {
+            cachePortPositions();
+            refreshGeometry();
+        });
     });
 }
 function scheduleSave(){
@@ -1462,6 +1492,7 @@ async function openCanvasNow(id){
         setCanvasMode(true);
         renderCanvasList();
         render();
+        scheduleMinimapRender(); // ponytail: 初始加载后立即渲染小地图
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
         await rememberLastCanvasId(id);
@@ -1805,7 +1836,11 @@ backToManagerBtn.addEventListener('click', returnToCanvasManager);
 function addNode(node){
     if(!ensureCanvas()) return;
     nodes.push(node);
-    render();
+    // ponytail: 只插新节点 DOM，不重建全部。旧节点 DOM 未变，无需碰
+    nodesEl.appendChild(renderNode(node));
+    refreshGeometry();
+    refreshGeometryAfterLayout();
+    refreshIcons();
     scheduleSave();
     return node;
 }
@@ -3358,17 +3393,56 @@ function applyImageEdit(){
     return applyImageCrop();
 }
 
+// ponytail: 平移/缩放后补渲染新进入视口的节点。
+// RAF 合帧 + 300ms 防抖：滚轮连续缩放时不堆积 render，停手后补一次
+let viewportCullRaf = 0;
+let viewportCullDebounce = 0;
+function scheduleViewportCull(){
+    // ponytail: 小地图立即更新（不等 300ms），视口裁剪 300ms 后再跑
+    scheduleMinimapRender();
+    clearTimeout(viewportCullDebounce);
+    viewportCullDebounce = setTimeout(() => {
+        if(viewportCullRaf) return;
+        viewportCullRaf = requestAnimationFrame(() => {
+            viewportCullRaf = 0;
+            render();
+        });
+    }, 300);
+}
 function render(){
     const outputScrolls = captureOutputScrolls();
     applyViewport();
+    
+    // ponytail: 视口裁剪 — 只渲染可见区域节点，图片多时避免全量 DOM 重建
+    // 边距取一屏：pan 中不补渲染，靠这层缓冲避免拖出空白
+    // 尺寸走纯数据不查 DOM，边距足够吸收估算误差
+    const view = currentWorldViewRect();
+    const mx = Math.max(view.w, 600), my = Math.max(view.h, 600);
+    const x0 = view.x - mx, x1 = view.x + view.w + mx;
+    const y0 = view.y - my, y1 = view.y + view.h + my;
+    const visibleNodes = nodes.filter(n => {
+        const size = defaultNodeSize(n.type);
+        const w = n.w || size.w || 260, h = n.h || size.h || 160;
+        const nx = n.x || 0, ny = n.y || 0;
+        return nx + w >= x0 && nx <= x1 && ny + h >= y0 && ny <= y1;
+    });
+    
     nodesEl.innerHTML = '';
-    nodes.forEach(node => nodesEl.appendChild(renderNode(node)));
+    const nodesFrag = document.createDocumentFragment();
+    visibleNodes.forEach(node => nodesFrag.appendChild(renderNode(node)));
+    nodesEl.appendChild(nodesFrag);
     restoreOutputScrolls(outputScrolls);
+    
+    // ponytail: 节点刷新后立即缓存端口世界坐标，renderLinks 不再每帧查 DOM
+    cachePortPositions();
+    
     refreshGeometry();
     refreshGeometryAfterLayout();
     refreshSelectionLayoutToolbar();
     refreshIcons();
     refreshOutputTimer();
+    // ponytail: render 后立即补小地图，否则打开画布或删除节点后小地图是空的
+    scheduleMinimapRender();
 }
 function refreshNodes(ids=[]){
     const uniqueIds = [...new Set((ids || []).filter(Boolean))];
@@ -3381,10 +3455,8 @@ function refreshNodes(ids=[]){
         if(!node) continue;
         if(node.type === 'output' && refreshOutputNodeContent(node)) continue;
         const current = nodesEl.querySelector(`.node[data-id="${CSS.escape(id)}"]`);
-        if(!current){
-            render();
-            return;
-        }
+        // ponytail: 无 DOM = 被视口裁剪，看不见就不用渲染，跳过即可
+        if(!current) continue;
         current.replaceWith(renderNode(node));
         if(node.type === 'generator') resizedGenerators.push(node);
     }
@@ -3899,6 +3971,7 @@ function fitGeneratorNodeHeight(node, saveHistory=true){
     node.h = height;
     el.classList.add('sized');
     el.style.height = `${node.h}px`;
+    invalidatePortCache(node.id); // 高度变 → 端口垂直居中位置变
     refreshGeometry();
     scheduleMinimapRender();
     scheduleSave();
@@ -5926,7 +5999,6 @@ function deleteConnection(id, event){
     if(hoveredConnectionId === id) hoveredConnectionId = '';
     syncGeneratorInputs();
     render();
-    renderLinks();
     scheduleSave();
 }
 function outputDownloadName(url){
@@ -7365,7 +7437,7 @@ function startSelectionLink(e, kind){
     e.stopPropagation();
     const p = screenToWorld(e.clientX, e.clientY);
     tempLink = {from:`selection:${kind}`, x1:p.x, y1:p.y, x2:p.x, y2:p.y};
-    window.onmousemove = e2 => { const next = screenToWorld(e2.clientX, e2.clientY); tempLink.x2 = next.x; tempLink.y2 = next.y; renderLinks(); };
+    window.onmousemove = e2 => { const next = screenToWorld(e2.clientX, e2.clientY); tempLink.x2 = next.x; tempLink.y2 = next.y; scheduleRenderLinks(); };
     window.onmouseup = e2 => {
         const targetPort = nearestPort(e2.clientX, e2.clientY, 'in');
         const target = targetPort?.closest('.generator-node');
@@ -7595,8 +7667,7 @@ function onNodeDrag(e){
             childEl.style.top = `${childDrag.node.y}px`;
         }
     });
-    renderLinks();
-    renderSelectionHub();
+    scheduleGeometry();
     scheduleMinimapRender();
 }
 function startNodeResize(e, node){
@@ -7641,8 +7712,9 @@ function onNodeResize(e){
             });
         }
     }
-    renderLinks();
-    renderSelectionHub();
+    // resize 改尺寸 → 端口偏移失效（out 贴右边、垂直居中）
+    invalidatePortCache(resizeNode.node.id);
+    scheduleGeometry();
     scheduleMinimapRender();
 }
 function startLink(e, originId, originKind){
@@ -7655,7 +7727,7 @@ function startLink(e, originId, originKind){
         const p = screenToWorld(e2.clientX, e2.clientY);
         tempLink.x2 = p.x;
         tempLink.y2 = p.y;
-        renderLinks();
+        scheduleRenderLinks();
     };
     window.onmouseup = e2 => {
         const targetKind = originKind === 'out' ? 'in' : 'out';
@@ -7690,7 +7762,7 @@ function startLink(e, originId, originKind){
         tempLink = null;
         window.onmousemove = null;
         window.onmouseup = null;
-        renderLinks();
+        scheduleRenderLinks();
     };
 }
 function nearestPort(clientX, clientY, kind){
@@ -7762,6 +7834,7 @@ function endDrag(event=null){
         if(!draggedGroup) updateGroupMembership(moved);
     }
     dragNode = null;
+    const wasPanning = !!dragBoard;
     dragBoard = null;
     resizeNode = null;
     llmPaneDrag = null;
@@ -7772,13 +7845,21 @@ function endDrag(event=null){
     const shouldRenderKnife = knifeNeedsRender;
     knifeChanged = false;
     knifeNeedsRender = false;
-    if(!isKnifeKey(event)) setKnifeMode(false);
+    if(!isKnifeKey(window.event)) setKnifeMode(false);
     if(textSelectionGuard) textSelectionGuard.active = false;
+    // ponytail: pan 结束时清理合成层提升，确保在类移除前执行
+    if(wasPanning && world) world.style.willChange = '';
     document.body.classList.remove('canvas-node-drag', 'canvas-node-resize', 'canvas-selecting', 'canvas-board-pan');
     window.onmousemove = null;
     window.onmouseup = null;
     if(shouldRenderKnife) render();
-    scheduleMinimapRender();
+    // ponytail: pan 结束后立即渲染新进入视口的节点和小地图
+    else if(wasPanning){
+        render();
+        scheduleMinimapRender();
+    }
+    // ponytail: 其他拖拽（节点/缩放/框选）结束后立即更新小地图
+    else scheduleMinimapRender();
     scheduleSave();
 }
 function nodeRect(n){
@@ -8001,10 +8082,48 @@ function updateGroupMembership(movedNodes){
     }
 }
 
+// ponytail: 端口偏移缓存 — 存节点原点到端口中心的偏移（世界尺度）。
+// 存偏移而非绝对坐标：拖动只改 n.x/n.y，偏移不变，热路径零 DOM 查询。
+// 只有尺寸变化（resize、内容重流）才需失效。
+const portOffsetCache = new Map(); // id -> {out:{dx,dy}, in:{dx,dy}}
+function cachePortPositions(){
+    const s = viewport.scale || 1;
+    // 直接走已渲染 DOM：被裁剪的节点没 DOM，不该为它们白查一次
+    nodesEl.querySelectorAll('.node[data-id]').forEach(el => {
+        const id = el.dataset.id;
+        if(!id) return;
+        const nodeRect = el.getBoundingClientRect();
+        const entry = {};
+        ['out', 'in'].forEach(kind => {
+            const port = el.querySelector(`.port.${kind}`);
+            if(!port) return;
+            const r = port.getBoundingClientRect();
+            // 屏幕差值 ÷ scale = 世界偏移，与 viewport 平移无关
+            entry[kind] = {
+                dx: (r.left + r.width / 2 - nodeRect.left) / s,
+                dy: (r.top + r.height / 2 - nodeRect.top) / s
+            };
+        });
+        if(entry.out || entry.in) portOffsetCache.set(id, entry);
+    });
+}
+function invalidatePortCache(id){
+    if(id == null) portOffsetCache.clear();
+    else portOffsetCache.delete(id);
+}
 function portPoint(id, kind){
     const n = nodes.find(x => x.id === id);
+    if(!n) return {x:0,y:0};
+    // 热路径：命中缓存直接算，不查 DOM
+    const cached = portOffsetCache.get(id)?.[kind];
+    if(cached) return {x:(n.x || 0) + cached.dx, y:(n.y || 0) + cached.dy};
     const el = nodesEl.querySelector(`.node[data-id="${id}"]`);
-    if(!n || !el) return {x:0,y:0};
+    // ponytail: 节点被视口裁剪时无 DOM，用数据估算端口位置，不能回退到原点
+    if(!el){
+        const size = defaultNodeSize(n.type);
+        const w = n.w || size.w || 260, h = n.h || size.h || 160;
+        return kind === 'out' ? {x:n.x + w, y:n.y + h / 2} : {x:n.x, y:n.y + h / 2};
+    }
     const port = el.querySelector(`.port.${kind}`);
     if(port){
         const r = port.getBoundingClientRect();
@@ -8013,18 +8132,50 @@ function portPoint(id, kind){
     const w = el.offsetWidth || n.w || 260, h = el.offsetHeight || n.h || 160;
     return kind === 'out' ? {x:n.x + w, y:n.y + h / 2} : {x:n.x, y:n.y + h / 2};
 }
+function clearLinkDomCache(){
+    linkDomById.clear();
+    tempLinkPath = null;
+    linksEl.replaceChildren();
+    linkControlsEl.replaceChildren();
+}
 function renderLinks(){
-    linksEl.innerHTML = '';
-    linkControlsEl.innerHTML = '';
+    const activeIds = new Set();
     connections.forEach(c => {
+        const id = c.id;
+        activeIds.add(id);
         const a = portPoint(c.from, 'out'), b = portPoint(c.to, 'in');
-        linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, 'link'));
-        const btn = linkDeleteButton(c, a, b);
-        linkControlsEl.appendChild(btn);
-        linksEl.appendChild(linkHitEl(a.x, a.y, b.x, b.y, c.id));
+        let dom = linkDomById.get(id);
+        if(!dom){
+            dom = {
+                path:pathEl(a.x, a.y, b.x, b.y, 'link'),
+                hit:linkHitEl(a.x, a.y, b.x, b.y, id),
+                button:linkDeleteButton(c, a, b)
+            };
+            dom.path.dataset.connectionId = id;
+            linkDomById.set(id, dom);
+        } else {
+            updatePathEl(dom.path, a.x, a.y, b.x, b.y);
+            updatePathEl(dom.hit, a.x, a.y, b.x, b.y);
+            updateLinkDeleteButton(dom.button, c, a, b);
+        }
+        if(dom.path.parentNode !== linksEl) linksEl.appendChild(dom.path);
+        if(dom.hit.parentNode !== linksEl) linksEl.appendChild(dom.hit);
+        if(dom.button.parentNode !== linkControlsEl) linkControlsEl.appendChild(dom.button);
+    });
+    linkDomById.forEach((dom, id) => {
+        if(activeIds.has(id)) return;
+        dom.path.remove();
+        dom.hit.remove();
+        dom.button.remove();
+        linkDomById.delete(id);
     });
     if(tempLink){
-        linksEl.appendChild(pathEl(tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2, 'link temp'));
+        if(!tempLinkPath) tempLinkPath = pathEl(tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2, 'link temp');
+        else updatePathEl(tempLinkPath, tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2);
+        if(tempLinkPath.parentNode !== linksEl) linksEl.appendChild(tempLinkPath);
+    } else if(tempLinkPath){
+        tempLinkPath.remove();
+        tempLinkPath = null;
     }
 }
 function renderKnifeTrail(){
@@ -8057,18 +8208,24 @@ function smoothKnifePath(pts){
     d += ` L${last.x},${last.y}`;
     return d;
 }
+function updateLinkDeleteButton(btn, connection, a, b){
+    btn.classList.toggle('visible', isConnectionSelected(connection));
+    btn.classList.toggle('hover', hoveredConnectionId === connection.id);
+    const left = `${(a.x + b.x) / 2}px`, top = `${(a.y + b.y) / 2}px`;
+    if(btn.style.left !== left) btn.style.left = left;
+    if(btn.style.top !== top) btn.style.top = top;
+}
 function linkDeleteButton(connection, a, b){
     const btn = document.createElement('button');
-    btn.className = `link-delete ${isConnectionSelected(connection) ? 'visible' : ''} ${hoveredConnectionId === connection.id ? 'hover' : ''}`;
+    btn.className = 'link-delete';
     btn.type = 'button';
     btn.title = tr('canvas.deleteLink');
     btn.setAttribute('aria-label', tr('canvas.deleteLink'));
     btn.dataset.connectionId = connection.id;
-    btn.style.left = `${(a.x + b.x) / 2}px`;
-    btn.style.top = `${(a.y + b.y) / 2}px`;
     btn.textContent = '×';
     btn.onmousedown = e => { e.stopPropagation(); };
     btn.onclick = e => { e.stopPropagation(); deleteConnection(connection.id, e); };
+    updateLinkDeleteButton(btn, connection, a, b);
     return btn;
 }
 function linkHitEl(x1,y1,x2,y2,id){
@@ -8138,10 +8295,17 @@ function refreshSelectionVisuals(){
     refreshSelectionLayoutToolbar();
     scheduleMinimapRender();
 }
+function linkPathData(x1,y1,x2,y2){
+    const dx = Math.max(80, Math.abs(x2 - x1) * .45);
+    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+}
+function updatePathEl(path, x1,y1,x2,y2){
+    const d = linkPathData(x1, y1, x2, y2);
+    if(path.getAttribute('d') !== d) path.setAttribute('d', d);
+}
 function pathEl(x1,y1,x2,y2,cls){
     const p = document.createElementNS('http://www.w3.org/2000/svg','path');
-    const dx = Math.max(80, Math.abs(x2 - x1) * .45);
-    p.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+    updatePathEl(p, x1, y1, x2, y2);
     p.setAttribute('class', cls);
     return p;
 }
@@ -8305,14 +8469,37 @@ function startBoardPan(e){
     e.stopPropagation();
     closeCreateMenu();
     if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
-    dragBoard = {sx:e.clientX, sy:e.clientY, ox:viewport.x, oy:viewport.y};
+    dragBoard = {sx:e.clientX, sy:e.clientY, ox:viewport.x, oy:viewport.y, rafPending:false};
     document.body.classList.add('canvas-board-pan');
+    // ponytail: pan 时提升 .world 为独立合成层，整个画布作为纹理平移，子节点不重绘
+    world.style.willChange = 'transform';
     window.onmousemove = e2 => {
-        viewport.x = dragBoard.ox + e2.clientX - dragBoard.sx;
-        viewport.y = dragBoard.oy + e2.clientY - dragBoard.sy;
-        applyViewport();
+        const dx = e2.clientX - dragBoard.sx;
+        const dy = e2.clientY - dragBoard.sy;
+        // ponytail: rAF 节流，200fps 鼠标事件 → 60fps 渲染
+        if(!dragBoard.rafPending){
+            dragBoard.rafPending = true;
+            requestAnimationFrame(() => {
+                dragBoard.rafPending = false;
+                viewport.x = dragBoard.ox + dx;
+                viewport.y = dragBoard.oy + dy;
+                applyViewport();
+            });
+        }
     };
-    window.onmouseup = endDrag;
+    window.onmouseup = () => {
+        // ponytail: mouseup 时立即同步更新 viewport 到最终位置，确保 endDrag 里的 render 使用正确坐标
+        if(dragBoard){
+            const e = window.event;
+            const dx = e.clientX - dragBoard.sx;
+            const dy = e.clientY - dragBoard.sy;
+            viewport.x = dragBoard.ox + dx;
+            viewport.y = dragBoard.oy + dy;
+            dragBoard.rafPending = false;
+            applyViewport();
+        }
+        endDrag();
+    };
     return true;
 }
 
@@ -8378,8 +8565,8 @@ function applyWheelZoom(e){
     viewport.x = e.clientX - rect.left - before.x * viewport.scale;
     viewport.y = e.clientY - rect.top - before.y * viewport.scale;
     applyViewport();
-    renderLinks();
-    renderSelectionHub();
+    scheduleGeometry();
+    scheduleViewportCull();
     scheduleSave();
 }
 board.onwheel = e => {
@@ -8528,8 +8715,8 @@ function focusOnSelectedOrAll(){
     viewport.x = rect.width / 2 - cx * viewport.scale;
     viewport.y = rect.height / 2 - cy * viewport.scale;
     applyViewport();
-    renderLinks();
-    renderSelectionHub();
+    scheduleGeometry();
+    scheduleViewportCull();
 }
 window.addEventListener('keydown', e => {
     if(!canvas) return;
@@ -8553,7 +8740,7 @@ window.addEventListener('keydown', e => {
             viewport.scale = Math.min(viewport.scale * 1.08, 10);
             viewport.x = cx - before.x * viewport.scale;
             viewport.y = cy - before.y * viewport.scale;
-            applyViewport(); renderLinks(); renderSelectionHub();
+            applyViewport(); scheduleGeometry(); scheduleViewportCull();
             return;
         }
         if(e.key === '-'){
@@ -8564,7 +8751,7 @@ window.addEventListener('keydown', e => {
             viewport.scale = Math.max(viewport.scale * 0.92, 0.05);
             viewport.x = cx - before.x * viewport.scale;
             viewport.y = cy - before.y * viewport.scale;
-            applyViewport(); renderLinks(); renderSelectionHub();
+            applyViewport(); scheduleGeometry(); scheduleViewportCull();
             return;
         }
         if(e.key === '0'){
@@ -8575,7 +8762,7 @@ window.addEventListener('keydown', e => {
             viewport.scale = 1;
             viewport.x = cx - before.x * viewport.scale;
             viewport.y = cy - before.y * viewport.scale;
-            applyViewport(); renderLinks(); renderSelectionHub();
+            applyViewport(); renderLinks(); renderSelectionHub(); scheduleViewportCull();
             return;
         }
     }
