@@ -209,6 +209,8 @@ let lastImagePasteAt = 0;
 const activeCanvasTaskPolls = new Set();
 let renderLinksRafPending = false;
 let renderSelectionHubRafPending = false;
+const linkDomById = new Map();
+let tempLinkPath = null;
 let hoveredConnectionId = '';
 let lastMouseBoard = {x: 0, y: 0};
 let undoStack = [];
@@ -813,8 +815,7 @@ function setCanvasMode(open){
     shell.classList.toggle('no-canvas', !open);
     if(!open){
         nodesEl.innerHTML = '';
-        linksEl.innerHTML = '';
-        linkControlsEl.innerHTML = '';
+        clearLinkDomCache();
         selectionHub.classList.remove('open');
     } else if(currentCanvasTitle) {
         currentCanvasTitle.textContent = canvas?.title || tr('canvas.untitled');
@@ -5998,7 +5999,6 @@ function deleteConnection(id, event){
     if(hoveredConnectionId === id) hoveredConnectionId = '';
     syncGeneratorInputs();
     render();
-    renderLinks();
     scheduleSave();
 }
 function outputDownloadName(url){
@@ -7834,9 +7834,7 @@ function endDrag(event=null){
         if(!draggedGroup) updateGroupMembership(moved);
     }
     dragNode = null;
-    console.log('[endDrag] called, dragBoard:', dragBoard);
     const wasPanning = !!dragBoard;
-    console.log('[endDrag] wasPanning:', wasPanning);
     dragBoard = null;
     resizeNode = null;
     llmPaneDrag = null;
@@ -7856,10 +7854,9 @@ function endDrag(event=null){
     window.onmouseup = null;
     if(shouldRenderKnife) render();
     // ponytail: pan 结束后立即渲染新进入视口的节点和小地图
-    else if(wasPanning){ 
-        console.log('[endDrag] wasPanning=true, calling render');
-        render(); 
-        scheduleMinimapRender(); 
+    else if(wasPanning){
+        render();
+        scheduleMinimapRender();
     }
     // ponytail: 其他拖拽（节点/缩放/框选）结束后立即更新小地图
     else scheduleMinimapRender();
@@ -8135,26 +8132,51 @@ function portPoint(id, kind){
     const w = el.offsetWidth || n.w || 260, h = el.offsetHeight || n.h || 160;
     return kind === 'out' ? {x:n.x + w, y:n.y + h / 2} : {x:n.x, y:n.y + h / 2};
 }
+function clearLinkDomCache(){
+    linkDomById.clear();
+    tempLinkPath = null;
+    linksEl.replaceChildren();
+    linkControlsEl.replaceChildren();
+}
 function renderLinks(){
-    linksEl.innerHTML = '';
-    linkControlsEl.innerHTML = '';
-    
-    const linksFrag = document.createDocumentFragment();
-    const controlsFrag = document.createDocumentFragment();
-    
+    const activeIds = new Set();
     connections.forEach(c => {
+        const id = c.id;
+        activeIds.add(id);
         const a = portPoint(c.from, 'out'), b = portPoint(c.to, 'in');
-        linksFrag.appendChild(pathEl(a.x, a.y, b.x, b.y, 'link'));
-        controlsFrag.appendChild(linkDeleteButton(c, a, b));
-        linksFrag.appendChild(linkHitEl(a.x, a.y, b.x, b.y, c.id));
+        let dom = linkDomById.get(id);
+        if(!dom){
+            dom = {
+                path:pathEl(a.x, a.y, b.x, b.y, 'link'),
+                hit:linkHitEl(a.x, a.y, b.x, b.y, id),
+                button:linkDeleteButton(c, a, b)
+            };
+            dom.path.dataset.connectionId = id;
+            linkDomById.set(id, dom);
+        } else {
+            updatePathEl(dom.path, a.x, a.y, b.x, b.y);
+            updatePathEl(dom.hit, a.x, a.y, b.x, b.y);
+            updateLinkDeleteButton(dom.button, c, a, b);
+        }
+        if(dom.path.parentNode !== linksEl) linksEl.appendChild(dom.path);
+        if(dom.hit.parentNode !== linksEl) linksEl.appendChild(dom.hit);
+        if(dom.button.parentNode !== linkControlsEl) linkControlsEl.appendChild(dom.button);
     });
-    
+    linkDomById.forEach((dom, id) => {
+        if(activeIds.has(id)) return;
+        dom.path.remove();
+        dom.hit.remove();
+        dom.button.remove();
+        linkDomById.delete(id);
+    });
     if(tempLink){
-        linksFrag.appendChild(pathEl(tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2, 'link temp'));
+        if(!tempLinkPath) tempLinkPath = pathEl(tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2, 'link temp');
+        else updatePathEl(tempLinkPath, tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2);
+        if(tempLinkPath.parentNode !== linksEl) linksEl.appendChild(tempLinkPath);
+    } else if(tempLinkPath){
+        tempLinkPath.remove();
+        tempLinkPath = null;
     }
-    
-    linksEl.appendChild(linksFrag);
-    linkControlsEl.appendChild(controlsFrag);
 }
 function renderKnifeTrail(){
     if(!knifeActive || knifeTrail.length < 2) return;
@@ -8186,18 +8208,24 @@ function smoothKnifePath(pts){
     d += ` L${last.x},${last.y}`;
     return d;
 }
+function updateLinkDeleteButton(btn, connection, a, b){
+    btn.classList.toggle('visible', isConnectionSelected(connection));
+    btn.classList.toggle('hover', hoveredConnectionId === connection.id);
+    const left = `${(a.x + b.x) / 2}px`, top = `${(a.y + b.y) / 2}px`;
+    if(btn.style.left !== left) btn.style.left = left;
+    if(btn.style.top !== top) btn.style.top = top;
+}
 function linkDeleteButton(connection, a, b){
     const btn = document.createElement('button');
-    btn.className = `link-delete ${isConnectionSelected(connection) ? 'visible' : ''} ${hoveredConnectionId === connection.id ? 'hover' : ''}`;
+    btn.className = 'link-delete';
     btn.type = 'button';
     btn.title = tr('canvas.deleteLink');
     btn.setAttribute('aria-label', tr('canvas.deleteLink'));
     btn.dataset.connectionId = connection.id;
-    btn.style.left = `${(a.x + b.x) / 2}px`;
-    btn.style.top = `${(a.y + b.y) / 2}px`;
     btn.textContent = '×';
     btn.onmousedown = e => { e.stopPropagation(); };
     btn.onclick = e => { e.stopPropagation(); deleteConnection(connection.id, e); };
+    updateLinkDeleteButton(btn, connection, a, b);
     return btn;
 }
 function linkHitEl(x1,y1,x2,y2,id){
@@ -8267,10 +8295,17 @@ function refreshSelectionVisuals(){
     refreshSelectionLayoutToolbar();
     scheduleMinimapRender();
 }
+function linkPathData(x1,y1,x2,y2){
+    const dx = Math.max(80, Math.abs(x2 - x1) * .45);
+    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+}
+function updatePathEl(path, x1,y1,x2,y2){
+    const d = linkPathData(x1, y1, x2, y2);
+    if(path.getAttribute('d') !== d) path.setAttribute('d', d);
+}
 function pathEl(x1,y1,x2,y2,cls){
     const p = document.createElementNS('http://www.w3.org/2000/svg','path');
-    const dx = Math.max(80, Math.abs(x2 - x1) * .45);
-    p.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+    updatePathEl(p, x1, y1, x2, y2);
     p.setAttribute('class', cls);
     return p;
 }
@@ -8453,7 +8488,6 @@ function startBoardPan(e){
         }
     };
     window.onmouseup = () => {
-        console.log('[pan mouseup] called');
         // ponytail: mouseup 时立即同步更新 viewport 到最终位置，确保 endDrag 里的 render 使用正确坐标
         if(dragBoard){
             const e = window.event;
@@ -8464,7 +8498,6 @@ function startBoardPan(e){
             dragBoard.rafPending = false;
             applyViewport();
         }
-        console.log('[pan mouseup] calling endDrag');
         endDrag();
     };
     return true;
