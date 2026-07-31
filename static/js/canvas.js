@@ -3441,6 +3441,8 @@ function render(){
     refreshSelectionLayoutToolbar();
     refreshIcons();
     refreshOutputTimer();
+    // API 节点全量重绘后也按最新内容重算高度，不能只依赖局部刷新。
+    fitGeneratorNodesAfterLayout(visibleNodes);
     // ponytail: render 后立即补小地图，否则打开画布或删除节点后小地图是空的
     scheduleMinimapRender();
 }
@@ -3735,12 +3737,11 @@ function renderNode(node){
     el.querySelector('.node-head').onmousedown = e => { if(e.button === 0 && !spacePan && !isNodeControl(e.target)) startNodeDrag(e, node); };
     const resizeHandle = el.querySelector('.resize-handle');
     resizeHandle.onmousedown = e => { if(e.button === 0 && !isKnifeKey(e)) startNodeResize(e, node); };
-    if(['output','prompt','generator'].includes(node.type)) resizeHandle.ondblclick = e => {
+    if(['output','prompt'].includes(node.type)) resizeHandle.ondblclick = e => {
         e.preventDefault();
         e.stopPropagation();
         if(node.type === 'output') fitOutputNodeToContent(node);
-        else if(node.type === 'prompt') fitPromptNodeHeight(node);
-        else fitGeneratorNodeHeight(node);
+        else fitPromptNodeHeight(node);
     };
     el.ondragstart = e => {
         // 输出节点图片拖动时，不阻止默认行为
@@ -3949,7 +3950,7 @@ function measureGeneratorNodeHeight(el){
     const height = el.style.height;
     el.style.removeProperty('height');
     el.classList.remove('sized');
-    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight) + 24);
+    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight));
     if(wasSized) el.classList.add('sized');
     if(height) el.style.height = height;
     return naturalHeight;
