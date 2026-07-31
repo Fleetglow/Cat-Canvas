@@ -8,6 +8,7 @@ h2 { margin:28px 0 8px; font-size:18px; }
 p { color:#697079; line-height:1.65; }
 .progress { height:4px; margin:24px 0 4px; overflow:hidden; border-radius:99px; background:#dedbd4; }
 .progress span { display:block; width:34%; height:100%; border-radius:inherit; background:#1f2328; animation:loading 1.2s ease-in-out infinite alternate; }
+.progress span[hidden] { display:none; }
 .actions { display:flex; justify-content:center; gap:10px; margin-top:18px; }
 button { min-height:40px; padding:0 18px; border:1px solid #c9c5bd; border-radius:10px; background:#fff; color:#1f2328; cursor:pointer; font-weight:600; }
 button.primary { border-color:#1f2328; background:#1f2328; color:#fff; }
