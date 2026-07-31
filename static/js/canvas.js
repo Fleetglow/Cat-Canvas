@@ -170,6 +170,8 @@ let pendingPurgeCanvasId = null;
 let emojiPickerCanvasId = null;
 let localCanvasDirty = false;
 let allowEmptyCanvasSave = false;
+let recoveryTimer = null;
+let canvasSaveFailure = '';
 let savingCanvasNow = false;
 let saveCanvasAgain = false;
 let saveWaiters = [];
@@ -974,11 +976,62 @@ function refreshGeometryAfterLayout(){
         });
     });
 }
+function canvasRecovery(mode, action){
+    return new Promise((resolve, reject) => {
+        if(!window.indexedDB) return resolve(null);
+        const open = indexedDB.open('cat-canvas-recovery', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('canvases', {keyPath:'canvasId'});
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+            const db = open.result;
+            let request;
+            const tx = db.transaction('canvases', mode);
+            try { request = action(tx.objectStore('canvases')); }
+            catch(error) { db.close(); reject(error); return; }
+            tx.oncomplete = () => { const value = request?.result; db.close(); resolve(value); };
+            tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+    });
+}
+function canvasSaveBody(){
+    return JSON.stringify({
+        title:canvas.title,
+        icon:canvas.icon || '🧩',
+        nodes,
+        connections,
+        viewport,
+        logs:canvas.logs || [],
+        client_id:CLIENT_ID,
+        base_updated_at:Number(lastCanvasUpdatedAt || canvas.updated_at || 0),
+        allow_empty:allowEmptyCanvasSave
+    });
+}
+async function saveCanvasRecovery(canvasId=canvas?.id, body=canvas ? canvasSaveBody() : ''){
+    if(!canvasId || !body) return;
+    try { await canvasRecovery('readwrite', store => store.put({canvasId, savedAt:Date.now(), body})); }
+    catch(error) { console.error('canvas recovery save failed', error); }
+}
+async function loadCanvasRecovery(canvasId){
+    try { return await canvasRecovery('readonly', store => store.get(canvasId)); }
+    catch(error) { console.error('canvas recovery load failed', error); return null; }
+}
+async function clearCanvasRecovery(canvasId){
+    try { await canvasRecovery('readwrite', store => store.delete(canvasId)); }
+    catch(error) { console.error('canvas recovery clear failed', error); }
+}
+function queueCanvasRecovery(){
+    clearTimeout(recoveryTimer);
+    const canvasId = canvas?.id;
+    recoveryTimer = setTimeout(() => {
+        if(canvas?.id === canvasId) saveCanvasRecovery(canvasId);
+    }, 200);
+}
 function scheduleSave(){
     if(!canvas || applyingRemoteCanvas) return;
     const canvasId = canvas.id;
     localCanvasDirty = true;
     setStatus('Saving...');
+    queueCanvasRecovery();
     clearTimeout(saveTimer);
     if(savingCanvasNow){
         saveCanvasAgain = true;
@@ -1034,17 +1087,8 @@ async function saveCanvas(){
     if(savingCanvasNow) return waitForCanvasSave();
     sanitizeConnections();
     const canvasId = canvas.id;
-    const body = JSON.stringify({
-        title:canvas.title,
-        icon:canvas.icon || '🧩',
-        nodes,
-        connections,
-        viewport,
-        logs:canvas.logs || [],
-        client_id:CLIENT_ID,
-        base_updated_at:Number(lastCanvasUpdatedAt || canvas.updated_at || 0),
-        allow_empty:allowEmptyCanvasSave
-    });
+    const body = canvasSaveBody();
+    const recovery = saveCanvasRecovery(canvasId, body);
     savingCanvasNow = true;
     saveCanvasAgain = false;
     localCanvasDirty = false;
@@ -1064,12 +1108,16 @@ async function saveCanvas(){
             if(detail.reason === 'empty_canvas_blocked'){
                 saveCanvasAgain = false;
                 if(remote) applyRemoteCanvasData(remote);
+                await recovery;
+                await clearCanvasRecovery(canvasId);
                 setStatus('已阻止意外清空');
                 succeeded = true;
                 return true;
             }
+            await recovery;
+            canvasSaveFailure = '保存冲突：本地恢复稿已保留，重新打开时可恢复为新画布。';
             localCanvasDirty = true;
-            setStatus('保存冲突，请刷新后重试');
+            setStatus(canvasSaveFailure);
             return false;
         }
         if(!res.ok) throw new Error('save failed');
@@ -1078,16 +1126,24 @@ async function saveCanvas(){
         canvas.updated_at = Number(data.canvas?.updated_at || canvas.updated_at || Date.now());
         lastCanvasUpdatedAt = canvas.updated_at;
         localCanvasDirty = Boolean(saveCanvasAgain);
-        if(!saveCanvasAgain) allowEmptyCanvasSave = false;
+        if(!saveCanvasAgain){
+            allowEmptyCanvasSave = false;
+            clearTimeout(recoveryTimer);
+            await recovery;
+            await clearCanvasRecovery(canvasId);
+        }
+        canvasSaveFailure = '';
         if(currentCanvasTime) currentCanvasTime.textContent = formatCanvasTime(canvas.updated_at);
         setStatus('Saved');
         loadCanvasList(false);
         succeeded = true;
         return true;
     } catch(e) {
+        await recovery;
         if(canvas?.id === canvasId){
+            canvasSaveFailure = '保存失败：本地恢复稿已保留，重新打开时可恢复为新画布。';
             localCanvasDirty = true;
-            setStatus('Save failed');
+            setStatus(canvasSaveFailure);
         }
         console.error(e);
         return false;
@@ -1461,9 +1517,38 @@ function openCanvas(id){
     canvasOpenQueue = canvasOpenQueue.then(run, run);
     return canvasOpenQueue;
 }
+async function restoreCanvasRecovery(recovery){
+    const saved = JSON.parse(recovery.body);
+    const title = `${saved.title || '未命名画布'}（恢复）`.slice(0, 80);
+    const created = await fetch('/api/canvases', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, icon:saved.icon || '🧩'})
+    }).then(async res => { if(!res.ok) throw new Error('创建恢复画布失败'); return res.json(); });
+    const target = created.canvas;
+    const restored = await fetch(`/api/canvases/${target.id}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            title, icon:saved.icon || '🧩', nodes:saved.nodes || [], connections:saved.connections || [],
+            viewport:saved.viewport || {x:0, y:0, scale:1}, logs:saved.logs || [], client_id:CLIENT_ID,
+            base_updated_at:Number(target.updated_at || 0), allow_empty:Boolean(saved.allow_empty)
+        })
+    });
+    if(!restored.ok) throw new Error('写入恢复画布失败');
+    await clearCanvasRecovery(recovery.canvasId);
+    return (await restored.json()).canvas;
+}
+async function resolveCanvasRecovery(remote){
+    const recovery = await loadCanvasRecovery(remote?.id);
+    if(!recovery) return remote;
+    if(!confirm(`“${remote.title || '未命名画布'}”有未保存的本地恢复稿。是否恢复为一个新画布？`)) return remote;
+    try { return await restoreCanvasRecovery(recovery); }
+    catch(error) { showErrorModal(`恢复本地画布失败：${error.message || error}`, '恢复失败'); return remote; }
+}
 async function openCanvasNow(id){
     if(canvas){
-        if(!await flushCurrentCanvasSave()) return;
+        if(!await flushCurrentCanvasSave()){
+            showErrorModal(canvasSaveFailure || '画布未保存，已保留本地恢复稿。', '保存失败');
+            return;
+        }
         if(canvas.id === id) return;
     }
     const previousCanvasId = canvas?.id || '';
@@ -1472,6 +1557,7 @@ async function openCanvasNow(id){
         const res = await fetch(`/api/canvases/${id}`);
         if(!res.ok) throw new Error(tr('canvas.openFailed'));
         const data = await res.json();
+        data.canvas = await resolveCanvasRecovery(data.canvas);
         if(previousCanvasId && (canvas?.id !== previousCanvasId || localCanvasDirty || savingCanvasNow)){
             setStatus('检测到新修改，请再次打开画布');
             return;
@@ -1495,7 +1581,7 @@ async function openCanvasNow(id){
         scheduleMinimapRender(); // ponytail: 初始加载后立即渲染小地图
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
-        await rememberLastCanvasId(id);
+        await rememberLastCanvasId(canvas.id);
         setStatus('Ready');
     } catch(e) {
         setStatus(tr('canvas.openFailed'));
@@ -1626,7 +1712,10 @@ function handleCanvasUpdatedMessage(data){
     setStatus(localCanvasDirty || savingCanvasNow ? 'Saving...' : 'Syncing...');
 }
 async function returnToCanvasManager(){
-    if(!await flushCurrentCanvasSave()) return;
+    if(!await flushCurrentCanvasSave()){
+        showErrorModal(canvasSaveFailure || '画布未保存，已保留本地恢复稿。', '保存失败');
+        return;
+    }
     stopCanvasRemotePolling();
     canvas = null;
     nodes = [];
@@ -1832,6 +1921,7 @@ window.addEventListener('resize', () => {
     if(cropState) syncImageEditOverflow();
 });
 backToManagerBtn.addEventListener('click', returnToCanvasManager);
+window.addEventListener('pagehide', () => { if(canvas) saveCanvasRecovery(); });
 
 function addNode(node){
     if(!ensureCanvas()) return;
@@ -3950,8 +4040,7 @@ function measureGeneratorNodeHeight(el){
     const height = el.style.height;
     el.style.removeProperty('height');
     el.classList.remove('sized');
-    const bottomGap = el.querySelector('.generator-body.prompt-only') ? 12 : 0;
-    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight) + bottomGap);
+    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight));
     if(wasSized) el.classList.add('sized');
     if(height) el.style.height = height;
     return naturalHeight;
@@ -3968,11 +4057,25 @@ function fitGeneratorNodeHeight(node, saveHistory=true){
     const el = nodesEl.querySelector(`.generator-node[data-id="${CSS.escape(node?.id || '')}"]`);
     if(!node || !el) return;
     if(saveHistory) pushUndo();
-    const height = measureGeneratorNodeHeight(el);
-    if(Number(node.h) === height && el.classList.contains('sized') && el.style.height === `${height}px`) return;
-    node.h = height;
+    let height = Math.max(96, Number(node.h) || measureGeneratorNodeHeight(el));
     el.classList.add('sized');
-    el.style.height = `${node.h}px`;
+    el.style.height = `${height}px`;
+    const run = el.querySelector('.gen-run-row');
+    if(run){
+        // 强制触发 reflow，确保 rect 是真实渲染值
+        void el.offsetHeight;
+        const nodeRect = el.getBoundingClientRect();
+        const runRect = run.getBoundingClientRect();
+        const scale = nodeRect.width / el.offsetWidth || 1;
+        const actualBottomGap = (nodeRect.bottom - runRect.bottom) / scale;
+        // 从按钮底部往下应保留 12px，所以目标高度 = 当前高度 - 实际底部空白 + 12
+        const targetHeight = Math.max(96, Math.round(height - actualBottomGap + 12));
+        // 只有实际偏差 >2px 才更新，避免微小抖动反复保存
+        if(Math.abs(targetHeight - height) > 2) height = targetHeight;
+    }
+    if(Number(node.h) === height && el.style.height === `${height}px`) return;
+    node.h = height;
+    el.style.height = `${height}px`;
     invalidatePortCache(node.id); // 高度变 → 端口垂直居中位置变
     refreshGeometry();
     scheduleMinimapRender();
@@ -4667,7 +4770,6 @@ function renderGeneratorBody(node){
     const ordered = orderedSources(node, inputSources);
     const imageInputs = ordered.filter(src => src.refs?.length);
     const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
-    if(promptInputs.length && !imageInputs.length) wrap.classList.add('prompt-only');
     node.apiProvider = resolveImageProviderId(node.apiProvider || '');
     const imageProviderModels = providerImageModels(node.apiProvider);
     if(!imageProviderModels.length) node.model = '';

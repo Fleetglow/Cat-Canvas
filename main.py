@@ -1499,8 +1499,16 @@ def save_canvas(canvas):
                     os.remove(os.path.join(backup_dir, old_fn))
                 except OSError:
                     pass
-        with open(target, 'w', encoding='utf-8') as f:
-            json.dump(canvas, f, ensure_ascii=False, indent=2)
+        temp = f"{target}.{uuid.uuid4().hex}.tmp"
+        try:
+            with open(temp, 'w', encoding='utf-8') as f:
+                json.dump(canvas, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp, target)
+        finally:
+            if os.path.exists(temp):
+                os.remove(temp)
 
 def normalize_canvas_kind(kind="classic"):
     return "classic"
