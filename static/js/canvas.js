@@ -3950,7 +3950,8 @@ function measureGeneratorNodeHeight(el){
     const height = el.style.height;
     el.style.removeProperty('height');
     el.classList.remove('sized');
-    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight));
+    const bottomGap = el.querySelector('.generator-body.prompt-only') ? 12 : 0;
+    const naturalHeight = Math.max(96, Math.ceil(el.offsetHeight) + bottomGap);
     if(wasSized) el.classList.add('sized');
     if(height) el.style.height = height;
     return naturalHeight;
@@ -4666,6 +4667,7 @@ function renderGeneratorBody(node){
     const ordered = orderedSources(node, inputSources);
     const imageInputs = ordered.filter(src => src.refs?.length);
     const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
+    if(promptInputs.length && !imageInputs.length) wrap.classList.add('prompt-only');
     node.apiProvider = resolveImageProviderId(node.apiProvider || '');
     const imageProviderModels = providerImageModels(node.apiProvider);
     if(!imageProviderModels.length) node.model = '';
@@ -5334,32 +5336,32 @@ async function runGenerator(genId, opts={}){
     const refs = sources.flatMap(s => s.refs || []);
     if(!prompt && !refs.length){ alert(tr('canvas.needPromptOrImage')); return; }
     const count = Math.max(1, Math.min(8, Number(gen.count || 1)));
-    let out = outputForNode(gen, 460);
+    const out = outputForNode(gen, 460);
     const run = runSnapshot(gen, prompt || 'Edit the reference images.', refs);
-    const payload = {
-        prompt: prompt || 'Edit the reference images.',
-        provider_id:resolveImageProviderId(gen.apiProvider || 'comfly'),
-        model:resolveImageModel(gen.model),
-        size:await generatorSizeForRun(gen, refs),
-        reference_images:refs
-    };
-    const quality = normalizedImageQuality(gen.quality);
-    if(quality) payload.quality = quality;
-    let pendingIds = [];
-    if(!opts.cascade){ gen.running = true; }
+    const pendingIds = Array.from({length:count}, () => uid('p'));
+    if(out) out._pending = [...(out._pending || []), ...pendingIds.map(id => makePending(id, run))];
+    if(!opts.cascade) gen.running = true;
+    // 先渲染占位输出；尺寸计算和建任务的异步等待不能阻塞反馈。
+    if(out && !nodesEl.querySelector(`.node[data-id="${CSS.escape(out.id)}"]`)) render();
+    else refreshRunNodes(gen, out);
+    fitOutputNodeHeight(out, false);
+    scheduleSave();
     try {
+        const payload = {
+            prompt: prompt || 'Edit the reference images.',
+            provider_id:resolveImageProviderId(gen.apiProvider || 'comfly'),
+            model:resolveImageModel(gen.model),
+            size:await generatorSizeForRun(gen, refs),
+            reference_images:refs
+        };
+        const quality = normalizedImageQuality(gen.quality);
+        if(quality) payload.quality = quality;
         const taskInfos = await Promise.all(Array.from({length:count}, () => createCanvasImageTask(payload)));
-        pendingIds = taskInfos.map(() => uid('p'));
-        if(out) out._pending = [
-            ...(out._pending || []),
-            ...taskInfos.map((task, index) => makePending(pendingIds[index], run, {
-                canvasTaskId:task.task_id,
-                canvasTaskType:'online-image',
-                appendGenerated:Boolean(opts.cascade)
-            }))
-        ];
-        refreshRunNodes(gen, out);
-        fitOutputNodeHeight(out, false);
+        taskInfos.forEach((task, index) => Object.assign(pendingById(out, pendingIds[index]) || {}, {
+            canvasTaskId:task.task_id,
+            canvasTaskType:'online-image',
+            appendGenerated:Boolean(opts.cascade)
+        }));
         scheduleSave();
         await saveCanvas();
         const statuses = await Promise.all(taskInfos.map(task => pollCanvasImageTask(task.task_id)));
