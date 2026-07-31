@@ -6809,6 +6809,10 @@ function createImageCardFromOutput(url, point){
     scheduleSave();
 }
 async function downloadUrl(url, filename){
+    const parentSave = window.parent !== window && window.parent.desktopSaveOutputFile;
+    if(parentSave) return parentSave(url, filename);
+    const invoke = window.__TAURI__?.core?.invoke;
+    if(invoke) return invoke('save_output_file', {url, filename});
     const res = await fetch(url);
     if(!res.ok) throw new Error('下载失败');
     const blob = await res.blob();

@@ -16,6 +16,7 @@
     "allow-probe-update-source",
     "allow-download-desktop-update",
     "allow-install-desktop-update",
+    "allow-save-output-file",
     "allow-open-backup-folder"
   ]
 }

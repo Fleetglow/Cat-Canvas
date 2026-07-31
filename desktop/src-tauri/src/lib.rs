@@ -885,6 +885,72 @@ async fn install_desktop_update(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn save_output_file(app: AppHandle, url: String, filename: String) -> Result<(), String> {
+    let filename = Path::new(&filename)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .unwrap_or("download")
+        .to_string();
+    let callback_app = app.clone();
+    app.dialog()
+        .file()
+        .set_file_name(&filename)
+        .save_file(move |path| {
+            let Some(path) = path.and_then(|path| path.into_path().ok()) else {
+                return;
+            };
+            tauri::async_runtime::spawn(async move {
+                let result = async {
+                    let session_url = callback_app
+                        .state::<DesktopState>()
+                        .snapshot
+                        .lock()
+                        .map_err(|_| "后端状态锁已损坏".to_string())?
+                        .url
+                        .clone();
+                    let mut endpoint =
+                        reqwest::Url::parse(&session_url).map_err(|error| error.to_string())?;
+                    let token = endpoint
+                        .query_pairs()
+                        .find_map(|(key, value)| (key == "token").then(|| value.into_owned()))
+                        .ok_or_else(|| "桌面会话令牌不存在".to_string())?;
+                    endpoint.set_path("/api/download-output");
+                    endpoint.set_query(None);
+                    endpoint
+                        .query_pairs_mut()
+                        .append_pair("url", &url)
+                        .append_pair("name", &filename);
+                    let bytes = reqwest::Client::new()
+                        .get(endpoint)
+                        .header(
+                            reqwest::header::COOKIE,
+                            format!("cat_canvas_session={token}"),
+                        )
+                        .send()
+                        .await
+                        .map_err(|error| error.to_string())?
+                        .error_for_status()
+                        .map_err(|error| error.to_string())?
+                        .bytes()
+                        .await
+                        .map_err(|error| error.to_string())?;
+                    fs::write(path, bytes).map_err(|error| error.to_string())
+                }
+                .await;
+                if let Err(error) = result {
+                    callback_app
+                        .dialog()
+                        .message(format!("下载失败：{error}"))
+                        .title("下载失败")
+                        .show(|_| {});
+                }
+            });
+        });
+    Ok(())
+}
+
+#[tauri::command]
 fn open_backup_folder(state: State<'_, DesktopState>) -> Result<(), String> {
     let path = state.user_root.join("Backups");
     let mut command = Command::new("explorer.exe");
@@ -950,6 +1016,7 @@ pub fn run() {
             probe_update_source,
             download_desktop_update,
             install_desktop_update,
+            save_output_file,
             open_backup_folder,
         ]);
 

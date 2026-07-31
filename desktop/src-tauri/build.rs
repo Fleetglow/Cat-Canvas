@@ -9,6 +9,7 @@ fn main() {
             "probe_update_source",
             "download_desktop_update",
             "install_desktop_update",
+            "save_output_file",
             "open_backup_folder",
         ]),
     ))
