@@ -1,6 +1,6 @@
 [package]
 name = "cat-canvas-desktop"
-version = "0.1.9"
+version = "0.1.10"
 description = "Cat Canvas Windows desktop shell"
 authors = ["Fleetglow"]
 edition = "2021"
