@@ -6808,9 +6808,31 @@ function createImageCardFromOutput(url, point){
     render();
     scheduleSave();
 }
+function requestParentDownload(url, filename){
+    if(window.parent === window) return Promise.resolve(false);
+    return new Promise((resolve, reject) => {
+        const id = crypto.randomUUID();
+        const finish = result => {
+            clearTimeout(timer);
+            window.removeEventListener('message', receive);
+            resolve(result);
+        };
+        const receive = event => {
+            const data = event.data;
+            if(event.origin !== location.origin || data?.type !== 'cat-canvas-save-output-result' || data.id !== id) return;
+            if(data.error){
+                clearTimeout(timer);
+                window.removeEventListener('message', receive);
+                reject(new Error(data.error));
+            } else finish(Boolean(data.ok));
+        };
+        const timer = setTimeout(() => finish(false), 1500);
+        window.addEventListener('message', receive);
+        window.parent.postMessage({type:'cat-canvas-save-output', id, url, filename}, location.origin);
+    });
+}
 async function downloadUrl(url, filename){
-    const parentSave = window.parent !== window && window.parent.desktopSaveOutputFile;
-    if(parentSave) return parentSave(url, filename);
+    if(await requestParentDownload(url, filename)) return;
     const invoke = window.__TAURI__?.core?.invoke;
     if(invoke) return invoke('save_output_file', {url, filename});
     const res = await fetch(url);
@@ -7343,6 +7365,14 @@ function initOutputCompareEvents(){
     }, {passive:false});
     window.addEventListener('touchend', () => { outputCompareDrag = false; });
 }
+function triggerOutputDownload(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const url = currentOutputLightboxUrl;
+    if(url) downloadUrl(url, outputDownloadName(url)).catch(err => alert(err.message || '下载失败'));
+}
+outputDownloadBtn.addEventListener('pointerdown', triggerOutputDownload, true);
+outputDownloadBtn.addEventListener('click', e => { if(e.detail === 0) triggerOutputDownload(e); });
 function openOutputLightbox(url, out){
     if(!url) return;
     resetOutputPreviewZoom();
@@ -7379,10 +7409,6 @@ function openOutputLightbox(url, out){
         };
         outputLightboxVideo.src = url;
         outputPreview.ondblclick = null;
-        outputDownloadBtn.onclick = e => {
-            e.stopPropagation();
-            downloadUrl(url, outputDownloadName(url)).catch(err => alert(err.message || '下载失败'));
-        };
         outputLightbox.classList.add('open');
         refreshIcons();
         updateLightboxNavButtons();
@@ -7429,10 +7455,6 @@ function openOutputLightbox(url, out){
         e.stopPropagation();
         if(!currentOutputCompareUrl) return;
         setOutputCompareMode(!outputPreview.classList.contains('compare-mode'));
-    };
-    outputDownloadBtn.onclick = e => {
-        e.stopPropagation();
-        downloadUrl(url, outputDownloadName(url)).catch(err => alert(err.message || '下载失败'));
     };
     outputLightbox.classList.add('open');
     refreshIcons();

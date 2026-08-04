@@ -958,7 +958,7 @@
         <main class="stage">
             <iframe id="frame-online" data-src="/static/online.html?v=2026.07.28" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.28" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.07.31.8" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.07.31.11" class="active" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.28" scrolling="yes"></iframe>
 
         </main>
@@ -1283,9 +1283,16 @@
             if(!invoke) throw new Error('桌面桥接不可用');
             return invoke(command, args);
         }
-        if(window.__TAURI__?.core?.invoke) {
-            window.desktopSaveOutputFile = (url, filename) => desktopInvoke('save_output_file', {url, filename});
-        }
+        window.addEventListener('message', event => {
+            const data = event.data;
+            if(event.origin !== location.origin || data?.type !== 'cat-canvas-save-output') return;
+            const reply = payload => event.source?.postMessage({type:'cat-canvas-save-output-result', id:data.id, ...payload}, event.origin);
+            const invoke = window.__TAURI__?.core?.invoke;
+            if(!invoke) return reply({unsupported:true});
+            invoke('save_output_file', {url:data.url, filename:data.filename})
+                .then(() => reply({ok:true}))
+                .catch(error => reply({error:String(error)}));
+        });
 
         function setDesktopUpdateText(text, available = false) {
             const button = document.getElementById('desktop-update-btn');
