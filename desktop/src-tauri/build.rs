@@ -11,6 +11,8 @@ fn main() {
             "install_desktop_update",
             "save_output_file",
             "open_backup_folder",
+            "finish_desktop_close",
+            "cancel_desktop_close",
         ]),
     ))
     .unwrap();

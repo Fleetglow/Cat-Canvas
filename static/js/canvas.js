@@ -1046,9 +1046,13 @@ function waitForCanvasSave(){
     if(!savingCanvasNow) return Promise.resolve(true);
     return new Promise(resolve => saveWaiters.push(resolve));
 }
-async function flushCurrentCanvasSave(){
+async function flushCurrentCanvasSave(force=false){
     clearTimeout(saveTimer);
     saveTimer = null;
+    if(force && canvas && !applyingRemoteCanvas){
+        localCanvasDirty = true;
+        queueCanvasRecovery();
+    }
     if(savingCanvasNow && !await waitForCanvasSave()) return false;
     while(canvas && localCanvasDirty){
         clearTimeout(saveTimer);
@@ -1120,7 +1124,11 @@ async function saveCanvas(){
             setStatus(canvasSaveFailure);
             return false;
         }
-        if(!res.ok) throw new Error('save failed');
+        if(!res.ok){
+            const data = await res.json().catch(() => ({}));
+            const detail = data.detail;
+            throw new Error(typeof detail === 'string' ? detail : `服务器返回 HTTP ${res.status}`);
+        }
         if(!isCurrentCanvas) return false;
         const data = await res.json().catch(() => ({}));
         canvas.updated_at = Number(data.canvas?.updated_at || canvas.updated_at || Date.now());
@@ -1141,7 +1149,7 @@ async function saveCanvas(){
     } catch(e) {
         await recovery;
         if(canvas?.id === canvasId){
-            canvasSaveFailure = '保存失败：本地恢复稿已保留，重新打开时可恢复为新画布。';
+            canvasSaveFailure = `保存失败：${e.message || '未知原因'}；本地恢复稿已保留，重新打开时可恢复为新画布。`;
             localCanvasDirty = true;
             setStatus(canvasSaveFailure);
         }

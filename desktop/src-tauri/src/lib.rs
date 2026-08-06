@@ -14,7 +14,9 @@ use std::{
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
+use tauri::{
+    AppHandle, Emitter, Manager, RunEvent, State, WindowEvent, RESTART_EXIT_CODE,
+};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_updater::UpdaterExt;
 use uuid::Uuid;
@@ -53,8 +55,9 @@ struct DesktopState {
     user_root: PathBuf,
     local_root: PathBuf,
     migration_marker: PathBuf,
+    exit_allowed: Mutex<bool>,
+    close_pending: Mutex<bool>,
 }
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct UpdateInfo {
@@ -885,6 +888,26 @@ async fn install_desktop_update(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn finish_desktop_close(app: AppHandle) -> Result<(), String> {
+    let state = app.state::<DesktopState>();
+    *state.exit_allowed.lock().map_err(|_| "退出状态锁已损坏")? = true;
+    *state.close_pending.lock().map_err(|_| "退出状态锁已损坏")? = false;
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
+fn cancel_desktop_close(app: AppHandle) -> Result<(), String> {
+    let state = app.state::<DesktopState>();
+    *state.close_pending.lock().map_err(|_| "退出状态锁已损坏")? = false;
+    Ok(())
+}
+
+fn request_desktop_close(app: &AppHandle) {
+    let _ = app.emit("desktop-close-requested", ());
+}
+
+#[tauri::command]
 fn save_output_file(app: AppHandle, url: String, filename: String) -> Result<(), String> {
     let filename = Path::new(&filename)
         .file_name()
@@ -1001,6 +1024,8 @@ pub fn run() {
                 user_root,
                 local_root,
                 migration_marker,
+                exit_allowed: Mutex::new(false),
+                close_pending: Mutex::new(false),
             });
             if !migration_pending {
                 start_backend(app.handle()).map_err(std::io::Error::other)?;
@@ -1018,14 +1043,56 @@ pub fn run() {
             install_desktop_update,
             save_output_file,
             open_backup_folder,
+            finish_desktop_close,
+            cancel_desktop_close,
         ]);
 
     let app = builder
         .build(tauri::generate_context!())
         .expect("failed to build Cat Canvas desktop app");
     app.run(|app, event| {
-        if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
-            stop_backend(app);
+        match event {
+            RunEvent::WindowEvent {
+                event: WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                let state = app.state::<DesktopState>();
+                let allowed = state.exit_allowed.lock().map(|value| *value).unwrap_or(false);
+                if allowed {
+                    stop_backend(app);
+                } else if let Ok(mut pending) = state.close_pending.lock() {
+                    api.prevent_close();
+                    if !*pending {
+                        *pending = true;
+                        request_desktop_close(app);
+                    }
+                } else {
+                    api.prevent_close();
+                }
+            }
+            RunEvent::ExitRequested { api, code, .. } => {
+                let state = app.state::<DesktopState>();
+                if code == Some(RESTART_EXIT_CODE) {
+                    stop_backend(app);
+                    return;
+                }
+                let allowed = state.exit_allowed.lock().map(|value| *value).unwrap_or(false);
+                if allowed {
+                    stop_backend(app);
+                } else if let Ok(mut pending) = state.close_pending.lock() {
+                    if !*pending {
+                        *pending = true;
+                        api.prevent_exit();
+                        request_desktop_close(app);
+                    } else {
+                        api.prevent_exit();
+                    }
+                } else {
+                    api.prevent_exit();
+                }
+            }
+            RunEvent::Exit => stop_backend(app),
+            _ => {}
         }
     });
 }

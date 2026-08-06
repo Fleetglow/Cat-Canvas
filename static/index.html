@@ -675,6 +675,10 @@
         }
 
         .update-modal-panel { width:min(760px, 100%); }
+        .close-save-modal-panel { width:min(520px, 100%); }
+        .close-save-status { margin:0; color:#475569; font-size:13px; line-height:1.7; white-space:pre-line; }
+        html.theme-dark .close-save-status,
+        body.theme-dark .close-save-status { color:#cbd5e1; }
         .update-summary { margin:0; color:#475569; font-size:13px; line-height:1.7; }
         .update-notes {
             padding:14px;
@@ -958,10 +962,29 @@
         <main class="stage">
             <iframe id="frame-online" data-src="/static/online.html?v=2026.07.28" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.28" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.07.31.11" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas.html?v=2026.07.31.13" class="active" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.28" scrolling="yes"></iframe>
 
         </main>
+    </div>
+
+    <div id="desktop-close-save-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="desktop-close-save-title">
+        <div class="studio-modal-panel close-save-modal-panel">
+            <div class="studio-modal-head">
+                <div>
+                    <div class="studio-modal-kicker">退出前保存</div>
+                    <h2 id="desktop-close-save-title" class="studio-modal-title">正在保存画布</h2>
+                </div>
+            </div>
+            <div class="studio-modal-body">
+                <p id="desktop-close-save-status" class="close-save-status">正在保存中，保存完毕后退出……</p>
+            </div>
+            <div id="desktop-close-save-actions" class="studio-modal-actions" hidden>
+                <button id="desktop-close-save-cancel" class="studio-modal-btn" type="button">取消关闭</button>
+                <button id="desktop-close-save-retry" class="studio-modal-btn primary" type="button">重试保存</button>
+                <button id="desktop-close-save-exit" class="studio-modal-btn" type="button">仍然退出</button>
+            </div>
+        </div>
     </div>
 
     <div id="desktop-update-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="desktop-update-modal-title">
@@ -1277,6 +1300,76 @@
         let desktopUpdateTesting = false;
         let desktopCurrentVersion = '';
         let desktopUpdateSource = 'github';
+        let desktopCloseBusy = false;
+        let desktopCloseTimer = null;
+        let desktopCloseWaiting = false;
+
+        function setDesktopCloseModal(status, state = 'saving') {
+            const modal = document.getElementById('desktop-close-save-modal');
+            const title = document.getElementById('desktop-close-save-title');
+            const actions = document.getElementById('desktop-close-save-actions');
+            const retry = document.getElementById('desktop-close-save-retry');
+            const exit = document.getElementById('desktop-close-save-exit');
+            const actionable = state !== 'saving';
+            if(modal) modal.hidden = false;
+            if(title) title.textContent = state === 'failed' ? '画布保存失败' : state === 'waiting' ? '保存仍在进行中' : '正在保存画布';
+            document.getElementById('desktop-close-save-status').textContent = status;
+            if(actions) actions.hidden = !actionable;
+            if(retry) {
+                retry.textContent = state === 'waiting' ? '继续等待' : '重试保存';
+                retry.disabled = !actionable;
+            }
+            if(exit) exit.disabled = !actionable;
+        }
+
+        function armDesktopCloseTimer() {
+            clearTimeout(desktopCloseTimer);
+            desktopCloseTimer = setTimeout(() => {
+                if(!desktopCloseBusy) return;
+                desktopCloseWaiting = true;
+                setDesktopCloseModal('保存已超过 15 秒，尚未收到结果。\n保存请求仍在继续，不代表保存失败；请继续等待，或取消关闭后检查软件状态。', 'waiting');
+            }, 15000);
+        }
+
+        function finishDesktopClose() {
+            clearTimeout(desktopCloseTimer);
+            desktopCloseBusy = false;
+            desktopCloseWaiting = false;
+            desktopInvoke('finish_desktop_close').catch(error => {
+                setDesktopCloseModal(`退出失败：${String(error)}\n本地恢复稿已保留，请取消关闭后重试。`, 'failed');
+            });
+        }
+
+        function showDesktopCloseFailure(error) {
+            clearTimeout(desktopCloseTimer);
+            desktopCloseBusy = false;
+            desktopCloseWaiting = false;
+            setDesktopCloseModal(`保存失败：${error || '未知原因'}\n本地恢复稿已保留。建议检查磁盘空间和软件状态，然后点击“重试保存”。`, 'failed');
+            desktopInvoke('cancel_desktop_close').catch(() => {});
+        }
+
+        async function requestCanvasCloseSave() {
+            const frame = document.getElementById('frame-canvas');
+            if(!frame?.src || !frame.contentWindow) return finishDesktopClose();
+            desktopCloseWaiting = false;
+            setDesktopCloseModal('正在保存中，保存完毕后退出……');
+            armDesktopCloseTimer();
+            try {
+                const save = frame.contentWindow.flushCurrentCanvasSave;
+                if(typeof save !== 'function') throw new Error('画布尚未初始化，请稍后重试');
+                if(await save(true)) finishDesktopClose();
+                else showDesktopCloseFailure('画布保存未完成');
+            } catch(error) {
+                showDesktopCloseFailure(String(error?.message || error));
+            }
+        }
+
+        window.__TAURI__?.event?.listen?.('desktop-close-requested', () => {
+            if(desktopCloseBusy) return;
+            desktopCloseBusy = true;
+            requestCanvasCloseSave();
+        });
+
 
         function desktopInvoke(command, args) {
             const invoke = window.__TAURI__?.core?.invoke;
@@ -1552,7 +1645,28 @@
             const theme = window.StudioTheme ? window.StudioTheme.get() : 'light';
             updateThemeIcon(theme);
             if(window.StudioI18n) window.StudioI18n.apply();
-            document.getElementById('desktop-update-btn')?.addEventListener('click', handleDesktopUpdate);
+            document.getElementById('desktop-close-save-cancel')?.addEventListener('click', () => {
+                clearTimeout(desktopCloseTimer);
+                desktopCloseBusy = false;
+                desktopCloseWaiting = false;
+                document.getElementById('desktop-close-save-modal').hidden = true;
+                desktopInvoke('cancel_desktop_close').catch(() => {});
+            });
+            document.getElementById('desktop-close-save-retry')?.addEventListener('click', () => {
+                if(desktopCloseWaiting) {
+                    desktopCloseWaiting = false;
+                    setDesktopCloseModal('正在继续等待保存结果……');
+                    armDesktopCloseTimer();
+                    return;
+                }
+                if(desktopCloseBusy) return;
+                desktopCloseBusy = true;
+                requestCanvasCloseSave();
+            });
+            document.getElementById('desktop-close-save-exit')?.addEventListener('click', () => {
+                if(!confirm('保存未成功，本地恢复稿已保留。仍然退出可能丢失最后部分修改，确定退出吗？')) return;
+                finishDesktopClose();
+            });
             document.getElementById('desktop-update-close')?.addEventListener('click', closeDesktopUpdateModal);
             document.getElementById('desktop-update-cancel')?.addEventListener('click', closeDesktopUpdateModal);
             document.getElementById('desktop-update-test')?.addEventListener('click', probeDesktopUpdateSources);

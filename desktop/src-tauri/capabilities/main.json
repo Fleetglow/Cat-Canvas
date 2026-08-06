@@ -17,6 +17,8 @@
     "allow-download-desktop-update",
     "allow-install-desktop-update",
     "allow-save-output-file",
-    "allow-open-backup-folder"
+    "allow-open-backup-folder",
+    "allow-finish-desktop-close",
+    "allow-cancel-desktop-close"
   ]
 }
