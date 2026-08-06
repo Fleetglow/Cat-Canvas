@@ -56,7 +56,7 @@ jobs:
 
       - name: 验证 FastAPI sidecar
         shell: pwsh
-        run: ./desktop/scripts/test-backend.ps1
+        run: ./desktop/scripts/test-backend.ps1 -TimeoutSeconds 120
 
       - name: 构建 Tauri NSIS 与更新包
         shell: pwsh
