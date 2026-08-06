@@ -1,7 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import sys
 
 root = Path(SPECPATH).parent
+runtime_dlls = [
+    (str(Path(sys.base_prefix) / name), ".")
+    for name in ("VCRUNTIME140.dll", "VCRUNTIME140_1.dll")
+    if (Path(sys.base_prefix) / name).is_file()
+]
 
 datas = [
     (str(root / "static"), "static"),
@@ -13,7 +19,7 @@ if (root / "workflows").is_dir():
 analysis = Analysis(
     [str(root / "main.py")],
     pathex=[str(root)],
-    binaries=[],
+    binaries=runtime_dlls,
     datas=datas,
     hiddenimports=[
         "uvicorn.logging",
