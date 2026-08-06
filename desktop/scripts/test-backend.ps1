@@ -32,7 +32,11 @@ try {
         } catch {}
         Start-Sleep -Milliseconds 500
     }
-    throw "Backend did not become healthy within $TimeoutSeconds seconds"
+    $detail = @(
+        "stdout: $((Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim())"
+        "stderr: $((Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim())"
+    ) -join [Environment]::NewLine
+    throw "Backend did not become healthy within $TimeoutSeconds seconds`n$detail"
 } finally {
     if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
     Remove-Item Env:CAT_CANVAS_PORT -ErrorAction SilentlyContinue
