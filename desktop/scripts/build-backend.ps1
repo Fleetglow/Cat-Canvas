@@ -19,6 +19,8 @@ try {
         $runtime = Join-Path $target "_internal/$name"
         if (Test-Path $runtime) { Copy-Item $runtime (Join-Path $target $name) -Force }
     }
+    $ucrt = Join-Path ${env:ProgramFiles(x86)} "Windows Kits/10/Redist/ucrt/DLLs/x64"
+    if (Test-Path $ucrt) { Copy-Item (Join-Path $ucrt "*.dll") $target -Force }
     foreach ($resourceTarget in @(
         (Join-Path $root "desktop/src-tauri/target/release/backend"),
         (Join-Path $root "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/backend")
