@@ -15,6 +15,10 @@ try {
     & $Python -m PyInstaller --noconfirm --clean --distpath $buildRoot --workpath "desktop/.pyinstaller" "desktop/backend.spec"
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed" }
     Copy-Item (Join-Path $buildRoot "cat-canvas-backend/*") $target -Recurse -Force
+    foreach ($name in "VCRUNTIME140.dll", "VCRUNTIME140_1.dll") {
+        $runtime = Join-Path $target "_internal/$name"
+        if (Test-Path $runtime) { Copy-Item $runtime (Join-Path $target $name) -Force }
+    }
     foreach ($resourceTarget in @(
         (Join-Path $root "desktop/src-tauri/target/release/backend"),
         (Join-Path $root "desktop/src-tauri/target/x86_64-pc-windows-msvc/release/backend")
