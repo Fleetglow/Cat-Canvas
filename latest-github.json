@@ -1,0 +1,12 @@
+{
+    "version":  "0.1.11",
+    "notes":  "修复：下载按钮无响应问题。\n\n新增：关闭软件是自动保存机制",
+    "pub_date":  "2026-08-06T09:07:27.1643756Z",
+    "platforms":  {
+                      "windows-x86_64":  {
+                                             "url":  "https://github.com/Fleetglow/Cat-Canvas/releases/download/v0.1.11/Cat.Canvas_0.1.11_x64-setup.exe",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUUUhRVmhPNDFySFErOXZYOTdKUkp1QWs1aHc0dm5zNkJQcTZVZ2ttVE0xWDdjVjJlZ1QwUFZaZEx3emRZbWY2ZVVkeUpUQU83UWlWcW1FVUo1dnZEZlFVaDdrSWROWXdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MDA3MjE2CWZpbGU6Q2F0IENhbnZhc18wLjEuMTFfeDY0LXNldHVwLmV4ZQphbUxFUzdxb0FDVmhoU1VNaEt4UFlUN3Yvd1RqNHNCYVUwUitpbmozamw4RlJVR3NOUFA1OUpqQWVNT2hmSndnR20vNk01Q3Y0eGkzRVZOMng2NGhEUT09Cg==",
+                                             "sha256":  "64d857e4bf9b93289d2ecb62fb85443081d94f1d4d9148a53f41ba88f5f58ba3"
+                                         }
+                  }
+}
